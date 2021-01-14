@@ -1,10 +1,10 @@
 #include <cpuid.h>
 #include <cstring>
 
-#include "x64/id.h"
+#include "x86/cpuid.h"
 
 
-void x64::cpu_id(unsigned int leaf, general_regs_t& regs, unsigned int sub_leaf) {
+void x86::cpu_id(unsigned int leaf, cpuid_regs_t& regs, unsigned int sub_leaf) noexcept {
     if (0 == sub_leaf) {
         // returns 1 for success, 0 for error
         __get_cpuid(leaf,
@@ -21,9 +21,9 @@ void x64::cpu_id(unsigned int leaf, general_regs_t& regs, unsigned int sub_leaf)
     }
 }
 
-void x64::cpu_id(unsigned int leaf, void* data_struct, unsigned int sub_leaf) {
-    general_regs_t regs = {0};
+void x86::cpu_id(unsigned int leaf, void* data_struct, unsigned int sub_leaf) noexcept {
+    cpuid_regs_t regs = {0};
     cpu_id(leaf, regs, sub_leaf);
 
-    memcpy(data_struct, &regs, sizeof(general_regs_t));
+    memcpy(data_struct, &regs, sizeof(cpuid_regs_t));
 }

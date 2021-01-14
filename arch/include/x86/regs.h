@@ -2,14 +2,7 @@
 
 #include "types.h"
 
-namespace x64 {
-
-struct general_regs_t {
-    uintn_t eax;
-    uintn_t ebx;
-    uintn_t ecx;
-    uintn_t edx;
-};
+namespace x86 {
 
 struct cr0_t {
     union {
@@ -20,10 +13,10 @@ struct cr0_t {
             uint64_t ts : 1;
             uint64_t et : 1;
             uint64_t ne : 1;
-            uint64_t reserved0 : 11;
+            uint64_t reserved0 : 10;
             uint64_t wp : 1;
             uint64_t am : 1;
-            uint64_t reserved1 : 11;
+            uint64_t reserved1 : 10;
             uint64_t nw : 1;
             uint64_t cd : 1;
             uint64_t pg : 1;
@@ -32,12 +25,12 @@ struct cr0_t {
         uint64_t raw;
     };
 
-    cr0_t();
-    explicit cr0_t(uint64_t raw);
+    cr0_t() noexcept;
+    explicit cr0_t(uint64_t raw) noexcept;
 
-    void clear();
-    void load();
-    void store();
+    void clear() noexcept;
+    void load() noexcept;
+    void store() noexcept;
 };
 
 struct cr4_t {
@@ -70,12 +63,12 @@ struct cr4_t {
         uint64_t raw;
     };
 
-    cr4_t();
-    explicit cr4_t(uint64_t raw);
+    cr4_t() noexcept;
+    explicit cr4_t(uint64_t raw) noexcept;
 
-    void clear();
-    void load();
-    void store();
+    void clear() noexcept;
+    void load() noexcept;
+    void store() noexcept;
 };
 
 }

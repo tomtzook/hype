@@ -1,10 +1,16 @@
 cmake_minimum_required(VERSION 3.17)
-project(hypervisor)
+project(hypervisor CXX ASM)
 
 set(CMAKE_CXX_STANDARD 14)
 
-include_directories(include)
-set(HEADERS include/x64/id.h include/x64/regs.h include/types.h include/x64/gdt.h)
-set(SOURCES src/x64/id.cpp src/x64/gdt.cpp include/x64/intrinsic.h src/x64/regs.cpp)
+enable_language(ASM_NASM)
+set(CMAKE_ASM_NASM_OBJECT_FORMAT elf64)
+set(CMAKE_ASM_NASM_COMPILE_OBJECT "<CMAKE_ASM_NASM_COMPILER> <INCLUDES> \
+    <FLAGS> -f ${CMAKE_ASM_NASM_OBJECT_FORMAT} -o <OBJECT> <SOURCE>")
 
-add_executable(hypervisor main.cpp ${HEADERS} ${SOURCES})
+add_subdirectory(arch)
+
+include_directories(arch/include)
+
+add_executable(hypervisor main.cpp)
+target_link_libraries(hypervisor arch_static)

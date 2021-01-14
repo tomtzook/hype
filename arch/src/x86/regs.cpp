@@ -22,6 +22,26 @@ void x86::cr0_t::store() noexcept {
     _write_cr0(raw);
 }
 
+x86::cr3_t::cr3_t() noexcept {
+    load();
+}
+
+x86::cr3_t::cr3_t(uint64_t raw) noexcept {
+    this->raw = raw;
+}
+
+void x86::cr3_t::clear() noexcept {
+    raw = 0;
+}
+
+void x86::cr3_t::load() noexcept {
+    raw = _read_cr3();
+}
+
+void x86::cr3_t::store() noexcept {
+    _write_cr3(raw);
+}
+
 x86::cr4_t::cr4_t() noexcept {
     load();
 }

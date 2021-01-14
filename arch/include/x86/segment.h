@@ -6,8 +6,8 @@
 namespace x86 {
 
 struct gdtr_t {
-    uint32_t limit : 16;
-    uint32_t base : 32;
+    uint16_t limit;
+    uint32_t base;
 
     void load() noexcept;
     void store() noexcept;

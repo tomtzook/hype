@@ -16,6 +16,9 @@ a product for use.
 - [UEFI Specification Manual](https://www.uefi.org/sites/default/files/resources/UEFI%20Spec%202_6.pdf)
 - [CMAKE + UEFI](https://github.com/eruffaldi/uefiboot)
 - [CMAKE + UEFI 2](https://github.com/matlo607/uefi-test)
+- [Bareflank](https://github.com/Bareflank/hypervisor/)
+- [hvpp](https://github.com/wbenny/hvpp)
+- [zpp](https://github.com/eyalz800/zpp_hypervisor)
 
 ### Setting Up Environment
 

@@ -15,66 +15,23 @@ a product for use.
 - [Intel's IA-32 Software Development Manual Volume 3](https://www.intel.com/content/www/us/en/architecture-and-technology/64-ia-32-architectures-software-developer-system-programming-manual-325384.html)
 - [UEFI Specification Manual](https://www.uefi.org/sites/default/files/resources/UEFI%20Spec%202_6.pdf)
 - [OSDev](https://wiki.osdev.org/)
-- [CMAKE + UEFI](https://github.com/eruffaldi/uefiboot)
-- [CMAKE + UEFI 2](https://github.com/matlo607/uefi-test)
+  
+## Other Hypervisors
+
 - [Bareflank](https://github.com/Bareflank/hypervisor/)
 - [hvpp](https://github.com/wbenny/hvpp)
 - [zpp](https://github.com/eyalz800/zpp_hypervisor)
 
 
-### Setting Up Environment
+## Setting Up Environment
 
-#### EDK II
+### Building UEFI Application
 
-EDK II is a modern, feature-rich, cross-platform firmware development environment for the UEFI and PI specifications.
+We will need an _sdk_ for using _UEFI_. We'll use __GNU-EFI__.
 
-[Prerequisites](https://github.com/tianocore/tianocore.github.io/wiki/Using-EDK-II-with-Native-GCC#Ubuntu_1604_LTS__Ubuntu_1610)
-[Build edk2](https://github.com/tianocore/tianocore.github.io/wiki/Common-instructions)
+__GNU-EFI__ is a very lightweight developing environment to create _UEFI_ applications.
 
-```shell
-git clone https://github.com/tianocore/edk2.git
-cd edk2
-git checkout edk2-stable202011
-git submodule update --init
-make -C BaseTools
-source edksetup.sh
-```
-
-Now we should be in a _EDK II_ env in the shell, so we can build with it.
-
-#### OVMF
-
-[Build OVMF](https://github.com/tianocore/tianocore.github.io/wiki/How-to-build-OVMF)
-
-Modify configurations to wanted target under `Conf/target.txt`:
-```
-ACTIVE_PLATFORM       = OvmfPkg/OvmfPkgX64.dsc
-TARGET_ARCH           = X64
-TOOL_CHAIN_TAG        = GCC5
-```
-
-Run `build` from the _EDK-II_ env to build. 
-The binary should be under `Build/OvmfX64/DEBUG_GCC5/FV/OVMF.fd`.
-
-[Run OVMF](https://github.com/tianocore/tianocore.github.io/wiki/How-to-run-OVMF)
-
-Install __QEMU__:
-```shell
-sudo apt install qemu-system
-```
-
-Run _QEMU_ with the build binary:
-```shell
-qemu-system-x86_64 -L . --bios /path/to/edk2/Build/OvmfX64/DEBUG_GCC5/FV/OVMF.fd -net none
-```
-
-#### Building UEFI Application
-
-We will need an _sdk_ for using _UEFI_. We'll use _GNU-EFI_.
-
-_GNU-EFI_ is a very lightweight developing environment to create UEFI applications.
-
-[Building GNU-EFI](https://wiki.osdev.org/GNU-EFI)
+- [Building GNU-EFI](https://wiki.osdev.org/GNU-EFI)
 
 ```shell
 git clone https://git.code.sf.net/p/gnu-efi/code gnu-efi
@@ -83,4 +40,33 @@ make
 sudo make install
 ```
 
-We can then add it to the project using _cmake_.
+We can also install directly from _apt_:
+```shell
+sudo apt install gnu-efi
+```
+
+We can then add it to the project using _cmake_. This requires
+adding a [script](scripts/modules/FindGNUefi.cmake) to find the library binaries and headers, as well as 
+setting a bunch of flags for correct compilation. [See CMakeLists.txt](hype/CMakeLists.txt).
+
+Made with references from: 
+- [eruffaldi/uefiboot](https://github.com/eruffaldi/uefiboot)
+- [matlo607/uefi-test](https://github.com/matlo607/uefi-test)
+
+With correctly configured _cmake_, we will get `.efi` binary.
+
+### Running
+
+- [Run OVMF](https://github.com/tianocore/tianocore.github.io/wiki/How-to-run-OVMF)
+- [Boot EFI with QEMU](https://unix.stackexchange.com/questions/52996/how-to-boot-efi-kernel-using-qemu-kvm)
+- [Building OVMF](BUILD_OVMF.md)
+
+Install __QEMU__ and __OVMF__:
+```shell
+sudo apt install qemu-system ovmf
+```
+
+Run __QEMU__:
+```shell
+qemu-system-x86_64 -enable-kvm --bios /usr/share/ovmf/OVMF.fd -net none
+```

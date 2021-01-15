@@ -8,8 +8,7 @@ endif()
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --std=c++11 -DGNU_EFI_USE_MS_ABI -m64 -ffreestanding -Wall -Werror")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-stack-protector -fpic -fshort-wchar -mno-red-zone -Wall")
-# for mingw
-# set(LDFLAGS "-nostdlib -Wl,-dll -shared -Wl,--subsystem,10 -Wl,-eefi_main -lgcc -Wl,-Bsymbolic -Wl,-nostdlib")
+
 set(LDFLAGS "-nostdlib -shared -lgcc -Wl,-Bsymbolic -Wl,-nostdlib -Wl,-znocombreloc")
 set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${LDFLAGS}")
 
@@ -22,17 +21,11 @@ set(HEADERS
 set(SOURCES
         src/main.cpp)
 
-set(TARGET_NAME hypervisor)
+set(TARGET_NAME hype)
 
 add_library(${TARGET_NAME} SHARED ${HEADERS} ${SOURCES})
 target_compile_definitions(${TARGET_NAME} PUBLIC _DEBUG)
 target_link_libraries(${TARGET_NAME} GnuEfi::GnuEfi ${GNUEFI_LIBRARIES} ${LDFLAGS})
-
-# for mingw
-#add_custom_command(TARGET "${TARGET_NAME}" POST_BUILD
-#        COMMAND ${CMAKE_COMMAND} -E copy
-#        "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/lib${TARGET_NAME}.dll"
-#        "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${TARGET_NAME}.efi")
 
 add_custom_command(TARGET "${TARGET_NAME}" POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})

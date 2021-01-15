@@ -14,11 +14,13 @@ a product for use.
 
 - [Intel's IA-32 Software Development Manual Volume 3](https://www.intel.com/content/www/us/en/architecture-and-technology/64-ia-32-architectures-software-developer-system-programming-manual-325384.html)
 - [UEFI Specification Manual](https://www.uefi.org/sites/default/files/resources/UEFI%20Spec%202_6.pdf)
+- [OSDev](https://wiki.osdev.org/)
 - [CMAKE + UEFI](https://github.com/eruffaldi/uefiboot)
 - [CMAKE + UEFI 2](https://github.com/matlo607/uefi-test)
 - [Bareflank](https://github.com/Bareflank/hypervisor/)
 - [hvpp](https://github.com/wbenny/hvpp)
 - [zpp](https://github.com/eyalz800/zpp_hypervisor)
+
 
 ### Setting Up Environment
 
@@ -67,13 +69,6 @@ qemu-system-x86_64 -L . --bios /path/to/edk2/Build/OvmfX64/DEBUG_GCC5/FV/OVMF.fd
 ```
 
 #### Building UEFI Application
-
-UEFI applications use Microsoft's Portable Executable format.
-
-Install cross compiler:
-```shell
-sudo apt-get install mingw-w64
-```
 
 We will need an _sdk_ for using _UEFI_. We'll use _GNU-EFI_.
 

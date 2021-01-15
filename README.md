@@ -15,12 +15,11 @@ a product for use.
 - [Intel's IA-32 Software Development Manual Volume 3](https://www.intel.com/content/www/us/en/architecture-and-technology/64-ia-32-architectures-software-developer-system-programming-manual-325384.html)
 - [UEFI Specification Manual](https://www.uefi.org/sites/default/files/resources/UEFI%20Spec%202_6.pdf)
 - [CMAKE + UEFI](https://github.com/eruffaldi/uefiboot)
+- [CMAKE + UEFI 2](https://github.com/matlo607/uefi-test)
 
 ### Setting Up Environment
 
-#### QEMU
-
-##### EDK II
+#### EDK II
 
 EDK II is a modern, feature-rich, cross-platform firmware development environment for the UEFI and PI specifications.
 
@@ -38,7 +37,7 @@ source edksetup.sh
 
 Now we should be in a _EDK II_ env in the shell, so we can build with it.
 
-##### OVMF
+#### OVMF
 
 [Build OVMF](https://github.com/tianocore/tianocore.github.io/wiki/How-to-build-OVMF)
 
@@ -64,7 +63,7 @@ Run _QEMU_ with the build binary:
 qemu-system-x86_64 -L . --bios /path/to/edk2/Build/OvmfX64/DEBUG_GCC5/FV/OVMF.fd -net none
 ```
 
-## Building UEFI Application
+#### Building UEFI Application
 
 UEFI applications use Microsoft's Portable Executable format.
 
@@ -72,3 +71,18 @@ Install cross compiler:
 ```shell
 sudo apt-get install mingw-w64
 ```
+
+We will need an _sdk_ for using _UEFI_. We'll use _GNU-EFI_.
+
+_GNU-EFI_ is a very lightweight developing environment to create UEFI applications.
+
+[Building GNU-EFI](https://wiki.osdev.org/GNU-EFI)
+
+```shell
+git clone https://git.code.sf.net/p/gnu-efi/code gnu-efi
+cd gnu-efi
+make
+sudo make install
+```
+
+We can then add it to the project using _cmake_.

@@ -11,8 +11,6 @@ set(ASM_SOURCES
         src/x86/intrinsic/iregs.asm
         src/x86/intrinsic/iseg.asm)
 
-set_source_files_properties(${ASM_SOURCES} PROPERTIES LANGUAGE ASM_NASM)
-
 set(SOURCES
         src/x86/cpuid.cpp
         src/x86/segment.cpp

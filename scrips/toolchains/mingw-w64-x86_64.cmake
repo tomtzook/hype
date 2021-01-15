@@ -8,6 +8,8 @@ set(CMAKE_Fortran_COMPILER ${TOOLCHAIN_PREFIX}-gfortran)
 set(CMAKE_RC_COMPILER ${TOOLCHAIN_PREFIX}-windres)
 set(CMAKE_ASM_COMPILER ${TOOLCHAIN_PREFIX}-as)
 
+set(CMAKE_ASM_NASM_OBJECT_FORMAT elf64)
+
 # target environment on the build host system
 set(CMAKE_FIND_ROOT_PATH /usr/${TOOLCHAIN_PREFIX})
 

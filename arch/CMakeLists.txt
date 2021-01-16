@@ -20,7 +20,7 @@ set(SOURCES
         src/x86/cpuid.cpp
         src/x86/segment.cpp
         src/x86/cr.cpp
-        ${ASM_SOURCES} src/x86/msr.cpp)
+        ${ASM_SOURCES} src/x86/msr.cpp include/x86/memory.h)
 
 add_library(arch_static STATIC ${HEADERS} ${SOURCES})
 target_compile_definitions(arch_static PUBLIC _DEBUG)

@@ -4,6 +4,8 @@
 #include <x86/msr.h>
 
 #include "commonefi.h"
+#include "crt.h"
+#include "environment.h"
 #include "debug.h"
 
 extern "C"
@@ -31,6 +33,24 @@ efi_main(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE* system_table) {
 
     auto efer = x86::msr::read<x86::msr::ia32_efer_t>(x86::msr::ia32_efer_t::ID);
     TRACE_DEBUG("EFER.LMA=%d", efer.bits.lma);
+
+    x86::cr3_t* cr3_n;
+    hype::result result = hype::environment::allocate(sizeof(x86::cr3_t), &cr3_n);
+    TRACE_DEBUG("ALLOCATION s=%x %d", cr3_n, result);
+    delete cr3_n;
+
+    auto* cr0_n = new x86::cr0_t(0);
+    TRACE_DEBUG("ALLOCATION s=%x", cr0_n);
+    delete cr0_n;
+
+
+    void* ptr;
+    EFI_STATUS status = system_table->BootServices->AllocatePool(EfiBootServicesData, 2, &ptr);
+    TRACE_DEBUG("%d %x", status, ptr);
+    if (EFI_SUCCESS == status) {
+        TRACE_DEBUG("success!");
+        system_table->BootServices->FreePool(ptr);
+    }
 
     return EFI_SUCCESS;
 }

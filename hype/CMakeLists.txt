@@ -8,11 +8,11 @@ include_directories(include)
 
 set(HEADERS
         include/debug.h
-        include/commonefi.h)
+        include/commonefi.h include/environment.h include/error.h include/crt.h)
 
 set(SOURCES
         src/main.cpp
-        src/debug.cpp)
+        src/debug.cpp src/environment.cpp src/efi.cpp)
 
 set(TARGET_NAME hype)
 

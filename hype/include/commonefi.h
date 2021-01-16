@@ -10,3 +10,11 @@ extern "C" {
 #ifdef __cplusplus
 }
 #endif
+
+#include "error.h"
+
+namespace hype::efi {
+
+hype::result efi_result(EFI_STATUS efi_status) noexcept;
+
+}

@@ -32,7 +32,7 @@ struct cr0_t {
     void clear() noexcept;
     void load() noexcept;
     void store() noexcept;
-};
+} __attribute__((packed));
 
 struct cr3_t {
     union {
@@ -53,7 +53,7 @@ struct cr3_t {
     void clear() noexcept;
     void load() noexcept;
     void store() noexcept;
-};
+} __attribute__((packed));
 
 struct cr4_t {
     union {
@@ -92,6 +92,6 @@ struct cr4_t {
     void clear() noexcept;
     void load() noexcept;
     void store() noexcept;
-};
+} __attribute__((packed));
 
 }

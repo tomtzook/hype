@@ -2,7 +2,10 @@
 
 #include <cstdint>
 
-#if __WORDSIZE == 64
+#include "macros.h"
+
+
+#ifdef X86_64
 typedef uint64_t uintn_t;
 #else
 typedef uint32_t uintn_t;

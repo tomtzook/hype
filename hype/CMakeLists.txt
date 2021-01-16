@@ -11,7 +11,8 @@ set(HEADERS
         include/commonefi.h)
 
 set(SOURCES
-        src/main.cpp)
+        src/main.cpp
+        src/debug.cpp)
 
 set(TARGET_NAME hype)
 

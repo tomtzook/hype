@@ -11,45 +11,44 @@ enum selector_table_t {
 };
 
 enum data_type_t {
-    READ_ONLY = 0x0,
-    READ_ONLY_ACCESSED = 0x1,
-    READ_WRITE = 0x10,
-    READ_WRITE_ACCESSED = 0x11,
-    READ_ONLY_EXPAND_DOWN = 0x100,
-    READ_ONLY_EXPAND_DOWN_ACCESSED = 0x101,
-    READ_WRITE_EXPAND_DOWN = 0x110,
-    READ_WRITE_EXPAND_DOWN_ACCESSED = 0x111
+    READ_ONLY = 0b0,
+    READ_ONLY_ACCESSED = 0b1,
+    READ_WRITE = 0b10,
+    READ_WRITE_ACCESSED = 0b11,
+    READ_ONLY_EXPAND_DOWN = 0b100,
+    READ_ONLY_EXPAND_DOWN_ACCESSED = 0b101,
+    READ_WRITE_EXPAND_DOWN = 0b110,
+    READ_WRITE_EXPAND_DOWN_ACCESSED = 0b111
 };
 
 enum code_type_t {
-    EXECUTE_ONLY = 0x1000,
-    EXECUTE_ONLY_ACCESSED = 0x1001,
-    EXECUTE_READ = 0x1010,
-    EXECUTE_READ_ACCESSED = 0x1011,
-    EXECUTE_ONLY_CONFORMING = 0x1100,
-    EXECUTE_ONLY_CONFORMING_ACCESSED = 0x1101,
-    EXECUTE_READ_CONFORMING = 0x1110,
-    EXECUTE_READ_CONFORMING_ACCESSED = 0x1111
+    EXECUTE_ONLY = 0b1000,
+    EXECUTE_ONLY_ACCESSED = 0b1001,
+    EXECUTE_READ = 0b1010,
+    EXECUTE_READ_ACCESSED = 0b1011,
+    EXECUTE_ONLY_CONFORMING = 0b1100,
+    EXECUTE_ONLY_CONFORMING_ACCESSED = 0b1101,
+    EXECUTE_READ_CONFORMING = 0b1110,
+    EXECUTE_READ_CONFORMING_ACCESSED = 0b1111
 };
 
 enum system_type_t {
-    TYPE_SYSTEM_RESERVED0 = 0x0000,
-    TYPE_BITS16_TSS_AVAILABLE = 0x0001,
-
-    TYPE_LDT = 0x0010,
-    TYPE_BITS16_TSS_BUSY = 0x0011,
-    TYPE_BITS16_CALL_GATE = 0x0100,
-    TYPE_TASK_GATE = 0x0101,
-    BITS16_INTERRUPT_GATE = 0x0110,
-    BITS16_TRAP_GATE = 0x0111,
-    TYPE_SYSTEM_RESERVED1 = 0x1000,
-    TYPE_BITS32_TSS_AVAILABLE = 0x1101,
-    TYPE_SYSTEM_RESERVED2 = 0x1010,
-    TYPE_BITS32_TSS_BUSY = 0x1011,
-    TYPE_BITS32_CALL_GATE = 0x1100,
-    TYPE_SYSTEM_RESERVED3 = 0x1101,
-    TYPE_BITS32_INTERRUPT = 0x1110,
-    TYPE_BITS32_TRAP_GATE = 0x1111
+    TYPE_SYSTEM_RESERVED0 = 0b0000,
+    TYPE_BITS16_TSS_AVAILABLE = 0b0001,
+    TYPE_LDT = 0b0010,
+    TYPE_BITS16_TSS_BUSY = 0b0011,
+    TYPE_BITS16_CALL_GATE = 0b0100,
+    TYPE_TASK_GATE = 0b0101,
+    BITS16_INTERRUPT_GATE = 0b0110,
+    BITS16_TRAP_GATE = 0b0111,
+    TYPE_SYSTEM_RESERVED1 = 0b1000,
+    TYPE_BITS32_TSS_AVAILABLE = 0b1001,
+    TYPE_SYSTEM_RESERVED2 = 0b1010,
+    TYPE_BITS32_TSS_BUSY = 0b1011,
+    TYPE_BITS32_CALL_GATE = 0b1100,
+    TYPE_SYSTEM_RESERVED3 = 0b1101,
+    TYPE_BITS32_INTERRUPT = 0b1110,
+    TYPE_BITS32_TRAP_GATE = 0b1111
 };
 
 enum descriptor_type_t {
@@ -67,7 +66,6 @@ enum granularity_t {
     GRANULARITY_PAGE = 1
 };
 
-#pragma pack(push, 1)
 struct segment_selector_t {
     union {
         struct {
@@ -78,7 +76,7 @@ struct segment_selector_t {
 
         uint16_t raw;
     };
-};
+} __attribute__((packed));
 
 struct segment_descriptor_t {
     union {
@@ -96,62 +94,84 @@ struct segment_descriptor_t {
             uint64_t default_big : 1;
             uint64_t granularity : 1;
             uint64_t base_address_high : 8;
-        } bits;
 
-        uint64_t raw;
-    };
-
-    virtual void* base_address() const noexcept;
-    virtual void base_address(void* value) noexcept;
-
-    virtual uint32_t limit() const noexcept;
-    virtual void limit(uint32_t value) noexcept;
-};
-
-struct segment_descriptor64_t : segment_descriptor_t {
-    union {
-        struct {
+#ifdef X86_64
             uint64_t base_address_upper : 32;
             uint64_t must_be_zero : 32;
+#endif
         } bits;
 
-        uint64_t raw;
-    } upper;
+        struct {
+            uint64_t raw;
+#ifdef X86_64
+            uint64_t raw_upper;
+#endif
+        };
+    };
 
-    segment_descriptor64_t();
+    segment_descriptor_t();
 
-    void* base_address() const noexcept override;
-    void base_address(void* value) noexcept override;
-};
+    void* base_address() const noexcept;
+    void base_address(void* value) noexcept;
 
-struct _segment_table_base_t {
-    virtual void* base_address() const noexcept = 0;
-    virtual uint16_t limit() const noexcept = 0;
+    uint32_t limit() const noexcept;
+    void limit(uint32_t value) noexcept;
 
-    void load() const noexcept;
-    void store() noexcept;
+    bool is_system() const noexcept;
+    bool is_data() const noexcept;
+    bool is_code() const noexcept;
+
+    descriptor_type_t descriptor_type() const noexcept;
+    void descriptor_type(descriptor_type_t descriptor_type) noexcept;
+
+    default_op_size_t default_big() const noexcept;
+    void default_big(default_op_size_t default_big) noexcept;
+
+    granularity_t granularity() const noexcept;
+    void granularity(granularity_t granularity) noexcept;
+} __attribute__((packed));
+
+struct segment_table_t {
+    uint16_t lim;
+#ifdef X86_64
+    uint64_t base;
+#else
+    uint32_t base;
+#endif
+
+    void* base_address() const noexcept;
+    uint16_t limit() const noexcept;
 
     const segment_descriptor_t& operator[](const segment_selector_t& selector) const noexcept;
     segment_descriptor_t& operator[](const segment_selector_t& selector) noexcept;
     const segment_descriptor_t& operator[](int index) const noexcept;
     segment_descriptor_t& operator[](int index) noexcept;
-};
+} __attribute__((packed));
 
-struct segment_table_t : _segment_table_base_t {
-    uint16_t lim;
-    uint32_t base;
+void load(const segment_table_t& gdt) noexcept;
+void store(segment_table_t& gdt) noexcept;
 
-    void* base_address() const noexcept override;
-    uint16_t limit() const noexcept override;
-};
+#ifdef _DEBUG
+namespace debug {
+const wchar_t* to_string(selector_table_t selector_table) noexcept;
+const wchar_t* to_string(data_type_t data_type) noexcept;
+const wchar_t* to_string(code_type_t code_type) noexcept;
+const wchar_t* to_string(system_type_t system_type) noexcept;
+const wchar_t* to_string(descriptor_type_t descriptor_type) noexcept;
+const wchar_t* to_string(default_op_size_t default_op_size) noexcept;
+const wchar_t* to_string(granularity_t granularity) noexcept;
+const wchar_t* type_to_string(const segment_descriptor_t& descriptor);
+}
+#endif
 
-struct segment_table64_t : _segment_table_base_t {
-    uint16_t lim;
-    uint64_t base;
+static_assert(sizeof(segment_selector_t) == 2, "segment_selector_t != 2");
 
-    void* base_address() const noexcept override;
-    uint16_t limit() const noexcept override;
-};
-#pragma pack(pop)
+#ifdef X86_64
+static_assert(sizeof(segment_descriptor_t) == 16, "segment_descriptor_t != 16");
+static_assert(sizeof(segment_table_t) == 10, "segment_table_t != 10");
+#else
+static_assert(sizeof(segment_descriptor_t) == 8, "segment_descriptor_t != 8");
+static_assert(sizeof(segment_table_t) == 6, "segment_table_t != 6");
+#endif
 
 }

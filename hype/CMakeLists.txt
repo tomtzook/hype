@@ -1,35 +1,14 @@
-if (NOT CMAKE_RUNTIME_OUTPUT_DIRECTORY)
-    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
-endif()
-if (NOT CMAKE_LIBRARY_OUTPUT_DIRECTORY)
-    set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
-endif()
-
-set(CMAKE_C_COMPILER /usr/bin/gcc)
-set(CMAKE_CXX_COMPILER /usr/bin/gcc)
-set(CMAKE_LINKER /usr/bin/ld)
-set(CMAKE_C_CREATE_SHARED_LIBRARY "<CMAKE_LINKER> <CMAKE_C_LINK_FLAGS> <LINK_FLAGS> <OBJECTS> -o <TARGET> <LINK_LIBRARIES>")
-set(CMAKE_CXX_CREATE_SHARED_LIBRARY "<CMAKE_LINKER> <CMAKE_CXX_LINK_FLAGS> <LINK_FLAGS> <OBJECTS> -o <TARGET> <LINK_LIBRARIES>")
-
-set(CMAKE_BUILD_TYPE Debug)
-set(CMAKE_C_STANDARD 11)
-set(CMAKE_CXX_STANDARD 14)
-
-set(ARCH x86_64)
-set(EFI_INCLUDE_PATH /usr/local/include/efi)
-set(LIB_PATH /usr/local/lib)
-set(EFI_LIB_PATH /usr/local/lib)
-set(EFI_CRT_OBJS ${EFI_LIB_PATH}/crt0-efi-${ARCH}.o)
-set(EFI_LDS ${EFI_LIB_PATH}/elf_${ARCH}_efi.lds)
 
 list(APPEND COMPILE_FLAGS "-fno-stack-protector" "-fpic" "-fshort-wchar" "-mno-red-zone" "-Wall" "-DEFI_FUNCTION_WRAPPER")
 set(LINK_FLAGS -nostdlib -T ${EFI_LDS} -shared -Bsymbolic -L ${EFI_LIB_PATH} -L ${LIB_PATH} ${EFI_CRT_OBJS})
 
 include_directories(${EFI_INCLUDE_PATH} ${EFI_INCLUDE_PATH}/${ARCH} ${EFI_INCLUDE_PATH}/protocol)
-#include_directories(../arch/include)
+include_directories(../arch/include)
+include_directories(include)
 
 set(HEADERS
-        include/debug.h)
+        include/debug.h
+        include/commonefi.h)
 
 set(SOURCES
         src/main.cpp)
@@ -40,7 +19,7 @@ add_library(${TARGET_NAME} SHARED ${HEADERS} ${SOURCES})
 target_compile_definitions("${TARGET_NAME}" PUBLIC _DEBUG EFI_FUNCTION_WRAPPER)
 target_compile_options(${TARGET_NAME} PRIVATE ${COMPILE_FLAGS})
 target_link_options(${TARGET_NAME} PRIVATE ${LINK_FLAGS})
-target_link_libraries(${TARGET_NAME} PRIVATE efi gnuefi)
+target_link_libraries(${TARGET_NAME} PRIVATE efi gnuefi arch_static)
 
 add_custom_command(TARGET "${TARGET_NAME}" POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})

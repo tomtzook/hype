@@ -25,8 +25,8 @@ dd if=/dev/zero of=/tmp/part.img bs=512 count=91669
 mformat -i /tmp/part.img -h 32 -t 32 -n 64 -c 1
 
 mcopy -i /tmp/part.img ${BINARY_PATH} ::app.efi
-echo app.efi > startup.nsh
-mcopy -i /tmp/part.img startup.nsh ::/
+echo app.efi > ${RUN_PATH}/startup.nsh
+mcopy -i /tmp/part.img ${RUN_PATH}/startup.nsh ::/startup.nsh
 
 ## make full image (with format and efi partition)
 dd if=/dev/zero of=${DISK_PATH} bs=512 count=93750

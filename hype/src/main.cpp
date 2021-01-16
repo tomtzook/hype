@@ -1,5 +1,6 @@
 #include <x86/cpuid.h>
 #include <x86/segment.h>
+#include <x86/regs.h>
 
 #include "commonefi.h"
 #include "debug.h"
@@ -17,6 +18,10 @@ efi_main(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE* system_table) {
     x86::segment_table_t table{};
     x86::store(table);
     hype::debug::trace(table);
+
+    x86::cr0_t cr0;
+    x86::load(cr0);
+    TRACE_DEBUG("CR0=%x", cr0.raw);
 
     return EFI_SUCCESS;
 }

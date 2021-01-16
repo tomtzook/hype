@@ -28,10 +28,6 @@ struct cr0_t {
 
     cr0_t() noexcept;
     explicit cr0_t(uint64_t raw) noexcept;
-
-    void clear() noexcept;
-    void load() noexcept;
-    void store() noexcept;
 } __attribute__((packed));
 
 struct cr3_t {
@@ -49,10 +45,6 @@ struct cr3_t {
 
     cr3_t() noexcept;
     explicit cr3_t(uint64_t raw) noexcept;
-
-    void clear() noexcept;
-    void load() noexcept;
-    void store() noexcept;
 } __attribute__((packed));
 
 struct cr4_t {
@@ -88,10 +80,15 @@ struct cr4_t {
 
     cr4_t() noexcept;
     explicit cr4_t(uint64_t raw) noexcept;
-
-    void clear() noexcept;
-    void load() noexcept;
-    void store() noexcept;
 } __attribute__((packed));
+
+void load(const cr0_t& reg) noexcept;
+void store(cr0_t& reg) noexcept;
+
+void load(const cr3_t& reg) noexcept;
+void store(cr3_t& reg) noexcept;
+
+void load(const cr4_t& reg) noexcept;
+void store(cr4_t& reg) noexcept;
 
 }

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "types.h"
+#include "cr.h"
 
 
 namespace x86 {
@@ -148,7 +149,7 @@ struct segment_table_t {
     segment_descriptor_t& operator[](int index) noexcept;
 } __attribute__((packed));
 
-void load(const segment_table_t& gdt) noexcept;
+void write(const segment_table_t &gdt) noexcept;
 void store(segment_table_t& gdt) noexcept;
 
 #ifdef _DEBUG

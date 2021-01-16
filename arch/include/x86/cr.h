@@ -82,13 +82,13 @@ struct cr4_t {
     explicit cr4_t(uint64_t raw) noexcept;
 } __attribute__((packed));
 
-void load(const cr0_t& reg) noexcept;
-void store(cr0_t& reg) noexcept;
+void read(cr0_t& reg) noexcept;
+void write(const cr0_t& reg) noexcept;
 
-void load(const cr3_t& reg) noexcept;
-void store(cr3_t& reg) noexcept;
+void read(cr3_t& reg) noexcept;
+void write(const cr3_t &reg) noexcept;
 
-void load(const cr4_t& reg) noexcept;
-void store(cr4_t& reg) noexcept;
+void read(cr4_t& reg) noexcept;
+void write(const cr4_t &reg) noexcept;
 
 }

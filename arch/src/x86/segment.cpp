@@ -103,7 +103,7 @@ uint16_t x86::segment_table_t::limit() const noexcept {
     return lim;
 }
 
-void x86::load(const segment_table_t& gdt) noexcept {
+void x86::write(const segment_table_t &gdt) noexcept {
     _lgdt(const_cast<segment_table_t*>(&gdt));
 }
 

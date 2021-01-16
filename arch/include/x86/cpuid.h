@@ -3,6 +3,8 @@
 #include "types.h"
 
 
+// https://c9x.me/x86/html/file_module_x86_id_45.html
+// https://wiki.osdev.org/CPUID
 namespace x86 {
 
 struct cpuid_regs_t {

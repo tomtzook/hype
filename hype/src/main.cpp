@@ -13,7 +13,12 @@ efi_main(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE* system_table) {
 
     x86::cpuid_regs_t cpuid_regs = {};
     x86::cpu_id(1, cpuid_regs);
-    TRACE_DEBUG("CPUID[1].EAX=%x", cpuid_regs.eax);
+    TRACE_DEBUG("CPUID[1].EDX=%x %d", cpuid_regs.edx,
+                ((cpuid_regs.edx >> 6) & 0x1));
+
+    x86::cpuid_eax01_t eax_01 = {};
+    x86::cpu_id(1, eax_01);
+    TRACE_DEBUG("CPUID[1].EDX.PAE=%x", eax_01.edx.bits.pae);
 
     x86::segment_table_t table{};
     x86::store(table);
@@ -22,6 +27,7 @@ efi_main(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE* system_table) {
     x86::cr0_t cr0;
     x86::load(cr0);
     TRACE_DEBUG("CR0=%x", cr0.raw);
+
 
     return EFI_SUCCESS;
 }

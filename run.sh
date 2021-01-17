@@ -17,6 +17,12 @@ cmake ..
 make
 cd ..
 
+if [ ! -f ${BINARY_PATH} ]; then
+    echo "Compilation failed!"
+    exit 1
+fi
+
+
 # make image
 mkdir -p ${RUN_PATH}
 
@@ -24,8 +30,12 @@ mkdir -p ${RUN_PATH}
 dd if=/dev/zero of=/tmp/part.img bs=512 count=91669
 mformat -i /tmp/part.img -h 32 -t 32 -n 64 -c 1
 
-mcopy -i /tmp/part.img ${BINARY_PATH} ::app.efi
-echo app.efi > ${RUN_PATH}/startup.nsh
+mmd -i /tmp/part.img ::/EFI
+mmd -i /tmp/part.img ::/EFI/BOOT
+mcopy -i /tmp/part.img ${BINARY_PATH} ::/EFI/BOOT/BOOTX64.efi
+
+echo "bcfg boot add 0 FS0:\EFI\BOOT\BOOTX64.efi \"my_boot\"" > ${RUN_PATH}/startup.nsh
+#echo app.efi >> ${RUN_PATH}/startup.nsh
 mcopy -i /tmp/part.img ${RUN_PATH}/startup.nsh ::/startup.nsh
 
 ## make full image (with format and efi partition)
@@ -38,7 +48,8 @@ dd if=/tmp/part.img of=${DISK_PATH} bs=512 count=91669 seek=2048 conv=notrunc
 
 # run
 qemu-system-x86_64 \
-  -cpu qemu64 \
+  -cpu host \
+  -m 1G \
   -enable-kvm \
   -net none \
   -drive if=pflash,format=raw,unit=0,file=${OVMF_DISK_IMG},readonly=on \

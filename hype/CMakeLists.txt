@@ -12,7 +12,7 @@ set(HEADERS
 
 set(SOURCES
         src/main.cpp
-        src/debug.cpp src/environment.cpp src/efi.cpp)
+        src/debug.cpp src/environment.cpp src/efi.cpp src/crt.cpp)
 
 set(TARGET_NAME hype)
 
@@ -24,13 +24,14 @@ target_link_libraries(${TARGET_NAME} PRIVATE efi gnuefi arch_static)
 
 add_custom_command(TARGET "${TARGET_NAME}" POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
-
+#--target=efi-app-x86_64 #  "efi-app", "efi-bsd", "efi-rtd"
 function(efi_objcopy)
     cmake_parse_arguments(parsedargs "" "INFILE;OUTFILE" "SECTIONS" ${ARGN})
     add_custom_command(TARGET "${TARGET_NAME}" POST_BUILD
             COMMAND ${CMAKE_OBJCOPY}
             ${parsedargs_SECTIONS}
-            --target=efi-app-x86_64 #  "efi-app", "efi-bsd", "efi-rtd"
+            --output-target=pei-x86-64
+            --subsystem=efi-app     # efi-app  efi-rtd  efi-btd
             "${parsedargs_INFILE}"
             "${parsedargs_OUTFILE}")
 endfunction()

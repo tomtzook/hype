@@ -1,43 +1,17 @@
 #pragma once
 
 #include "environment.h"
+#include "debug.h"
 
 _GLIBCXX_NODISCARD
-void* operator new(size_t size) _GLIBCXX_USE_NOEXCEPT {
-    void* out;
-    hype::result result = hype::environment::allocate(size, &out);
-    if (result) {
-        return out;
-    }
-
-    return nullptr;
-}
+void* operator new(size_t size) noexcept;
+_GLIBCXX_NODISCARD
+void* operator new(size_t size, hype::environment::alignment_t alignment) noexcept;
 
 _GLIBCXX_NODISCARD
-void* operator new(size_t size, hype::environment::alignment_t alignment) _GLIBCXX_USE_NOEXCEPT {
-    void* out;
-    hype::result result = hype::environment::allocate(size, &out, alignment);
-    if (result) {
-        return out;
-    }
-
-    return nullptr;
-}
-
+void* operator new[](size_t size) noexcept;
 _GLIBCXX_NODISCARD
-void* operator new[](size_t size) _GLIBCXX_USE_NOEXCEPT {
-    return ::operator new(size);
-}
+void* operator new[](size_t size, hype::environment::alignment_t alignment) noexcept;
 
-_GLIBCXX_NODISCARD
-void* operator new[](size_t size, hype::environment::alignment_t alignment) _GLIBCXX_USE_NOEXCEPT {
-    return ::operator new(size, alignment);
-}
-
-void operator delete(void* memory) _GLIBCXX_USE_NOEXCEPT {
-    hype::environment::free(memory);
-}
-
-void operator delete[](void* memory) _GLIBCXX_USE_NOEXCEPT {
-    ::operator delete(memory);
-}
+void operator delete(void* memory) noexcept;
+void operator delete[](void* memory) noexcept;

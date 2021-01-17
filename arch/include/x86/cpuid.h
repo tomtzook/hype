@@ -83,15 +83,31 @@ struct cpuid_eax01_t {
 };
 
 void cpu_id(unsigned int leaf, cpuid_regs_t& regs, unsigned int sub_leaf = 0) noexcept;
+cpuid_regs_t cpu_id(unsigned int leaf, unsigned int sub_leaf = 0) noexcept;
+
 void cpu_id(unsigned int leaf, void* data_struct, unsigned int sub_leaf = 0) noexcept;
 
-template<typename T>
-void cpu_id(unsigned int leaf, T& data_struct, unsigned int sub_leaf = 0) noexcept {
-    void* data_ptr = reinterpret_cast<void*>(&data_struct);
-    cpu_id(leaf, data_ptr, sub_leaf);
-}
+template<typename cpuid_type>
+void cpu_id(unsigned int leaf, cpuid_type& data_struct, unsigned int sub_leaf = 0) noexcept;
+template<typename cpuid_type>
+cpuid_type cpu_id(unsigned int leaf, unsigned int sub_leaf = 0) noexcept;
 
 static_assert(sizeof(cpuid_regs_t) == 16, "cpuid_regs_t != 16");
 static_assert(sizeof(cpuid_eax01_t) == 16, "cpuid_eax01_t != 16");
 
+}
+
+template<typename cpuid_type>
+void x86::cpu_id(unsigned int leaf, cpuid_type& data_struct, unsigned int sub_leaf) noexcept {
+    static_assert(sizeof(cpuid_type) == sizeof(cpuid_regs_t), "cpuid_type != cpuid regs size");
+    void* data_ptr = reinterpret_cast<void*>(&data_struct);
+    cpu_id(leaf, data_ptr, sub_leaf);
+}
+
+template<typename cpuid_type>
+cpuid_type x86::cpu_id(unsigned int leaf, unsigned int sub_leaf) noexcept {
+    static_assert(sizeof(cpuid_type) == sizeof(cpuid_regs_t), "cpuid_type != cpuid regs size");
+    cpuid_type t = {0};
+    cpu_id(leaf, t, sub_leaf);
+    return t;
 }

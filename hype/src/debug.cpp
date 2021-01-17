@@ -5,8 +5,16 @@
 
 #include "debug.h"
 
+#ifdef _DEBUG
 
-void hype::debug::trace(const x86::segment_table_t& table) {
+void hype::debug::deadloop() noexcept {
+    int wait = 1;
+    while (wait) {
+        __asm__ __volatile__("hlt");
+    }
+}
+
+void hype::debug::trace(const x86::segment_table_t& table) noexcept {
     size_t descriptor_count = table.limit() / sizeof(x86::segment_descriptor_t);
     TRACE_DEBUG("--GDT-- BASE=%x  LIMIT=%d  COUNT=%d --", table.base_address(), table.limit(), descriptor_count);
 
@@ -24,4 +32,8 @@ void hype::debug::trace(const x86::segment_table_t& table) {
                     x86::debug::to_string(descriptor.default_big()),
                     x86::debug::to_string(descriptor.granularity()));
     }
+
+    TRACE_DEBUG("--END--GDT--------------------------");
 }
+
+#endif

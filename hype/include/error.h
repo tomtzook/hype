@@ -3,6 +3,24 @@
 #include "types.h"
 
 
+#define VERIFY(...) \
+    do {            \
+        status = __VA_ARGS__; \
+        if (!status) { \
+            TRACE_ERROR("Error in call %d", status.code()); \
+            goto cleanup; \
+        } \
+    } while(0)
+
+#define VERIFY_ALLOCATION(mem) \
+    do {            \
+        if (nullptr == mem) { \
+            TRACE_ERROR("Memory is null (unallocated)"); \
+            status = hype::result::ALLOCATION_ERROR; \
+            goto cleanup; \
+        } \
+    } while(0)
+
 namespace hype {
 
 using result_code_t = uint32_t;
@@ -15,7 +33,8 @@ enum class result_category_t {
 class result {
 public:
     enum code_t {
-        SUCCESS = 0
+        SUCCESS = 0,
+        ALLOCATION_ERROR
     };
 
     result() = delete;
@@ -32,8 +51,12 @@ public:
         return m_category;
     }
 
-    explicit operator bool() const noexcept {
+    bool success() const noexcept {
         return 0 == m_code;
+    }
+
+    explicit operator bool() const noexcept {
+        return success();
     }
 private:
     result_code_t m_code;

@@ -45,7 +45,7 @@ common::result common::environment::allocate(size_t size,
     }
 
     *out = memory;
-    return hype::efi::efi_result(status);
+    return efi::result::efi_result(status);
 }
 
 common::result common::environment::free(void* memory) noexcept {
@@ -54,5 +54,5 @@ common::result common::environment::free(void* memory) noexcept {
     }
 
     EFI_STATUS status = uefi_call_wrapper((void*)BS->FreePool, 1, memory);
-    return hype::efi::efi_result(status);
+    return efi::result::efi_result(status);
 }

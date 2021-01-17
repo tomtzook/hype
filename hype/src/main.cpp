@@ -12,7 +12,7 @@ efi_main(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE* system_table) {
     InitializeLib(image_handle, system_table);
     TRACE_DEBUG("Hello from the UEFI");
 
-    hype::context_t* context;
+    hype::context_t* context = nullptr;
     CHECK(hype::initialize(context));
 
     // do something with the context
@@ -26,7 +26,7 @@ cleanup:
         }
     }
 
-    TRACE_DEBUG("Finished with status: %d", status);
+    TRACE_DEBUG("Finished with status: %d", status.code());
     common::debug::deadloop();
 
     return EFI_SUCCESS;

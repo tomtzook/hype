@@ -6,6 +6,6 @@
 
 namespace x86 {
 
-const uint32_t PAGE_SIZE = 4096;
+const uint32_t PAGE_SIZE = 0x1000;
 
 }

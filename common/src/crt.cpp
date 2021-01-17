@@ -4,7 +4,6 @@
 #include "crt.h"
 
 
-_GLIBCXX_NODISCARD
 void* operator new(size_t size) noexcept {
     void* out;
     common::result result = common::environment::allocate(size, &out);
@@ -15,7 +14,6 @@ void* operator new(size_t size) noexcept {
     return nullptr;
 }
 
-_GLIBCXX_NODISCARD
 void* operator new(size_t size, common::environment::alignment_t alignment) noexcept {
     void* out;
     common::result result = common::environment::allocate(size, &out, alignment);
@@ -26,12 +24,10 @@ void* operator new(size_t size, common::environment::alignment_t alignment) noex
     return nullptr;
 }
 
-_GLIBCXX_NODISCARD
 void* operator new[](size_t size) noexcept {
     return ::operator new(size);
 }
 
-_GLIBCXX_NODISCARD
 void* operator new[](size_t size, common::environment::alignment_t alignment) noexcept {
     return ::operator new(size, alignment);
 }

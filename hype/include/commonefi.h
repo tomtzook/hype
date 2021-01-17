@@ -13,8 +13,19 @@ extern "C" {
 
 #include "common.h"
 
-namespace hype::efi {
+namespace efi::result {
+
+const common::result_category_t CATEGORY = 1;
 
 common::result efi_result(EFI_STATUS efi_status) noexcept;
 
+#ifdef _DEBUG
+namespace debug {
+const wchar_t* to_string(const common::result& result) noexcept;
 }
+#endif
+
+}
+
+template<>
+common::result::result(EFI_STATUS code) noexcept;

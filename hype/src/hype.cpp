@@ -28,7 +28,7 @@ static common::result check_environment_support() noexcept {
 common::result hype::initialize(context_t*&context) noexcept {
     common::result status = hype::result::SUCCESS;
     if (nullptr != context) {
-        return hype::result::SUCCESS;
+        return hype::result::ALREADY_INITIALIZED;
     }
 
     CHECK(check_environment_support());
@@ -43,6 +43,23 @@ common::result hype::free(context_t* context) noexcept {
     return hype::result::SUCCESS;
 }
 
+template<>
+common::result::result(hype::result::code_t code) noexcept
+        : m_code(code)
+        , m_category(hype::result::CATEGORY)
+{}
+
+#ifdef _DEBUG
+const wchar_t* hype::result::debug::to_string(const common::result& result) noexcept {
+    switch (result.code()) {
+        case hype::result::SUCCESS: return L"SUCCESS";
+        case hype::result::ALLOCATION_ERROR: return L"ALLOCATION_ERROR";
+        case hype::result::NOT_SUPPORTED: return L"NOT_SUPPORTED";
+        case hype::result::ALREADY_INITIALIZED: return L"ALREADY_INITIALIZED";
+        default: return L"";
+    }
+}
+#endif
 
 /*x86::cpuid_regs_t cpuid_regs = {};
 x86::cpu_id(1, cpuid_regs);

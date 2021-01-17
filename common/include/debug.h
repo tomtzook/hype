@@ -13,7 +13,7 @@
     )
 
 #define TRACE_ERROR(fmt, ...) DEBUG_ONLY( \
-    common::debug::trace(L"[ERROR] " fmt "\n", ##__VA_ARGS__);  \
+    common::debug::trace(L"[ERROR] %s.%d: " fmt "\n", L"" __FILE__, __LINE__, ##__VA_ARGS__);  \
     )
 
 #define TRACE_CPUID_REG(leaf, subleaf, reg, value) \

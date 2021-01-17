@@ -243,10 +243,3 @@ void x86::debug::trace(const segment_table_t& table) noexcept {
     TRACE_DEBUG("--END--GDT--------------------------");
 }
 #endif
-
-
-/*
- * void hype::debug::trace(const x86::segment_table_t& table) noexcept {
-
-}
- */

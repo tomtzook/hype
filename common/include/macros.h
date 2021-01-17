@@ -1,6 +1,6 @@
 #pragma once
 
-#include <cstdint>
+#include <bits/wordsize.h>
 
 #if __WORDSIZE == 64
 #define X86_64

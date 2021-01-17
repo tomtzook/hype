@@ -3,6 +3,8 @@
 #include <types.h>
 
 
+extern "C" size_t _bit_scan_reverse(uint64_t value) noexcept;
+
 extern "C" uint64_t _read_cr0() noexcept;
 extern "C" void _write_cr0(uint64_t value) noexcept;
 
@@ -19,3 +21,5 @@ extern "C" uint64_t _read_msr(uint32_t id) noexcept;
 extern "C" void _write_msr(uint32_t id, uint64_t value) noexcept;
 
 extern "C" void _cpuid(uint32_t leaf, uint32_t subleaf, uint32_t* regs) noexcept;
+
+extern "C" uint32_t _vmxon(uintn_t vmxon_addr) noexcept;

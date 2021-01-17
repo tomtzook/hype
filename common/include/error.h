@@ -4,6 +4,12 @@
 #include "debug.h"
 
 
+#define ERROR(result) \
+    do {              \
+        status = result; \
+        goto cleanup; \
+    } while(0)
+
 #define CHECK(...) \
     do {            \
         status = __VA_ARGS__; \
@@ -13,7 +19,7 @@
         } \
     } while(0)
 
-#define VERIFY_ALLOCATION(mem) \
+#define CHECK_ALLOCATION(mem) \
     do {            \
         if (nullptr == mem) { \
             TRACE_ERROR("Memory is null (unallocated)"); \
@@ -21,6 +27,16 @@
             goto cleanup; \
         } \
     } while(0)
+
+#define CHECK_ASSERT(assertion, message) \
+    do {                           \
+        if (!(assertion)) {          \
+            TRACE_ERROR("Assertion Error: %s", L"" message); \
+            status = common::result::ASSERTION_ERROR;        \
+            goto cleanup; \
+        } \
+    } while(0)
+
 
 namespace common {
 
@@ -32,7 +48,8 @@ public:
     static const result_category_t COMMON = 0;
     enum common_code_t {
         SUCCESS = 0,
-        ALLOCATION_ERROR = 1
+        ALLOCATION_ERROR,
+        ASSERTION_ERROR
     };
 
     result_t() = delete;

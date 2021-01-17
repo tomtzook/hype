@@ -11,7 +11,7 @@ const common::result_category_t CATEGORY = 1;
 
 enum code_t {
     SUCCESS = 0,
-    NOT_SUPPORTED,
+    VMX_NOT_SUPPORTED,
     ALREADY_INITIALIZED
 };
 

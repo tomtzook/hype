@@ -8,15 +8,15 @@
 
 static const EFI_MEMORY_TYPE AllocationType = PoolAllocationType;
 
-static size_t alignment_to_size(common::environment::alignment_t alignment) {
+static size_t alignment_to_size(environment::alignment_t alignment) {
     switch (alignment) {
-        case common::environment::alignment_t::PAGE_ALIGN: return x86::PAGE_SIZE;
+        case environment::alignment_t::PAGE_ALIGN: return x86::PAGE_SIZE;
         default: return 0;
     }
 }
 
 
-common::result common::environment::allocate(size_t size,
+common::result environment::allocate(size_t size,
                                                void** out,
                                                alignment_t alignment) noexcept {
     // EfiRuntimeServicesData -> memory for runtime drivers.
@@ -48,11 +48,16 @@ common::result common::environment::allocate(size_t size,
     return efi::result::efi_result(status);
 }
 
-common::result common::environment::free(void* memory) noexcept {
+common::result environment::free(void* memory) noexcept {
     if (nullptr == memory) {
         return hype::result::SUCCESS;
     }
 
     EFI_STATUS status = uefi_call_wrapper((void*)BS->FreePool, 1, memory);
     return efi::result::efi_result(status);
+}
+
+uintn_t environment::to_physical(void* address) noexcept {
+    // 1-to-1 mapping because of UEFI
+    return reinterpret_cast<uintn_t>(address);
 }

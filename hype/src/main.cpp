@@ -14,8 +14,7 @@ efi_main(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE* system_table) {
 
     hype::context_t* context = nullptr;
     CHECK(hype::initialize(context));
-
-    // do something with the context
+    CHECK(hype::start(context));
 
     TRACE_DEBUG("THIS IS THE END");
 cleanup:

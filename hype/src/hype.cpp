@@ -5,6 +5,7 @@
 #include <x86/msr.h>
 #include <x86/memory.h>
 #include <x86/vmx/environment.h>
+#include <x86/vmx/operations.h>
 
 #include "common.h"
 
@@ -12,13 +13,13 @@
 
 
 struct hype::context_t {
-
+    void* vmxon_region;
 };
 
 
 static common::result check_environment_support() noexcept {
     if (!x86::vmx::is_supported()) {
-        return hype::result::NOT_SUPPORTED;
+        return hype::result::VMX_NOT_SUPPORTED;
     }
 
     return hype::result::SUCCESS;
@@ -38,6 +39,15 @@ cleanup:
     return status;
 }
 
+common::result hype::start(context_t* context) noexcept {
+    common::result status = hype::result::SUCCESS;
+
+    CHECK(x86::vmx::on(context->vmxon_region));
+
+cleanup:
+    return status;
+}
+
 common::result hype::free(context_t* context) noexcept {
     ::operator delete(context);
     return hype::result::SUCCESS;
@@ -53,7 +63,7 @@ common::result::result_t(hype::result::code_t code) noexcept
 const wchar_t* hype::result::debug::to_string(const common::result& result) noexcept {
     switch (result.code()) {
         case hype::result::SUCCESS: return L"SUCCESS";
-        case hype::result::NOT_SUPPORTED: return L"NOT_SUPPORTED";
+        case hype::result::VMX_NOT_SUPPORTED: return L"VMX_NOT_SUPPORTED";
         case hype::result::ALREADY_INITIALIZED: return L"ALREADY_INITIALIZED";
         default: return L"";
     }

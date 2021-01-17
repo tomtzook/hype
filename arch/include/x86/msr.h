@@ -5,8 +5,10 @@
 
 namespace x86::msr {
 
+using id_t = uint32_t;
+
 struct ia32_efer_t {
-    static const uint32_t ID = 0xC0000080;
+    static const id_t ID = 0xC0000080;
     union {
         struct {
             uint64_t sce : 1;
@@ -25,36 +27,70 @@ struct ia32_efer_t {
     };
 } PACKED;
 
+struct ia32_feature_ctrl_t {
+    static const id_t ID = 0x3a;
+    union {
+        struct {
+            uint64_t lock_bit : 1;
+            uint64_t vmx_smx : 1;
+            uint64_t vmx_no_smx : 1;
+            uint64_t reserved10 : 61;
+        } bits;
+        uint64_t raw;
+    };
+} PACKED;
 
-uint64_t read(uint32_t msr_id) noexcept;
-void write(uint32_t msr_id, uint64_t value) noexcept;
+struct ia32_vmx_basic_t {
+    static const id_t ID = 0x480;
+    union {
+        struct {
+            uint64_t vmcs_revision : 31;
+            uint64_t must_be_zero : 1;
+            uint64_t vm_struct_size : 13;
+            uint64_t reserved0 : 3;
+            uint64_t physaddr_width_type : 1;
+            uint64_t dual_monitor_smi : 1;
+            uint64_t vmcs_mem_type : 3;
+            uint64_t ins_outs_vmexit_report : 1;
+            uint64_t vm_ctrls_fixed : 1;
+            uint64_t reserved1 : 8;
+        } bits;
+        uint64_t raw;
+    };
+} PACKED;
+
+uint64_t read(id_t msr_id) noexcept;
+void write(id_t msr_id, uint64_t value) noexcept;
 
 template<typename msr_type>
-msr_type read(uint32_t msr_id) noexcept;
+msr_type read(id_t msr_id) noexcept;
 template<typename msr_type>
-void read(uint32_t msr_id, msr_type& msr) noexcept;
+void read(id_t msr_id, msr_type& msr) noexcept;
 template<typename msr_type>
-void write(uint32_t msr_id, const msr_type& msr) noexcept;
+void write(id_t msr_id, const msr_type& msr) noexcept;
 
 static_assert(sizeof(ia32_efer_t) == 8, "ia32_efer_t != 8");
+static_assert(sizeof(ia32_feature_ctrl_t) == 8, "ia32_feature_ctrl_t != 8");
+static_assert(sizeof(ia32_vmx_basic_t) == 8, "ia32_vmx_basic_t != 8");
 
 }
 
 template<typename msr_type>
-msr_type x86::msr::read(uint32_t msr_id) noexcept {
+msr_type x86::msr::read(id_t msr_id) noexcept {
     msr_type msr = {0};
     read(msr_id, msr);
     return msr;
 }
 
 template<typename msr_type>
-void x86::msr::read(uint32_t msr_id, msr_type& msr) noexcept {
+void x86::msr::read(id_t msr_id, msr_type& msr) noexcept {
     uint64_t value = read(msr_id);
     auto& msr_r = reinterpret_cast<uint64_t&>(msr);
     msr_r = value;
 }
 
 template<typename msr_type>
-void x86::msr::write(uint32_t msr_id, const msr_type& msr) noexcept {
-    write(msr_id, reinterpret_cast<uint64_t>(msr));
+void x86::msr::write(id_t msr_id, const msr_type& msr) noexcept {
+    auto& msr_r = reinterpret_cast<const uint64_t&>(msr);
+    write(msr_id, msr_r);
 }

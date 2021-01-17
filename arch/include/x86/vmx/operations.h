@@ -5,6 +5,6 @@
 
 namespace x86::vmx {
 
-bool is_supported() noexcept;
+common::result on(void*& vmxon_region) noexcept;
 
 }

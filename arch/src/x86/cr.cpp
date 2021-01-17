@@ -2,6 +2,7 @@
 
 #include "x86/cr.h"
 
+
 x86::cr0_t::cr0_t() noexcept {
     read(*this);
 }

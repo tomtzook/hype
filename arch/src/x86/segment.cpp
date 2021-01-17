@@ -1,6 +1,9 @@
-#include "x86/intrinsic.h"
+#include <types.h>
+#include <debug.h>
 
+#include "x86/intrinsic.h"
 #include "x86/segment.h"
+
 
 x86::segment_descriptor_t::segment_descriptor_t() {
 #ifdef X86_64
@@ -194,7 +197,7 @@ const wchar_t* x86::debug::to_string(granularity_t granularity) noexcept {
     }
 }
 
-const wchar_t* x86::debug::type_to_string(const segment_descriptor_t& descriptor) {
+const wchar_t* x86::debug::type_to_string(const segment_descriptor_t& descriptor) noexcept {
     if (descriptor.is_system()) {
         return to_string(static_cast<system_type_t>(descriptor.bits.type));
     } else if (descriptor.is_data()) {
@@ -203,4 +206,47 @@ const wchar_t* x86::debug::type_to_string(const segment_descriptor_t& descriptor
         return to_string(static_cast<code_type_t>(descriptor.bits.type));
     }
 }
+
+void x86::debug::trace(const segment_descriptor_t& descriptor) noexcept {
+    TRACE_DEBUG("BASE=%x LIMIT=%d DT=%s T=%s PRIV=%d PRES=%d AVAIL=%d LONG=%d D/B=%s GRAN=%s",
+                descriptor.base_address(), descriptor.limit(),
+                x86::debug::to_string(descriptor.descriptor_type()),
+                x86::debug::type_to_string(descriptor),
+                descriptor.bits.privilege,
+                descriptor.bits.present,
+                descriptor.bits.available,
+                descriptor.bits.long_mode,
+                x86::debug::to_string(descriptor.default_big()),
+                x86::debug::to_string(descriptor.granularity()));
+}
+
+void x86::debug::trace(const segment_table_t& table) noexcept {
+    size_t descriptor_count = table.limit() / sizeof(x86::segment_descriptor_t);
+    TRACE_DEBUG("--GDT-- BASE=%x  LIMIT=%d  COUNT=%d --", table.base_address(), table.limit(), descriptor_count);
+
+    for (size_t i = 0; i < descriptor_count; i++) {
+        const x86::segment_descriptor_t& descriptor = table[i];
+
+        TRACE_DEBUG("(%d) BASE=%x LIMIT=%d DT=%s T=%s PRIV=%d PRES=%d AVAIL=%d LONG=%d D/B=%s GRAN=%s",
+                    i, descriptor.base_address(), descriptor.limit(),
+                    x86::debug::to_string(descriptor.descriptor_type()),
+                    x86::debug::type_to_string(descriptor),
+                    descriptor.bits.privilege,
+                    descriptor.bits.present,
+                    descriptor.bits.available,
+                    descriptor.bits.long_mode,
+                    x86::debug::to_string(descriptor.default_big()),
+                    x86::debug::to_string(descriptor.granularity()));
+
+    }
+
+    TRACE_DEBUG("--END--GDT--------------------------");
+}
 #endif
+
+
+/*
+ * void hype::debug::trace(const x86::segment_table_t& table) noexcept {
+
+}
+ */

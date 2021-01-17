@@ -11,10 +11,10 @@ extern "C" {
 }
 #endif
 
-#include "error.h"
+#include "common.h"
 
 namespace hype::efi {
 
-hype::result efi_result(EFI_STATUS efi_status) noexcept;
+common::result efi_result(EFI_STATUS efi_status) noexcept;
 
 }

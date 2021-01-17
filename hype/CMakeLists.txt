@@ -3,32 +3,34 @@ list(APPEND COMPILE_FLAGS "-fno-stack-protector" "-fpic" "-fshort-wchar" "-mno-r
 set(LINK_FLAGS -nostdlib -T ${EFI_LDS} -shared -Bsymbolic -L ${EFI_LIB_PATH} -L ${LIB_PATH} ${EFI_CRT_OBJS})
 
 include_directories(${EFI_INCLUDE_PATH} ${EFI_INCLUDE_PATH}/${ARCH} ${EFI_INCLUDE_PATH}/protocol)
+include_directories(../common/include)
 include_directories(../arch/include)
 include_directories(include)
 
 set(HEADERS
-        include/debug.h
         include/commonefi.h
-        include/environment.h
-        include/error.h
-        include/crt.h
-        include/hype.h)
+        include/hype.h include/common.h)
 
 set(SOURCES
+        src/common/environment.cpp
+        src/common/debug.cpp
         src/main.cpp
-        src/debug.cpp
-        src/environment.cpp
         src/efi.cpp
-        src/crt.cpp
         src/hype.cpp)
 
 set(TARGET_NAME hype)
 
-add_library(${TARGET_NAME} SHARED ${HEADERS} ${SOURCES})
+add_library(${TARGET_NAME} SHARED
+        ${HEADERS}
+        ${SOURCES}
+        $<TARGET_OBJECTS:common_obj>
+        $<TARGET_OBJECTS:arch_obj>
+        )
+
 target_compile_definitions("${TARGET_NAME}" PUBLIC _DEBUG EFI_FUNCTION_WRAPPER)
 target_compile_options(${TARGET_NAME} PRIVATE ${COMPILE_FLAGS})
 target_link_options(${TARGET_NAME} PRIVATE ${LINK_FLAGS})
-target_link_libraries(${TARGET_NAME} PRIVATE efi gnuefi arch_static)
+target_link_libraries(${TARGET_NAME} PRIVATE efi gnuefi)
 
 add_custom_command(TARGET "${TARGET_NAME}" POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})

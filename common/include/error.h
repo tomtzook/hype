@@ -21,7 +21,7 @@
         } \
     } while(0)
 
-namespace hype {
+namespace common {
 
 using result_code_t = uint32_t;
 
@@ -32,12 +32,6 @@ enum class result_category_t {
 
 class result {
 public:
-    enum code_t {
-        SUCCESS = 0,
-        ALLOCATION_ERROR,
-        NOT_SUPPORTED
-    };
-
     result() = delete;
     result(result_code_t code, result_category_t category = result_category_t::HYPE)
         : m_code(code)

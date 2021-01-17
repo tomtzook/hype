@@ -1,3 +1,4 @@
+
 #include <x86/cpuid.h>
 #include <x86/segment.h>
 #include <x86/cr.h>
@@ -5,9 +6,8 @@
 #include <x86/memory.h>
 #include <x86/vmx/environment.h>
 
-#include "crt.h"
-#include "debug.h"
-#include "error.h"
+#include "common.h"
+
 #include "hype.h"
 
 
@@ -16,7 +16,7 @@ struct hype::context_t {
 };
 
 
-static hype::result check_environment_support() noexcept {
+static common::result check_environment_support() noexcept {
     if (!x86::vmx::is_supported()) {
         return hype::result::NOT_SUPPORTED;
     }
@@ -25,8 +25,8 @@ static hype::result check_environment_support() noexcept {
 }
 
 
-hype::result hype::initialize(context_t*&context) noexcept {
-    hype::result status = hype::result::SUCCESS;
+common::result hype::initialize(context_t*&context) noexcept {
+    common::result status = hype::result::SUCCESS;
     if (nullptr != context) {
         return hype::result::SUCCESS;
     }
@@ -38,7 +38,7 @@ cleanup:
     return status;
 }
 
-hype::result hype::free(context_t* context) noexcept {
+common::result hype::free(context_t* context) noexcept {
     ::operator delete(context);
     return hype::result::SUCCESS;
 }

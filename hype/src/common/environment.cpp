@@ -1,13 +1,22 @@
-#include "commonefi.h"
+#include <x86/memory.h>
 
-#include "environment.h"
-#include "debug.h"
+#include "commonefi.h"
+#include "common.h"
+
+#include <environment.h>
 
 
 static const EFI_MEMORY_TYPE AllocationType = PoolAllocationType;
 
+static size_t alignment_to_size(common::environment::alignment_t alignment) {
+    switch (alignment) {
+        case common::environment::alignment_t::PAGE_ALIGN: return x86::PAGE_SIZE;
+        default: return 0;
+    }
+}
 
-hype::result hype::environment::allocate(size_t size,
+
+common::result common::environment::allocate(size_t size,
                                          void** out,
                                          alignment_t alignment) noexcept {
     // EfiRuntimeServicesData -> memory for runtime drivers.
@@ -21,7 +30,7 @@ hype::result hype::environment::allocate(size_t size,
     void* memory;
 
     if (alignment_t::NO_ALIGN != alignment) {
-        size_t alignment_size = static_cast<size_t>(alignment);
+        size_t alignment_size = alignment_to_size(alignment);
         status = uefi_call_wrapper((void*)BS->AllocatePool, 3, AllocationType, size + alignment_size - 1, &memory);
         if (EFI_ERROR(status)) {
             memory = nullptr;
@@ -39,7 +48,7 @@ hype::result hype::environment::allocate(size_t size,
     return hype::efi::efi_result(status);
 }
 
-hype::result hype::environment::free(void* memory) noexcept {
+common::result common::environment::free(void* memory) noexcept {
     if (nullptr == memory) {
         return hype::result::SUCCESS;
     }

@@ -1,6 +1,7 @@
 #pragma once
 
-#include "types.h"
+#include <types.h>
+
 #include "cr.h"
 
 
@@ -161,7 +162,10 @@ const wchar_t* to_string(system_type_t system_type) noexcept;
 const wchar_t* to_string(descriptor_type_t descriptor_type) noexcept;
 const wchar_t* to_string(default_op_size_t default_op_size) noexcept;
 const wchar_t* to_string(granularity_t granularity) noexcept;
-const wchar_t* type_to_string(const segment_descriptor_t& descriptor);
+const wchar_t* type_to_string(const segment_descriptor_t& descriptor) noexcept;
+
+void trace(const segment_descriptor_t& descriptor) noexcept;
+void trace(const segment_table_t& table) noexcept;
 }
 #endif
 

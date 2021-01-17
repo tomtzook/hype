@@ -30,5 +30,6 @@ set(EFI_LIB_PATH /usr/local/lib)
 set(EFI_CRT_OBJS ${EFI_LIB_PATH}/crt0-efi-${ARCH}.o)
 set(EFI_LDS ${EFI_LIB_PATH}/elf_${ARCH}_efi.lds)
 
+add_subdirectory(common)
 add_subdirectory(arch)
 add_subdirectory(hype)

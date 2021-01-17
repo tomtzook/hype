@@ -1,7 +1,9 @@
 
+#include "common.h"
+
 #include "commonefi.h"
 
 
-hype::result hype::efi::efi_result(EFI_STATUS efi_status) noexcept {
-    return result(efi_status, hype::result_category_t::EFI);
+common::result hype::efi::efi_result(EFI_STATUS efi_status) noexcept {
+    return common::result(efi_status, common::result_category_t::EFI);
 }

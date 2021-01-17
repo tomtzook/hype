@@ -28,7 +28,7 @@ struct cr0_t {
 
     cr0_t() noexcept;
     explicit cr0_t(uint64_t raw) noexcept;
-} __attribute__((packed));
+} PACKED;
 
 struct cr3_t {
     union {
@@ -45,7 +45,7 @@ struct cr3_t {
 
     cr3_t() noexcept;
     explicit cr3_t(uint64_t raw) noexcept;
-} __attribute__((packed));
+} PACKED;
 
 struct cr4_t {
     union {
@@ -80,7 +80,7 @@ struct cr4_t {
 
     cr4_t() noexcept;
     explicit cr4_t(uint64_t raw) noexcept;
-} __attribute__((packed));
+} PACKED;
 
 void read(cr0_t& reg) noexcept;
 void write(const cr0_t& reg) noexcept;

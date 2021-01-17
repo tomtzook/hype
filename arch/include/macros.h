@@ -7,3 +7,5 @@
 #else
 #define X86
 #endif
+
+#define PACKED __attribute__ ((packed));

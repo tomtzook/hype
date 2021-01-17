@@ -3,7 +3,7 @@
 #include "types.h"
 
 
-#define VERIFY(...) \
+#define CHECK(...) \
     do {            \
         status = __VA_ARGS__; \
         if (!status) { \
@@ -34,7 +34,8 @@ class result {
 public:
     enum code_t {
         SUCCESS = 0,
-        ALLOCATION_ERROR
+        ALLOCATION_ERROR,
+        NOT_SUPPORTED
     };
 
     result() = delete;

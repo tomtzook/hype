@@ -36,11 +36,9 @@ void* operator new[](size_t size, hype::environment::alignment_t alignment) noex
 }
 
 void operator delete(void* memory) noexcept {
-    TRACE_DEBUG("hello11 %x", memory);
     hype::environment::free(memory);
 }
 
 void operator delete[](void* memory) noexcept {
-    TRACE_DEBUG("hello12 %x", memory);
     ::operator delete(memory);
 }

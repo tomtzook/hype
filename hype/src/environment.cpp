@@ -40,7 +40,6 @@ hype::result hype::environment::allocate(size_t size,
 }
 
 hype::result hype::environment::free(void* memory) noexcept {
-    TRACE_DEBUG("hello %x", memory);
     if (nullptr == memory) {
         return hype::result::SUCCESS;
     }

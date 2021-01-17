@@ -23,7 +23,7 @@ struct ia32_efer_t {
         } bits;
         uint64_t raw;
     };
-};
+} PACKED;
 
 
 uint64_t read(uint32_t msr_id) noexcept;

@@ -77,7 +77,7 @@ struct segment_selector_t {
 
         uint16_t raw;
     };
-} __attribute__((packed));
+} PACKED;
 
 struct segment_descriptor_t {
     union {
@@ -130,7 +130,7 @@ struct segment_descriptor_t {
 
     granularity_t granularity() const noexcept;
     void granularity(granularity_t granularity) noexcept;
-} __attribute__((packed));
+} PACKED;
 
 struct segment_table_t {
     uint16_t lim;
@@ -147,7 +147,7 @@ struct segment_table_t {
     segment_descriptor_t& operator[](const segment_selector_t& selector) noexcept;
     const segment_descriptor_t& operator[](int index) const noexcept;
     segment_descriptor_t& operator[](int index) noexcept;
-} __attribute__((packed));
+} PACKED;
 
 void write(const segment_table_t &gdt) noexcept;
 void store(segment_table_t& gdt) noexcept;

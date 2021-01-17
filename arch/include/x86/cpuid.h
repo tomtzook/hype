@@ -12,7 +12,7 @@ struct cpuid_regs_t {
     uint32_t ebx;
     uint32_t ecx;
     uint32_t edx;
-} __attribute__((packed));
+} PACKED;
 
 struct cpuid_eax01_t {
     union {
@@ -37,7 +37,8 @@ struct cpuid_eax01_t {
             uint32_t reserved0 : 2;
             uint32_t monitor : 1;
             uint32_t ds_cpl : 1;
-            uint32_t reserved1 : 2;
+            uint32_t vmx : 1;
+            uint32_t reserved1 : 1;
             uint32_t est : 1;
             uint32_t tm2 : 1;
             uint32_t reserved2 : 1;
@@ -80,7 +81,7 @@ struct cpuid_eax01_t {
         } bits;
         uint32_t raw;
     } edx;
-};
+} PACKED;
 
 void cpu_id(unsigned int leaf, cpuid_regs_t& regs, unsigned int sub_leaf = 0) noexcept;
 cpuid_regs_t cpu_id(unsigned int leaf, unsigned int sub_leaf = 0) noexcept;

@@ -9,3 +9,7 @@
 #endif
 
 #define PACKED __attribute__ ((packed));
+
+
+#define EXTRACT_BITS(value, start_idx, mask) (((value) >> (start_idx)) & (mask))
+#define CHECK_BIT(value, bit_idx) EXTRACT_BITS(value, bit_idx, 0x1)

@@ -4,9 +4,15 @@
 
 #define PAGE_ALIGNED __attribute__ ((aligned (x86::PAGE_SIZE)));
 
+#define SIZE_1GB (1073741824ull)
+
+#define PAGE_SHIFT_LEFT(value) ((value) << x86::PAGE_BITS)
+#define PAGE_SHIFT_RIGHT(value) ((value) >> x86::PAGE_BITS)
+
 namespace x86 {
 
 const size_t PAGE_SIZE = 0x1000;
+const size_t PAGE_BITS = 12;
 
 size_t get_maximum_physical_address_width() noexcept;
 

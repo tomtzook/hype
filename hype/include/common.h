@@ -12,7 +12,8 @@ const common::result_category_t CATEGORY = 1;
 enum code_t {
     SUCCESS = 0,
     VMX_NOT_SUPPORTED,
-    ALREADY_INITIALIZED
+    ALREADY_INITIALIZED,
+    HUGE_PAGES_NOT_SUPPORTED
 };
 
 #ifdef _DEBUG

@@ -4,6 +4,7 @@
 #include <x86/cr.h>
 #include <x86/msr.h>
 #include <x86/memory.h>
+#include <x86/paging.h>
 #include <x86/vmx/environment.h>
 #include <x86/vmx/operations.h>
 
@@ -15,6 +16,8 @@
 struct hype::context_t {
     void* vmxon_region;
 
+    x86::paging::huge_page_table_t page_table PAGE_ALIGNED;
+
     bool is_in_vmx_operation;
 };
 
@@ -25,6 +28,10 @@ static common::result check_environment_support() noexcept {
     }
     // TODO: add check for secondary and primary controls
     // TODO: add check for unrestricted guest support
+
+    if (!x86::paging::are_huge_tables_supported()) {
+        return hype::result::HUGE_PAGES_NOT_SUPPORTED;
+    }
 
     return hype::result::SUCCESS;
 }
@@ -44,6 +51,7 @@ common::result hype::initialize(context_t*&context) noexcept {
 
     // TODO: initialize per-cpu contexts
     // TODO: initialize page tables
+    CHECK(x86::paging::setup_identity_paging(context->page_table));
     // TODO: initialize EPT
 cleanup:
     return status;
@@ -85,6 +93,7 @@ const wchar_t* hype::result::debug::to_string(const common::result& result) noex
         case hype::result::SUCCESS: return L"SUCCESS";
         case hype::result::VMX_NOT_SUPPORTED: return L"VMX_NOT_SUPPORTED";
         case hype::result::ALREADY_INITIALIZED: return L"ALREADY_INITIALIZED";
+        case hype::result::HUGE_PAGES_NOT_SUPPORTED: return L"HUGE_PAGES_NOT_SUPPORTED";
         default: return L"";
     }
 }

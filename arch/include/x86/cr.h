@@ -27,24 +27,24 @@ struct cr0_t {
     };
 
     cr0_t() noexcept;
-    explicit cr0_t(uint64_t raw) noexcept;
+    cr0_t(uint64_t raw) noexcept;
 } PACKED;
 
 struct cr3_t {
     union {
         struct {
-            uint64_t pcid : 12;
-            uint64_t page_frame_number : 36;
-            uint64_t reserved1 : 12;
-            uint64_t reserved2 : 3;
-            uint64_t pcid_invalidate : 1;
+            uint64_t ignored0 : 3;
+            uint64_t oage_write_through : 1;
+            uint64_t page_cache_disable : 1;
+            uint64_t ignored1 : 7;
+            uint64_t page_table_address : 52;
         } bits;
 
         uint64_t raw;
     };
 
     cr3_t() noexcept;
-    explicit cr3_t(uint64_t raw) noexcept;
+    cr3_t(uint64_t raw) noexcept;
 } PACKED;
 
 struct cr4_t {
@@ -79,7 +79,7 @@ struct cr4_t {
     };
 
     cr4_t() noexcept;
-    explicit cr4_t(uint64_t raw) noexcept;
+    cr4_t(uint64_t raw) noexcept;
 } PACKED;
 
 void read(cr0_t& reg) noexcept;

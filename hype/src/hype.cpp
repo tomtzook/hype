@@ -44,7 +44,7 @@ common::result hype::free(context_t* context) noexcept {
 }
 
 template<>
-common::result::result(hype::result::code_t code) noexcept
+common::result::result_t(hype::result::code_t code) noexcept
         : m_code(code)
         , m_category(hype::result::CATEGORY)
 {}
@@ -53,7 +53,6 @@ common::result::result(hype::result::code_t code) noexcept
 const wchar_t* hype::result::debug::to_string(const common::result& result) noexcept {
     switch (result.code()) {
         case hype::result::SUCCESS: return L"SUCCESS";
-        case hype::result::ALLOCATION_ERROR: return L"ALLOCATION_ERROR";
         case hype::result::NOT_SUPPORTED: return L"NOT_SUPPORTED";
         case hype::result::ALREADY_INITIALIZED: return L"ALREADY_INITIALIZED";
         default: return L"";

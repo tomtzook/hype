@@ -9,7 +9,7 @@ common::result efi::result::efi_result(EFI_STATUS efi_status) noexcept {
 }
 
 template<>
-common::result::result(EFI_STATUS code) noexcept
+common::result::result_t(EFI_STATUS code) noexcept
         : m_code(code)
         , m_category(efi::result::CATEGORY)
 {}

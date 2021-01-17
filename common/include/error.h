@@ -17,7 +17,7 @@
     do {            \
         if (nullptr == mem) { \
             TRACE_ERROR("Memory is null (unallocated)"); \
-            status = hype::result::ALLOCATION_ERROR; \
+            status = common::result::ALLOCATION_ERROR; \
             goto cleanup; \
         } \
     } while(0)
@@ -27,42 +27,29 @@ namespace common {
 using result_code_t = uint64_t;
 using result_category_t = uint16_t;
 
-class result {
+class result_t {
 public:
-    result() = delete;
-    result(result&& other) noexcept
-            : m_code(other.m_code)
-            , m_category(other.m_category)
-    {}
-    result(result_code_t code, result_category_t category) noexcept
-        : m_code(code)
-        , m_category(category)
-    {}
+    static const result_category_t COMMON = 0;
+    enum common_code_t {
+        SUCCESS = 0,
+        ALLOCATION_ERROR = 1
+    };
+
+    result_t() = delete;
+    result_t(result_t&& other) noexcept;
+    result_t(result_code_t code, result_category_t category) noexcept;
 
     template<typename error_type>
-    result(error_type code) noexcept;
+    result_t(error_type code) noexcept;
 
-    result_code_t code() const noexcept {
-        return m_code;
-    }
+    result_code_t code() const noexcept;
+    result_category_t category() const noexcept;
 
-    result_category_t category() const noexcept {
-        return m_category;
-    }
+    bool success() const noexcept;
+    const wchar_t* message() const noexcept;
 
-    bool success() const noexcept {
-        return 0 == m_code;
-    }
-
-    explicit operator bool() const noexcept {
-        return success();
-    }
-
-    result& operator=(result&& other) noexcept {
-        m_code = other.m_code;
-        m_category = other.m_category;
-        return *this;
-    }
+    explicit operator bool() const noexcept;
+    result_t& operator=(result_t&& other) noexcept;
 private:
     result_code_t m_code;
     result_category_t m_category;
@@ -70,10 +57,11 @@ private:
 
 #ifdef _DEBUG
 namespace debug {
-
-const wchar_t* to_string(const result& result) noexcept;
-
+const wchar_t* to_string(const result_t& result) noexcept;
+const wchar_t* common_error_to_string(const result_t& result) noexcept;
 }
 #endif
+
+using result = result_t;
 
 }

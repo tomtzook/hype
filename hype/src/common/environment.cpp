@@ -17,8 +17,8 @@ static size_t alignment_to_size(common::environment::alignment_t alignment) {
 
 
 common::result common::environment::allocate(size_t size,
-                                         void** out,
-                                         alignment_t alignment) noexcept {
+                                               void** out,
+                                               alignment_t alignment) noexcept {
     // EfiRuntimeServicesData -> memory for runtime drivers.
     // This memory won't be deleted/overwritten when doing ExitBootServices. [UEFI-Specs 2.6 6.2 P152 "Note"]
     // Using it when subsystem=efi-app doesn't work, returning EFIERR(9).

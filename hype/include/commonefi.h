@@ -15,7 +15,7 @@ extern "C" {
 
 namespace efi::result {
 
-const common::result_category_t CATEGORY = 1;
+const common::result_category_t CATEGORY = 2;
 
 common::result efi_result(EFI_STATUS efi_status) noexcept;
 
@@ -28,4 +28,4 @@ const wchar_t* to_string(const common::result& result) noexcept;
 }
 
 template<>
-common::result::result(EFI_STATUS code) noexcept;
+common::result::result_t(EFI_STATUS code) noexcept;

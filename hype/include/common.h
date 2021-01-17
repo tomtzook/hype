@@ -7,11 +7,10 @@
 
 namespace hype::result {
 
-const common::result_category_t CATEGORY = 0;
+const common::result_category_t CATEGORY = 1;
 
 enum code_t {
     SUCCESS = 0,
-    ALLOCATION_ERROR,
     NOT_SUPPORTED,
     ALREADY_INITIALIZED
 };
@@ -25,4 +24,4 @@ const wchar_t* to_string(const common::result& result) noexcept;
 }
 
 template<>
-common::result::result(hype::result::code_t code) noexcept;
+common::result_t::result_t(hype::result::code_t code) noexcept;

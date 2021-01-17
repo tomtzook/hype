@@ -19,10 +19,7 @@ efi_main(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE* system_table) {
     TRACE_DEBUG("THIS IS THE END");
 cleanup:
     if (nullptr != context) {
-        common::result free_status = hype::free(context);
-        if (!free_status) {
-            TRACE_ERROR("Error freeing context %d", free_status.code());
-        }
+        hype::free(context);
     }
 
     TRACE_DEBUG("Finished with status: %d", status.code());

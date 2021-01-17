@@ -24,15 +24,11 @@ bool x86::is_page_aligned(void* ptr) noexcept {
     return is_page_aligned(address);
 }
 
-constexpr bool x86::is_page_aligned(uintn_t address) noexcept {
-    return 0 == (address & (PAGE_SIZE - 1));
-}
-
 size_t x86::get_address_size(uintn_t address) noexcept {
     return _bit_scan_reverse(address) + 1;
 }
 
-bool x86::does_address_in_max_physical_width(uintn_t address) noexcept {
+bool x86::is_address_in_max_physical_width(uintn_t address) noexcept {
     size_t address_size = get_address_size(address);
     size_t maxphys_width = get_maximum_physical_address_width();
 

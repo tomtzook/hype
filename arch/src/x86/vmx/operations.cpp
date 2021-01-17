@@ -6,7 +6,6 @@
 #include "x86/cpuid.h"
 #include "x86/cr.h"
 #include "x86/msr.h"
-#include "x86/intrinsic.h"
 #include "x86/memory.h"
 
 #include "x86/vmx/instrinsic.h"
@@ -58,6 +57,8 @@ common::result x86::vmx::on(void*& vmxon_region) noexcept {
     uint64_t vmxon_region_size;
     uintn_t vmxon_physaddr;
 
+    // TODO: modify CR0 & CR4 according to VMX restrictions
+
     CHECK(prepare_for_on());
 
     // loading vmxon region required [SDM 3 24.11.5 P1079]
@@ -72,11 +73,15 @@ common::result x86::vmx::on(void*& vmxon_region) noexcept {
 
     vmxon_physaddr = environment::to_physical(&vmxon_region);
     CHECK_ASSERT(x86::is_page_aligned(vmxon_physaddr), "vmxon region not page aligned");
-    CHECK_ASSERT(x86::does_address_in_max_physical_width(vmxon_physaddr),
+    CHECK_ASSERT(x86::is_address_in_max_physical_width(vmxon_physaddr),
                  "vmxon region exceeds maxphysaddress");
 
-    vmxon(vmxon_physaddr);
+    CHECK(vmxon(vmxon_physaddr));
 
 cleanup:
     return status;
+}
+
+common::result x86::vmx::off() noexcept {
+    return x86::result::SUCCESS;
 }

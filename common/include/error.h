@@ -37,6 +37,13 @@
         } \
     } while(0)
 
+#define CHECK_SILENT(...) \
+    do {            \
+        common::result __status = __VA_ARGS__; \
+        if (!__status) { \
+            TRACE_ERROR("Error in call (%d): %s", __status.code(), common::debug::to_string(__status)); \
+        } \
+    } while(0)
 
 namespace common {
 

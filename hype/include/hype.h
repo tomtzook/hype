@@ -1,17 +1,25 @@
 #pragma once
 
+#include <x86/paging.h>
 
 #include "common.h"
+#include "vcpu.h"
+#include "env.h"
 
 
 namespace hype {
 
-struct context_t;
+struct context_t {
+    environment_t environment;
 
-common::result initialize(context_t*& context) noexcept;
+    x86::paging::huge_page_table_t page_table PAGE_ALIGNED;
+};
 
-common::result start(context_t* context) noexcept;
+extern context_t* g_context;
 
-void free(context_t* context) noexcept;
+
+common::result initialize() noexcept;
+common::result start() noexcept;
+void free() noexcept;
 
 }

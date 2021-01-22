@@ -4,6 +4,10 @@
 
 namespace hype {
 
+class environment_t;
+
+common::result initialize(environment_t& environment) noexcept;
+
 class environment_t {
 public:
     environment_t() noexcept
@@ -13,7 +17,7 @@ public:
 
     vcpu_service_t& get_vcpu_service() noexcept;
 
-    friend common::result initialize(environment_t& environment) noexcept;
+    friend common::result hype::initialize(environment_t& environment) noexcept;
 private:
     vcpu_service_t m_vcpu_service;
 };

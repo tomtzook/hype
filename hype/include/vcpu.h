@@ -9,6 +9,9 @@ namespace hype {
 
 using vcpuid_t = uintn_t;
 using vcpu_procedure_t = common::result(void* param) noexcept;
+class vcpu_service_t;
+
+common::result initialize(vcpu_service_t& service) noexcept;
 
 struct vcpu_t {
     x86::vmx::vmxon_region_t vmxon_region PAGE_ALIGNED;
@@ -28,7 +31,7 @@ public:
 
     common::result run_on_each_vcpu(vcpu_procedure_t procedure, void* param = nullptr) noexcept;
 
-    friend common::result initialize(vcpu_service_t& service) noexcept;
+    friend common::result hype::initialize(vcpu_service_t& service) noexcept;
 private:
     vcpu_t* m_vcpus PAGE_ALIGNED;
     size_t m_vcpus_count;

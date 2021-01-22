@@ -1,6 +1,8 @@
 
 #include <x86/msr.h>
 
+#include "common.h"
+
 #include "vcpu.h"
 
 
@@ -29,9 +31,10 @@ size_t hype::vcpu_service_t::get_vcpu_count() noexcept {
 
 common::result hype::vcpu_service_t::run_on_each_vcpu(vcpu_procedure_t procedure, void* param) noexcept {
     // can use MpServices from EFI if before exit boot services.
+    return hype::result::SUCCESS;
 }
 
 common::result hype::initialize(vcpu_service_t& service) noexcept {
-
+    return hype::result::SUCCESS;
 }
 

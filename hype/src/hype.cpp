@@ -13,11 +13,7 @@
 #include "hype.h"
 
 
-struct hype::context_t {
-    environment_t environment;
-
-    x86::paging::huge_page_table_t page_table PAGE_ALIGNED;
-};
+hype::context_t* g_context = nullptr;
 
 
 static common::result check_environment_support() noexcept {
@@ -70,39 +66,41 @@ cleanup:
     return status;
 }
 
-common::result hype::initialize(context_t*&context) noexcept {
+common::result hype::initialize() noexcept {
     common::result status = hype::result::SUCCESS;
-    if (nullptr != context) {
+    if (nullptr != g_context) {
         return hype::result::ALREADY_INITIALIZED;
     }
 
     CHECK(check_environment_support());
-    CHECK(initialize(context->environment));
 
-    context = new hype::context_t;
-    // TODO: initialize page tables
-    CHECK(x86::paging::setup_identity_paging(context->page_table));
+    g_context = new hype::context_t;
+    CHECK(initialize(g_context->environment));
+    CHECK(x86::paging::setup_identity_paging(g_context->page_table));
     // TODO: initialize EPT
 cleanup:
+    if (!status) {
+        ::operator delete(g_context);
+    }
     return status;
 }
 
-common::result hype::start(context_t* context) noexcept {
+common::result hype::start() noexcept {
     common::result status = hype::result::SUCCESS;
 
-    CHECK(context->environment.get_vcpu_service().run_on_each_vcpu(
+    CHECK(g_context->environment.get_vcpu_service().run_on_each_vcpu(
             start_on_vcpu,
-            context));
+            g_context));
 cleanup:
     return status;
 }
 
-void hype::free(context_t* context) noexcept {
-    CHECK_SILENT(context->environment.get_vcpu_service().run_on_each_vcpu(
+void hype::free() noexcept {
+    CHECK_SILENT(g_context->environment.get_vcpu_service().run_on_each_vcpu(
             free_on_vcpu,
-            context));
+            g_context));
 
-    ::operator delete(context);
+    ::operator delete(g_context);
 }
 
 template<>

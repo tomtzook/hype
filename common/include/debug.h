@@ -3,7 +3,7 @@
 
 #ifdef _DEBUG
 #define DEBUG_ONLY(...) \
-    do { __VA_ARGS__ } while(0)
+    do { __VA_ARGS__; } while(0)
 #else
 #define DEBUG_ONLY(...)
 #endif

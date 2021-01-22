@@ -1,6 +1,9 @@
 #pragma once
 
 #include <error.h>
+#include <types.h>
+
+#include "x86/memory.h"
 
 
 namespace x86::paging {

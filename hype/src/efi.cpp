@@ -4,7 +4,7 @@
 #include "commonefi.h"
 
 
-static const EFI_MEMORY_TYPE AllocationType = PoolAllocationType;
+static const EFI_MEMORY_TYPE ALLOCATION_TYPE = PoolAllocationType;
 
 static bool g_is_after_exit_boot_services = false;
 static EFI_EXIT_BOOT_SERVICES g_original_exit_boot_services = nullptr;
@@ -31,7 +31,7 @@ common::result efi::allocate(size_t size, void** out) noexcept {
     EFI_STATUS status;
     void* memory;
 
-    status = uefi_call_wrapper((void*)BS->AllocatePool, 3, AllocationType, size, &memory);
+    status = uefi_call_wrapper((void*)BS->AllocatePool, 3, ALLOCATION_TYPE, size, &memory);
     if (EFI_ERROR(status)) {
         memory = nullptr;
     }

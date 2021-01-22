@@ -8,7 +8,7 @@ namespace x86::msr {
 using id_t = uint32_t;
 
 struct ia32_efer_t {
-    static const id_t ID = 0xC0000080;
+    static constexpr id_t ID = 0xC0000080;
     union {
         struct {
             uint64_t sce : 1;
@@ -28,7 +28,7 @@ struct ia32_efer_t {
 } PACKED;
 
 struct ia32_feature_ctrl_t {
-    static const id_t ID = 0x3a;
+    static constexpr id_t ID = 0x3a;
     union {
         struct {
             uint64_t lock_bit : 1;
@@ -41,7 +41,7 @@ struct ia32_feature_ctrl_t {
 } PACKED;
 
 struct ia32_fs_base_t {
-    static const id_t ID = 0xC0000100;
+    static constexpr id_t ID = 0xC0000100;
     union {
         uint64_t raw;
     };

@@ -69,9 +69,9 @@ enum granularity_t : uint8_t {
 struct segment_selector_t {
     union {
         struct {
-            uint16_t request_privilege_level : 2;
-            selector_table_t table : 1;
-            uint16_t index : 13;
+            uint16_t request_privilege_level: 2;
+            selector_table_t table: 1;
+            uint16_t index: 13;
         } bits;
 
         uint16_t raw;
@@ -81,23 +81,23 @@ struct segment_selector_t {
 struct segment_descriptor_t {
     union {
         struct {
-            uint64_t limit_low : 16;
-            uint64_t base_address_low : 16;
-            uint64_t base_address_middle : 8;
-            uint8_t type : 4;
-            descriptor_type_t descriptor_type : 1;
-            uint64_t privilege : 2;
-            bool present : 1;
-            uint64_t limit_high : 4;
-            bool available : 1;
-            bool long_mode : 1;
-            default_op_size_t default_big : 1;
-            granularity_t granularity : 1;
-            uint64_t base_address_high : 8;
+            uint64_t limit_low: 16;
+            uint64_t base_address_low: 16;
+            uint64_t base_address_middle: 8;
+            uint8_t type: 4;
+            descriptor_type_t descriptor_type: 1;
+            uint64_t privilege: 2;
+            bool present: 1;
+            uint64_t limit_high: 4;
+            bool available: 1;
+            bool long_mode: 1;
+            default_op_size_t default_big: 1;
+            granularity_t granularity: 1;
+            uint64_t base_address_high: 8;
 
 #ifdef X86_64
-            uint64_t base_address_upper : 32;
-            uint64_t must_be_zero : 32;
+            uint64_t base_address_upper: 32;
+            uint64_t must_be_zero: 32;
 #endif
         } bits;
 
@@ -112,22 +112,29 @@ struct segment_descriptor_t {
     segment_descriptor_t();
 
     void* base_address() const noexcept;
+
     void base_address(void* value) noexcept;
 
     uint32_t limit() const noexcept;
+
     void limit(uint32_t value) noexcept;
 
     bool is_system() const noexcept;
+
     bool is_data() const noexcept;
+
     bool is_code() const noexcept;
 
     descriptor_type_t descriptor_type() const noexcept;
+
     void descriptor_type(descriptor_type_t descriptor_type) noexcept;
 
     default_op_size_t default_big() const noexcept;
+
     void default_big(default_op_size_t default_big) noexcept;
 
     granularity_t granularity() const noexcept;
+
     void granularity(granularity_t granularity) noexcept;
 } PACKED;
 
@@ -140,15 +147,20 @@ struct segment_table_t {
 #endif
 
     void* base_address() const noexcept;
+
     uint16_t limit() const noexcept;
 
     const segment_descriptor_t& operator[](const segment_selector_t& selector) const noexcept;
+
     segment_descriptor_t& operator[](const segment_selector_t& selector) noexcept;
+
     const segment_descriptor_t& operator[](int index) const noexcept;
+
     segment_descriptor_t& operator[](int index) noexcept;
 } PACKED;
 
-void write(const segment_table_t &gdt) noexcept;
+void write(const segment_table_t& gdt) noexcept;
+
 void store(segment_table_t& gdt) noexcept;
 
 STATIC_ASSERT_SIZE(segment_selector_t, 2);
@@ -171,7 +183,8 @@ const wchar_t* to_string(segment_type_system_t segment_type) noexcept;
 const wchar_t* to_string(descriptor_type_t descriptor_type) noexcept;
 const wchar_t* to_string(default_op_size_t default_op_size) noexcept;
 const wchar_t* to_string(granularity_t granularity) noexcept;
-const wchar_t* type_to_string(const segment_descriptor_t &descriptor) noexcept;
-void trace(const segment_descriptor_t &descriptor) noexcept;
-void trace(const segment_table_t &table) noexcept;
+const wchar_t* type_to_string(const segment_descriptor_t& descriptor) noexcept;
+
+void trace(const segment_descriptor_t& descriptor) noexcept;
+void trace(const segment_table_t& table) noexcept;
 )

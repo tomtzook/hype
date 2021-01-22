@@ -7,7 +7,7 @@
 
 namespace hype::result {
 
-const common::result_category_t CATEGORY = 1;
+constexpr common::result_category_t CATEGORY = 1;
 
 enum code_t {
     SUCCESS = 0,

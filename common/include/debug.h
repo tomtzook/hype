@@ -2,14 +2,7 @@
 
 
 #ifdef _DEBUG
-
-#define DEBUG_ONLY(...) \
-    do { __VA_ARGS__; } while(0)
-
-#define TRACE(fmt, ...)DEBUG_ONLY( \
-    common::debug::trace(fmt "\n", ##__VA_ARGS__);  \
-)
-
+#define DEBUG_ONLY(...) do { __VA_ARGS__; } while(0)
 #define DEBUG_DECL(top_namespace, ...) \
     namespace top_namespace::debug {    \
         __VA_ARGS__      \
@@ -19,6 +12,10 @@
 #define DEBUG_ONLY(...)
 #define DEBUG_DECL(...)
 #endif
+
+#define TRACE(fmt, ...) DEBUG_ONLY( \
+    common::debug::trace(fmt "\n", ##__VA_ARGS__);  \
+)
 
 #define TRACE_DEBUG(fmt, ...) TRACE(L"[DEBUG] " fmt, ##__VA_ARGS__)
 #define TRACE_ERROR(fmt, ...) TRACE(L"[ERROR] %s.%d: " fmt "\n", L"" __FILE__, __LINE__, ##__VA_ARGS__)

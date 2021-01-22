@@ -9,6 +9,8 @@ extern "C" uint32_t _vmxoff() noexcept;
 extern "C" uint32_t _vmclear(void* vmcs) noexcept;
 
 
+// TODO: ADD BETTER CHECKS FOR INSTRUCTION ERRORS
+
 common::result x86::vmx::_vmxon(physical_address_t address) noexcept {
     // VMXON [SDM 3 30.3 P1219]
     uint32_t result = ::_vmxon(&address);
@@ -22,6 +24,7 @@ common::result x86::vmx::_vmxoff() noexcept {
 }
 
 common::result x86::vmx::_vmclear(physical_address_t address) noexcept {
+    // VMXOFF [SDM 3 30.3 P1203]
     uint32_t result = ::_vmclear(&address);
     return result ? x86::result::SUCCESS : x86::result::INSTRUCTION_FAILED;
 }

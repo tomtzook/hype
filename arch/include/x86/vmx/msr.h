@@ -8,7 +8,7 @@
 namespace x86::msr {
 
 struct ia32_vmx_basic_t {
-    static const id_t ID = 0x480;
+    static constexpr id_t ID = 0x480;
     union {
         struct {
             uint64_t vmcs_revision : 31;
@@ -27,28 +27,28 @@ struct ia32_vmx_basic_t {
 } PACKED;
 
 struct ia32_vmx_cr0_fixed0_t {
-    static const id_t ID = 0x486;
+    static constexpr id_t ID = 0x486;
     union {
         uint64_t raw;
     };
 } PACKED;
 
 struct ia32_vmx_cr0_fixed1_t {
-    static const id_t ID = 0x487;
+    static constexpr id_t ID = 0x487;
     union {
         uint64_t raw;
     };
 } PACKED;
 
 struct ia32_vmx_cr4_fixed0_t {
-    static const id_t ID = 0x488;
+    static constexpr id_t ID = 0x488;
     union {
         uint64_t raw;
     };
 } PACKED;
 
 struct ia32_vmx_cr4_fixed1_t {
-    static const id_t ID = 0x489;
+    static constexpr id_t ID = 0x489;
     union {
         uint64_t raw;
     };

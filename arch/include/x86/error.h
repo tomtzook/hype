@@ -5,7 +5,7 @@
 
 namespace x86::result {
 
-const common::result_category_t CATEGORY = 3;
+constexpr common::result_category_t CATEGORY = 3;
 
 enum code_t {
     SUCCESS = 0,

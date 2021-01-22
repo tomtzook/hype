@@ -174,8 +174,8 @@ STATIC_ASSERT_SIZE(segment_table_t, 6);
 
 }
 
-
-DEBUG_NAMESPACE_START(x86);
+#ifdef _DEBUG
+namespace x86::debug {
 const wchar_t* to_string(selector_table_t selector_table) noexcept;
 const wchar_t* to_string(segment_type_data_code_t segment_type) noexcept;
 const wchar_t* to_string(segment_type_system_t segment_type) noexcept;
@@ -186,4 +186,5 @@ const wchar_t* type_to_string(const segment_descriptor_t& descriptor) noexcept;
 
 void trace(const segment_descriptor_t& descriptor) noexcept;
 void trace(const segment_table_t& table) noexcept;
-DEBUG_NAMESPACE_END
+}
+#endif

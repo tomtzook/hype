@@ -18,6 +18,9 @@ enum code_t {
 template<>
 common::result_t::result_t(x86::result::code_t code) noexcept;
 
-DEBUG_NAMESPACE_START(x86::result);
+#ifdef _DEBUG
+namespace x86::result::debug {
 const wchar_t* to_string(const common::result& result) noexcept;
-DEBUG_NAMESPACE_END
+}
+#endif
+

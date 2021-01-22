@@ -32,6 +32,7 @@ struct cr0_t {
 #define CR0_CD_MASK (1 << 30)
             uint64_t paging_enable : 1;
 #define CR0_PG_MASK (1 << 31)
+            uint64_t reserved4 : 32;
         } bits;
 
         uint64_t raw;
@@ -84,6 +85,7 @@ struct cr4_t {
             uint64_t smep_enable : 1;
             uint64_t smap_enable : 1;
             uint64_t protection_key_enable : 1;
+            uint64_t reserved4 : 32;
         } bits;
 
         uint64_t raw;
@@ -108,4 +110,24 @@ STATIC_ASSERT_SIZE(cr4_t, 8);
 
 }
 
-
+// TODO: CR DEBUG
+/*
+ *     static const wchar_t* BIT_RESERVED = L"RESERVED";
+    static const wchar_t* CR0_BITS[] = {
+            L"PROTECTION_ENABLE",
+            L"MONITOR_COPROCESSOR",
+            L"EMULATE_FPU",
+            L"TASK_SWITCHED",
+            L"EXTENSION_TYPE",
+            L"NUMERIC_ERROR",
+            REPEATARG10(BIT_RESERVED),
+            L"WRITE_PROTECT",
+            BIT_RESERVED,
+            L"ALIGNMENT_MASK",
+            REPEATARG10(BIT_RESERVED),
+            L"NOT_WRITE_THROUGH",
+            L"CACHE_DISABLE",
+            L"PAGING_ENABLE",
+            REPEATARG10(BIT_RESERVED),REPEATARG10(BIT_RESERVED),REPEATARG2(BIT_RESERVED), // 32 bits
+    };
+ */

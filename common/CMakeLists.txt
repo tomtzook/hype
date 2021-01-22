@@ -11,7 +11,7 @@ set(HEADERS
         include/error.h)
 
 set(SOURCES
-        src/crt.cpp src/error.cpp)
+        src/crt.cpp src/error.cpp src/debug.cpp)
 
 add_library(common_obj OBJECT ${HEADERS} ${SOURCES})
 target_compile_definitions(common_obj PUBLIC _DEBUG)

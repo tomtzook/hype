@@ -1,6 +1,4 @@
 
-#include <x86/segment.h>
-
 #include "common.h"
 #include "commonefi.h"
 #include "hype.h"
@@ -9,7 +7,7 @@
 extern "C"
 EFI_STATUS EFIAPI
 efi_main(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE* system_table) {
-    common::result status = hype::result::SUCCESS;
+    common::result status;
 
     InitializeLib(image_handle, system_table);
     TRACE_DEBUG("Hello from the UEFI");

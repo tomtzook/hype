@@ -115,16 +115,3 @@ common::result::result_t(hype::result::code_t code) noexcept
         : m_code(code)
         , m_category(hype::result::CATEGORY)
 {}
-
-DEBUG_NAMESPACE_START(hype::result);
-const wchar_t* to_string(const common::result& result) noexcept {
-    switch (result.code()) {
-        case hype::result::SUCCESS: return L"SUCCESS";
-        case hype::result::VMX_NOT_SUPPORTED: return L"VMX_NOT_SUPPORTED";
-        case hype::result::ALREADY_INITIALIZED: return L"ALREADY_INITIALIZED";
-        case hype::result::HUGE_PAGES_NOT_SUPPORTED: return L"HUGE_PAGES_NOT_SUPPORTED";
-        case hype::result::UNSUPPORTED_FEATURE: return L"UNSUPPORTED_FEATURE";
-        default: return L"";
-    }
-}
-DEBUG_NAMESPACE_END

@@ -114,8 +114,8 @@ void x86::store(segment_table_t& gdt) noexcept {
     _sgdt(&gdt);
 }
 
-#ifdef _DEBUG
-const wchar_t* x86::debug::to_string(selector_table_t selector_table) noexcept {
+DEBUG_DECL(x86,
+const wchar_t* to_string(selector_table_t selector_table) noexcept {
     switch (selector_table) {
         case TABLE_GDT: return L"TABLE_GDT";
         case TABLE_LDT: return L"TABLE_LDT";
@@ -123,7 +123,7 @@ const wchar_t* x86::debug::to_string(selector_table_t selector_table) noexcept {
     }
 }
 
-const wchar_t* x86::debug::to_string(data_type_t data_type) noexcept {
+const wchar_t* to_string(data_type_t data_type) noexcept {
     switch (data_type) {
         case READ_ONLY: return L"READ_ONLY";
         case READ_ONLY_ACCESSED: return L"READ_ONLY_ACCESSED";
@@ -137,7 +137,7 @@ const wchar_t* x86::debug::to_string(data_type_t data_type) noexcept {
     }
 }
 
-const wchar_t* x86::debug::to_string(code_type_t code_type) noexcept {
+const wchar_t* to_string(code_type_t code_type) noexcept {
     switch (code_type) {
         case EXECUTE_ONLY: return L"EXECUTE_ONLY";
         case EXECUTE_ONLY_ACCESSED: return L"EXECUTE_ONLY_ACCESSED";
@@ -151,7 +151,7 @@ const wchar_t* x86::debug::to_string(code_type_t code_type) noexcept {
     }
 }
 
-const wchar_t* x86::debug::to_string(system_type_t system_type) noexcept {
+const wchar_t* to_string(system_type_t system_type) noexcept {
     switch (system_type) {
         case TYPE_SYSTEM_RESERVED0: return L"TYPE_SYSTEM_RESERVED0";
         case TYPE_BITS16_TSS_AVAILABLE: return L"TYPE_BITS16_TSS_AVAILABLE";
@@ -173,7 +173,7 @@ const wchar_t* x86::debug::to_string(system_type_t system_type) noexcept {
     }
 }
 
-const wchar_t* x86::debug::to_string(descriptor_type_t descriptor_type) noexcept {
+const wchar_t* to_string(descriptor_type_t descriptor_type) noexcept {
     switch (descriptor_type) {
         case DESCRIPTOR_SYSTEM: return L"DESCRIPTOR_SYSTEM";
         case DESCRIPTOR_CODE_OR_DATA: return L"DESCRIPTOR_CODE_OR_DATA";
@@ -181,7 +181,7 @@ const wchar_t* x86::debug::to_string(descriptor_type_t descriptor_type) noexcept
     }
 }
 
-const wchar_t* x86::debug::to_string(default_op_size_t default_op_size) noexcept {
+const wchar_t* to_string(default_op_size_t default_op_size) noexcept {
     switch (default_op_size) {
         case OP_SIZE_16: return L"OP_SIZE_16";
         case OP_SIZE_32: return L"OP_SIZE_32";
@@ -189,7 +189,7 @@ const wchar_t* x86::debug::to_string(default_op_size_t default_op_size) noexcept
     }
 }
 
-const wchar_t* x86::debug::to_string(granularity_t granularity) noexcept {
+const wchar_t* to_string(granularity_t granularity) noexcept {
     switch (granularity) {
         case GRANULARITY_BYTE: return L"GRANULARITY_BYTE";
         case GRANULARITY_PAGE: return L"GRANULARITY_PAGE";
@@ -197,7 +197,7 @@ const wchar_t* x86::debug::to_string(granularity_t granularity) noexcept {
     }
 }
 
-const wchar_t* x86::debug::type_to_string(const segment_descriptor_t& descriptor) noexcept {
+const wchar_t* type_to_string(const segment_descriptor_t& descriptor) noexcept {
     if (descriptor.is_system()) {
         return to_string(static_cast<system_type_t>(descriptor.bits.type));
     } else if (descriptor.is_data()) {
@@ -207,20 +207,20 @@ const wchar_t* x86::debug::type_to_string(const segment_descriptor_t& descriptor
     }
 }
 
-void x86::debug::trace(const segment_descriptor_t& descriptor) noexcept {
+void trace(const segment_descriptor_t& descriptor) noexcept {
     TRACE_DEBUG("BASE=%x LIMIT=%d DT=%s T=%s PRIV=%d PRES=%d AVAIL=%d LONG=%d D/B=%s GRAN=%s",
                 descriptor.base_address(), descriptor.limit(),
-                x86::debug::to_string(descriptor.descriptor_type()),
-                x86::debug::type_to_string(descriptor),
+                to_string(descriptor.descriptor_type()),
+                type_to_string(descriptor),
                 descriptor.bits.privilege,
                 descriptor.bits.present,
                 descriptor.bits.available,
                 descriptor.bits.long_mode,
-                x86::debug::to_string(descriptor.default_big()),
-                x86::debug::to_string(descriptor.granularity()));
+                to_string(descriptor.default_big()),
+                to_string(descriptor.granularity()));
 }
 
-void x86::debug::trace(const segment_table_t& table) noexcept {
+void trace(const segment_table_t& table) noexcept {
     size_t descriptor_count = table.limit() / sizeof(x86::segment_descriptor_t);
     TRACE_DEBUG("--GDT-- BASE=%x  LIMIT=%d  COUNT=%d --", table.base_address(), table.limit(), descriptor_count);
 
@@ -229,17 +229,17 @@ void x86::debug::trace(const segment_table_t& table) noexcept {
 
         TRACE_DEBUG("(%d) BASE=%x LIMIT=%d DT=%s T=%s PRIV=%d PRES=%d AVAIL=%d LONG=%d D/B=%s GRAN=%s",
                     i, descriptor.base_address(), descriptor.limit(),
-                    x86::debug::to_string(descriptor.descriptor_type()),
-                    x86::debug::type_to_string(descriptor),
+                    to_string(descriptor.descriptor_type()),
+                    type_to_string(descriptor),
                     descriptor.bits.privilege,
                     descriptor.bits.present,
                     descriptor.bits.available,
                     descriptor.bits.long_mode,
-                    x86::debug::to_string(descriptor.default_big()),
-                    x86::debug::to_string(descriptor.granularity()));
+                    to_string(descriptor.default_big()),
+                    to_string(descriptor.granularity()));
 
     }
 
     TRACE_DEBUG("--END--GDT--------------------------");
 }
-#endif
+)

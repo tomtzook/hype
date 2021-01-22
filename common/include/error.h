@@ -79,13 +79,11 @@ private:
     result_category_t m_category;
 };
 
-#ifdef _DEBUG
-namespace debug {
-const wchar_t* to_string(const result_t& result) noexcept;
-const wchar_t* common_error_to_string(const result_t& result) noexcept;
-}
-#endif
-
 using result = result_t;
 
 }
+
+DEBUG_DECL(common,
+const wchar_t* to_string(const result_t& result) noexcept;
+const wchar_t* common_error_to_string(const result_t& result) noexcept;
+)

@@ -16,13 +16,11 @@ enum code_t {
     HUGE_PAGES_NOT_SUPPORTED
 };
 
-#ifdef _DEBUG
-namespace debug {
-const wchar_t* to_string(const common::result& result) noexcept;
-}
-#endif
-
 }
 
 template<>
 common::result_t::result_t(hype::result::code_t code) noexcept;
+
+DEBUG_DECL(hype::result,
+const wchar_t* to_string(const common::result& result) noexcept;
+)

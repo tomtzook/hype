@@ -1,6 +1,7 @@
 #pragma once
 
 #include <types.h>
+#include <debug.h>
 
 #include "cr.h"
 
@@ -153,22 +154,6 @@ struct segment_table_t {
 void write(const segment_table_t &gdt) noexcept;
 void store(segment_table_t& gdt) noexcept;
 
-#ifdef _DEBUG
-namespace debug {
-const wchar_t* to_string(selector_table_t selector_table) noexcept;
-const wchar_t* to_string(data_type_t data_type) noexcept;
-const wchar_t* to_string(code_type_t code_type) noexcept;
-const wchar_t* to_string(system_type_t system_type) noexcept;
-const wchar_t* to_string(descriptor_type_t descriptor_type) noexcept;
-const wchar_t* to_string(default_op_size_t default_op_size) noexcept;
-const wchar_t* to_string(granularity_t granularity) noexcept;
-const wchar_t* type_to_string(const segment_descriptor_t& descriptor) noexcept;
-
-void trace(const segment_descriptor_t& descriptor) noexcept;
-void trace(const segment_table_t& table) noexcept;
-}
-#endif
-
 STATIC_ASSERT_SIZE(segment_selector_t, 2);
 
 #ifdef X86_64
@@ -180,3 +165,17 @@ STATIC_ASSERT_SIZE(segment_table_t, 6);
 #endif
 
 }
+
+
+DEBUG_DECL(x86,
+const wchar_t* to_string(selector_table_t selector_table) noexcept;
+const wchar_t* to_string(data_type_t data_type) noexcept;
+const wchar_t* to_string(code_type_t code_type) noexcept;
+const wchar_t* to_string(system_type_t system_type) noexcept;
+const wchar_t* to_string(descriptor_type_t descriptor_type) noexcept;
+const wchar_t* to_string(default_op_size_t default_op_size) noexcept;
+const wchar_t* to_string(granularity_t granularity) noexcept;
+const wchar_t* type_to_string(const segment_descriptor_t &descriptor) noexcept;
+void trace(const segment_descriptor_t &descriptor) noexcept;
+void trace(const segment_table_t &table) noexcept;
+)

@@ -1,9 +1,6 @@
 
 #include <x86/cpuid.h>
 #include <x86/segment.h>
-#include <x86/cr.h>
-#include <x86/msr.h>
-#include <x86/memory.h>
 #include <x86/paging.h>
 
 #include "common.h"
@@ -111,8 +108,8 @@ common::result::result_t(hype::result::code_t code) noexcept
         , m_category(hype::result::CATEGORY)
 {}
 
-#ifdef _DEBUG
-const wchar_t* hype::result::debug::to_string(const common::result& result) noexcept {
+DEBUG_DECL(hype::result,
+const wchar_t* to_string(const common::result& result) noexcept {
     switch (result.code()) {
         case hype::result::SUCCESS: return L"SUCCESS";
         case hype::result::VMX_NOT_SUPPORTED: return L"VMX_NOT_SUPPORTED";
@@ -121,4 +118,4 @@ const wchar_t* hype::result::debug::to_string(const common::result& result) noex
         default: return L"";
     }
 }
-#endif
+)

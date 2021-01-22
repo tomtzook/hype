@@ -41,8 +41,8 @@ common::result_t& common::result_t::operator=(result_t&& other) noexcept {
     return *this;
 }
 
-#ifdef _DEBUG
-const wchar_t* common::debug::common_error_to_string(const common::result& result) noexcept {
+DEBUG_DECL(common,
+const wchar_t* common_error_to_string(const common::result& result) noexcept {
     switch (result.code()) {
         case common::result::SUCCESS: return L"SUCCESS";
         case common::result::ALLOCATION_ERROR: return L"ALLOCATION_ERROR";
@@ -50,4 +50,4 @@ const wchar_t* common::debug::common_error_to_string(const common::result& resul
         default: return L"";
     }
 }
-#endif
+)

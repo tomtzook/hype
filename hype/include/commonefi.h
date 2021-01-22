@@ -25,12 +25,6 @@ const common::result_category_t CATEGORY = 2;
 
 common::result efi_result(EFI_STATUS efi_status) noexcept;
 
-#ifdef _DEBUG
-namespace debug {
-const wchar_t* to_string(const common::result& result) noexcept;
-} // namespace debug
-#endif
-
 } // namespace result
 
 
@@ -48,3 +42,7 @@ public:
 
 template<>
 common::result::result_t(EFI_STATUS code) noexcept;
+
+DEBUG_DECL(efi::result,
+const wchar_t* to_string(const common::result& result) noexcept;
+)

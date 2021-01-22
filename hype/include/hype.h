@@ -1,6 +1,6 @@
 #pragma once
 
-#include <x86/paging.h>
+#include <x86/paging/huge_paging.h>
 
 #include "common.h"
 #include "vcpu.h"
@@ -12,7 +12,7 @@ namespace hype {
 struct context_t {
     environment_t environment;
 
-    x86::paging::huge_page_table_t page_table PAGE_ALIGNED;
+    x86::paging::huge::page_table_t page_table PAGE_ALIGNED;
 };
 
 extern context_t* g_context;

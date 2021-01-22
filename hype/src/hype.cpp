@@ -1,7 +1,7 @@
 
 #include <x86/cpuid.h>
 #include <x86/segment.h>
-#include <x86/paging.h>
+#include <x86/paging/huge_paging.h>
 
 #include "common.h"
 #include "vcpu.h"

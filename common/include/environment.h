@@ -20,6 +20,6 @@ common::result allocate(size_t size, alloc_type** out, alignment_t alignment = a
 
 common::result free(void* memory) noexcept;
 
-uintn_t to_physical(void* address) noexcept;
+physical_address_t to_physical(void* address) noexcept;
 
 }

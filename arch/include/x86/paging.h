@@ -59,7 +59,7 @@ const size_t PDPT_ENTRIES_COUNT = 512;
 class huge_page_table_t {
 public:
     const void* base_address() const noexcept;
-    uintn_t to_physical(const void* memory) const noexcept;
+    physical_address_t to_physical(const void* memory) const noexcept;
 
     pml4e_t& pml4() noexcept;
     huge_pdpte_t& operator[](size_t index) noexcept;

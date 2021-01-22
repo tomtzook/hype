@@ -5,20 +5,18 @@
 #include <x86/msr.h>
 #include <x86/memory.h>
 #include <x86/paging.h>
-#include <x86/vmx/environment.h>
-#include <x86/vmx/operations.h>
 
 #include "common.h"
+#include "vcpu.h"
+#include "env.h"
 
 #include "hype.h"
 
 
 struct hype::context_t {
-    void* vmxon_region;
+    environment_t environment;
 
     x86::paging::huge_page_table_t page_table PAGE_ALIGNED;
-
-    bool is_in_vmx_operation;
 };
 
 
@@ -36,6 +34,41 @@ static common::result check_environment_support() noexcept {
     return hype::result::SUCCESS;
 }
 
+static common::result start_on_vcpu(void* param) noexcept {
+    common::result status = hype::result::SUCCESS;
+
+    hype::context_t* context = reinterpret_cast<hype::context_t*>(param);
+    hype::vcpu_t& cpu = context->environment.get_vcpu_service().get_current_vcpu();
+
+    {
+        physical_address_t vmxon_physaddress;
+        CHECK(x86::vmx::initialize_vmxon_region(cpu.vmxon_region));
+        vmxon_physaddress = environment::to_physical(&cpu.vmxon_region);
+        CHECK(x86::vmx::on(vmxon_physaddress));
+    }
+
+    cpu.is_in_vmx_operation = true;
+
+    // TODO: setup vmcs
+    // TODO: load vmcs
+    // TODO: launch
+
+cleanup:
+    return status;
+}
+
+static common::result free_on_vcpu(void* param) noexcept {
+    common::result status = hype::result::SUCCESS;
+
+    hype::context_t* context = reinterpret_cast<hype::context_t*>(param);
+    hype::vcpu_t& cpu = context->environment.get_vcpu_service().get_current_vcpu();
+
+    CHECK(x86::vmx::off());
+    cpu.is_in_vmx_operation = false;
+
+cleanup:
+    return status;
+}
 
 common::result hype::initialize(context_t*&context) noexcept {
     common::result status = hype::result::SUCCESS;
@@ -44,12 +77,9 @@ common::result hype::initialize(context_t*&context) noexcept {
     }
 
     CHECK(check_environment_support());
-
-    // TODO: identify all logical processors
+    CHECK(initialize(context->environment));
 
     context = new hype::context_t;
-
-    // TODO: initialize per-cpu contexts
     // TODO: initialize page tables
     CHECK(x86::paging::setup_identity_paging(context->page_table));
     // TODO: initialize EPT
@@ -60,23 +90,17 @@ cleanup:
 common::result hype::start(context_t* context) noexcept {
     common::result status = hype::result::SUCCESS;
 
-    // TODO: needs to be done for each processor
-
-    CHECK(x86::vmx::on(context->vmxon_region));
-    context->is_in_vmx_operation = true;
-
-    // TODO: setup vmcs
-    // TODO: load vmcs
-    // TODO: launch
-
+    CHECK(context->environment.get_vcpu_service().run_on_each_vcpu(
+            start_on_vcpu,
+            context));
 cleanup:
     return status;
 }
 
 void hype::free(context_t* context) noexcept {
-    if (context->is_in_vmx_operation) {
-        CHECK_SILENT(x86::vmx::off());
-    }
+    CHECK_SILENT(context->environment.get_vcpu_service().run_on_each_vcpu(
+            free_on_vcpu,
+            context));
 
     ::operator delete(context);
 }

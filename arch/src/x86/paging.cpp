@@ -18,7 +18,7 @@ const void* x86::paging::huge_page_table_t::base_address() const noexcept {
     return reinterpret_cast<const void*>(&m_pml4);
 }
 
-uintn_t x86::paging::huge_page_table_t::to_physical(const void* memory) const noexcept {
+physical_address_t x86::paging::huge_page_table_t::to_physical(const void* memory) const noexcept {
     // IA-32E huge paging translation [SDM 3 4.5 P125 "Figure 4-10"]
     // TODO: make a class for virtual address and use it to translate
     const uintn_t address = reinterpret_cast<const uintn_t>(memory);
@@ -31,7 +31,7 @@ uintn_t x86::paging::huge_page_table_t::to_physical(const void* memory) const no
     }
 
     const huge_pdpte_t& pdpte = m_pdpt[pdpte_idx];
-    return (static_cast<uintn_t>(pdpte.page_address) << 32) + offset;
+    return (static_cast<physical_address_t>(pdpte.page_address) << 32) + offset;
 }
 
 x86::paging::pml4e_t& x86::paging::huge_page_table_t::pml4() noexcept {
@@ -86,7 +86,7 @@ common::result x86::paging::setup_identity_paging(huge_page_table_t& page_table)
         pdpte.present = true;
         pdpte.read_write = true;
         pdpte.page_size = true;
-        pdpte.page_address = (i * SIZE_1GB) >> 32; // TODO: 32?
+        pdpte.page_address = (i * SIZE_1GB) >> 30;
     }
 
 cleanup:

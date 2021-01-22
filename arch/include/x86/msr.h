@@ -59,6 +59,13 @@ struct ia32_vmx_basic_t {
     };
 } PACKED;
 
+struct ia32_fs_base_t {
+    static const id_t ID = 0x480;
+    union {
+        uint64_t raw;
+    };
+} PACKED;
+
 uint64_t read(id_t msr_id) noexcept;
 void write(id_t msr_id, uint64_t value) noexcept;
 
@@ -72,6 +79,7 @@ void write(id_t msr_id, const msr_type& msr) noexcept;
 static_assert(sizeof(ia32_efer_t) == 8, "ia32_efer_t != 8");
 static_assert(sizeof(ia32_feature_ctrl_t) == 8, "ia32_feature_ctrl_t != 8");
 static_assert(sizeof(ia32_vmx_basic_t) == 8, "ia32_vmx_basic_t != 8");
+static_assert(sizeof(ia32_fs_base_t) == 8, "ia32_fs_base_t != 8");
 
 }
 

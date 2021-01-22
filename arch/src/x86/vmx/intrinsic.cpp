@@ -3,7 +3,7 @@
 
 
 
-common::result x86::vmx::vmxon(uintn_t address) noexcept {
+common::result x86::vmx::vmxon(physical_address_t address) noexcept {
     // TODO: implement
     return common::result::SUCCESS;
 }

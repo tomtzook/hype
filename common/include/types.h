@@ -32,3 +32,5 @@ typedef uint32_t uintn_t;
 
 typedef uint32_t size_t;
 #endif
+
+typedef uintn_t physical_address_t;

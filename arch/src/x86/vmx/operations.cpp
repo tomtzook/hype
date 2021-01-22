@@ -1,5 +1,4 @@
 
-#include <environment.h>
 #include <crt.h>
 
 #include "x86/error.h"
@@ -9,6 +8,7 @@
 #include "x86/memory.h"
 
 #include "x86/vmx/instrinsic.h"
+#include "x86/vmx/environment.h"
 
 #include "x86/vmx/operations.h"
 
@@ -50,12 +50,26 @@ cleanup:
     return status;
 }
 
-
-common::result x86::vmx::on(void*& vmxon_region) noexcept {
+common::result x86::vmx::initialize_vmxon_region(vmxon_region_t& vmxon_region) noexcept {
     common::result status = common::result::SUCCESS;
+
+    // check the size according to IA32_VMX_BASIC [SDM 3 24.11.5 P1079]
     x86::msr::ia32_vmx_basic_t vmx_basic {};
-    uint64_t vmxon_region_size;
-    uintn_t vmxon_physaddr;
+    x86::msr::read(x86::msr::ia32_vmx_basic_t::ID, vmx_basic);
+
+    CHECK_ASSERT(sizeof(vmxon_region) >= vmx_basic.bits.vm_struct_size,
+                 "vmxon region size too small");
+
+    // initialize the revision indicator
+    vmxon_region.revision = vmx_basic.bits.vmcs_revision;
+    vmxon_region.shadow_indicator = false;
+
+cleanup:
+    return status;
+}
+
+common::result x86::vmx::on(physical_address_t vmxon_region) noexcept {
+    common::result status = common::result::SUCCESS;
 
     // TODO: modify CR0 & CR4 according to VMX restrictions
 
@@ -63,20 +77,15 @@ common::result x86::vmx::on(void*& vmxon_region) noexcept {
 
     // loading vmxon region required [SDM 3 24.11.5 P1079]
     //      vmxon region size determined from IA32_VMX_BASIC MSR
+    //          however, it will never acceed PAGE_SIZE, so we will receive
+    //          an allocated PAGE_SIZE data.
     //      vmxon address must be page aligned
     //      vmxon address must not exceed maxphysaddr
-    x86::msr::read(x86::msr::ia32_vmx_basic_t::ID, vmx_basic);
-
-    vmxon_region_size = vmx_basic.bits.vm_struct_size;
-    vmxon_region = new (environment::alignment_t::PAGE_ALIGN) uint8_t[vmxon_region_size];
-    CHECK_ALLOCATION(vmxon_region);
-
-    vmxon_physaddr = environment::to_physical(&vmxon_region);
-    CHECK_ASSERT(x86::is_page_aligned(vmxon_physaddr), "vmxon region not page aligned");
-    CHECK_ASSERT(x86::is_address_in_max_physical_width(vmxon_physaddr),
+    CHECK_ASSERT(x86::is_page_aligned(vmxon_region), "vmxon region not page aligned");
+    CHECK_ASSERT(x86::is_address_in_max_physical_width(vmxon_region),
                  "vmxon region exceeds maxphysaddress");
 
-    CHECK(vmxon(vmxon_physaddr));
+    CHECK(vmxon(vmxon_region));
 
 cleanup:
     return status;

@@ -13,9 +13,12 @@ class vcpu_service_t;
 
 common::result initialize(vcpu_service_t& service) noexcept;
 
-struct vcpu_t {
-    x86::vmx::vmxon_region_t vmxon_region PAGE_ALIGNED;
+class vcpu_t {
+public:
+    vcpuid_t get_id() const noexcept;
+    bool is_bootstrap() const noexcept;
 
+    x86::vmx::vmxon_region_t vmxon_region PAGE_ALIGNED;
     bool is_in_vmx_operation;
 };
 

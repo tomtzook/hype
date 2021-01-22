@@ -75,6 +75,8 @@ common::result hype::initialize() noexcept {
     CHECK(check_environment_support());
 
     g_context = new hype::context_t;
+    CHECK_ALLOCATION(g_context);
+
     CHECK(initialize(g_context->environment));
     CHECK(x86::paging::setup_identity_paging(g_context->page_table));
     // TODO: initialize EPT

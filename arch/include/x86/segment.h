@@ -8,63 +8,60 @@
 
 namespace x86 {
 
-enum selector_table_t {
+enum selector_table_t : uint8_t {
     TABLE_GDT = 0,
     TABLE_LDT = 1
 };
 
-enum data_type_t {
-    READ_ONLY = 0b0,
-    READ_ONLY_ACCESSED = 0b1,
-    READ_WRITE = 0b10,
-    READ_WRITE_ACCESSED = 0b11,
-    READ_ONLY_EXPAND_DOWN = 0b100,
-    READ_ONLY_EXPAND_DOWN_ACCESSED = 0b101,
-    READ_WRITE_EXPAND_DOWN = 0b110,
-    READ_WRITE_EXPAND_DOWN_ACCESSED = 0b111
+enum segment_type_data_code_t : uint8_t {
+    DATA_READ_ONLY = 0b0,
+    DATA_READ_ONLY_ACCESSED = 0b1,
+    DATA_READ_WRITE = 0b10,
+    DATA_READ_WRITE_ACCESSED = 0b11,
+    DATA_READ_ONLY_EXPAND_DOWN = 0b100,
+    DATA_READ_ONLY_EXPAND_DOWN_ACCESSED = 0b101,
+    DATA_READ_WRITE_EXPAND_DOWN = 0b110,
+    DATA_READ_WRITE_EXPAND_DOWN_ACCESSED = 0b111,
+    CODE_EXECUTE_ONLY = 0b1000,
+    CODE_EXECUTE_ONLY_ACCESSED = 0b1001,
+    CODE_EXECUTE_READ = 0b1010,
+    CODE_EXECUTE_READ_ACCESSED = 0b1011,
+    CODE_EXECUTE_ONLY_CONFORMING = 0b1100,
+    CODE_EXECUTE_ONLY_CONFORMING_ACCESSED = 0b1101,
+    CODE_EXECUTE_READ_CONFORMING = 0b1110,
+    CODE_EXECUTE_READ_CONFORMING_ACCESSED = 0b1111,
 };
 
-enum code_type_t {
-    EXECUTE_ONLY = 0b1000,
-    EXECUTE_ONLY_ACCESSED = 0b1001,
-    EXECUTE_READ = 0b1010,
-    EXECUTE_READ_ACCESSED = 0b1011,
-    EXECUTE_ONLY_CONFORMING = 0b1100,
-    EXECUTE_ONLY_CONFORMING_ACCESSED = 0b1101,
-    EXECUTE_READ_CONFORMING = 0b1110,
-    EXECUTE_READ_CONFORMING_ACCESSED = 0b1111
+enum segment_type_system_t {
+    SYSTEM_RESERVED0 = 0b0000,
+    SYSTEM_BITS16_TSS_AVAILABLE = 0b0001,
+    SYSTEM_LDT = 0b0010,
+    SYSTEM_BITS16_TSS_BUSY = 0b0011,
+    SYSTEM_BITS16_CALL_GATE = 0b0100,
+    SYSTEM_TASK_GATE = 0b0101,
+    SYSTEM_BITS16_INTERRUPT_GATE = 0b0110,
+    SYSTEM_BITS16_TRAP_GATE = 0b0111,
+    SYSTEM_RESERVED1 = 0b1000,
+    SYSTEM_BITS32_TSS_AVAILABLE = 0b1001,
+    SYSTEM_RESERVED2 = 0b1010,
+    SYSTEM_BITS32_TSS_BUSY = 0b1011,
+    SYSTEM_BITS32_CALL_GATE = 0b1100,
+    SYSTEM_RESERVED3 = 0b1101,
+    SYSTEM_BITS32_INTERRUPT = 0b1110,
+    SYSTEM_BITS32_TRAP_GATE = 0b1111
 };
 
-enum system_type_t {
-    TYPE_SYSTEM_RESERVED0 = 0b0000,
-    TYPE_BITS16_TSS_AVAILABLE = 0b0001,
-    TYPE_LDT = 0b0010,
-    TYPE_BITS16_TSS_BUSY = 0b0011,
-    TYPE_BITS16_CALL_GATE = 0b0100,
-    TYPE_TASK_GATE = 0b0101,
-    BITS16_INTERRUPT_GATE = 0b0110,
-    BITS16_TRAP_GATE = 0b0111,
-    TYPE_SYSTEM_RESERVED1 = 0b1000,
-    TYPE_BITS32_TSS_AVAILABLE = 0b1001,
-    TYPE_SYSTEM_RESERVED2 = 0b1010,
-    TYPE_BITS32_TSS_BUSY = 0b1011,
-    TYPE_BITS32_CALL_GATE = 0b1100,
-    TYPE_SYSTEM_RESERVED3 = 0b1101,
-    TYPE_BITS32_INTERRUPT = 0b1110,
-    TYPE_BITS32_TRAP_GATE = 0b1111
-};
-
-enum descriptor_type_t {
+enum descriptor_type_t : uint8_t {
     DESCRIPTOR_SYSTEM = 0,
     DESCRIPTOR_CODE_OR_DATA = 1
 };
 
-enum default_op_size_t {
+enum default_op_size_t : uint8_t {
     OP_SIZE_16 = 0,
     OP_SIZE_32 = 1
 };
 
-enum granularity_t {
+enum granularity_t : uint8_t {
     GRANULARITY_BYTE = 0,
     GRANULARITY_PAGE = 1
 };
@@ -73,7 +70,7 @@ struct segment_selector_t {
     union {
         struct {
             uint16_t request_privilege_level : 2;
-            uint16_t table : 1;
+            selector_table_t table : 1;
             uint16_t index : 13;
         } bits;
 
@@ -87,15 +84,15 @@ struct segment_descriptor_t {
             uint64_t limit_low : 16;
             uint64_t base_address_low : 16;
             uint64_t base_address_middle : 8;
-            uint64_t type : 4;
-            uint64_t descriptor_type : 1;
+            uint8_t type : 4;
+            descriptor_type_t descriptor_type : 1;
             uint64_t privilege : 2;
-            uint64_t present : 1;
+            bool present : 1;
             uint64_t limit_high : 4;
-            uint64_t available : 1;
-            uint64_t long_mode : 1;
-            uint64_t default_big : 1;
-            uint64_t granularity : 1;
+            bool available : 1;
+            bool long_mode : 1;
+            default_op_size_t default_big : 1;
+            granularity_t granularity : 1;
             uint64_t base_address_high : 8;
 
 #ifdef X86_64
@@ -169,9 +166,8 @@ STATIC_ASSERT_SIZE(segment_table_t, 6);
 
 DEBUG_DECL(x86,
 const wchar_t* to_string(selector_table_t selector_table) noexcept;
-const wchar_t* to_string(data_type_t data_type) noexcept;
-const wchar_t* to_string(code_type_t code_type) noexcept;
-const wchar_t* to_string(system_type_t system_type) noexcept;
+const wchar_t* to_string(segment_type_data_code_t segment_type) noexcept;
+const wchar_t* to_string(segment_type_system_t segment_type) noexcept;
 const wchar_t* to_string(descriptor_type_t descriptor_type) noexcept;
 const wchar_t* to_string(default_op_size_t default_op_size) noexcept;
 const wchar_t* to_string(granularity_t granularity) noexcept;

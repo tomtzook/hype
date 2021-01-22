@@ -51,11 +51,11 @@ bool x86::segment_descriptor_t::is_system() const noexcept {
 }
 
 bool x86::segment_descriptor_t::is_data() const noexcept {
-    return !is_system() && bits.type < EXECUTE_ONLY;
+    return !is_system() && bits.type < CODE_EXECUTE_ONLY;
 }
 
 bool x86::segment_descriptor_t::is_code() const noexcept {
-    return !is_system() && bits.type >= EXECUTE_ONLY;
+    return !is_system() && bits.type >= CODE_EXECUTE_ONLY;
 }
 
 x86::descriptor_type_t x86::segment_descriptor_t::descriptor_type() const noexcept {
@@ -123,52 +123,46 @@ const wchar_t* to_string(selector_table_t selector_table) noexcept {
     }
 }
 
-const wchar_t* to_string(data_type_t data_type) noexcept {
-    switch (data_type) {
-        case READ_ONLY: return L"READ_ONLY";
-        case READ_ONLY_ACCESSED: return L"READ_ONLY_ACCESSED";
-        case READ_WRITE: return L"READ_WRITE";
-        case READ_WRITE_ACCESSED: return L"READ_WRITE_ACCESSED";
-        case READ_ONLY_EXPAND_DOWN: return L"READ_ONLY_EXPAND_DOWN";
-        case READ_ONLY_EXPAND_DOWN_ACCESSED: return L"READ_ONLY_EXPAND_DOWN_ACCESSED";
-        case READ_WRITE_EXPAND_DOWN: return L"READ_WRITE_EXPAND_DOWN";
-        case READ_WRITE_EXPAND_DOWN_ACCESSED: return L"READ_WRITE_EXPAND_DOWN_ACCESSED";
+const wchar_t* to_string(segment_type_data_code_t segment_type) noexcept {
+    switch (segment_type) {
+        case DATA_READ_ONLY: return L"DATA_READ_ONLY";
+        case DATA_READ_ONLY_ACCESSED: return L"DATA_READ_ONLY_ACCESSED";
+        case DATA_READ_WRITE: return L"DATA_READ_WRITE";
+        case DATA_READ_WRITE_ACCESSED: return L"DATA_READ_WRITE_ACCESSED";
+        case DATA_READ_ONLY_EXPAND_DOWN: return L"DATA_READ_ONLY_EXPAND_DOWN";
+        case DATA_READ_ONLY_EXPAND_DOWN_ACCESSED: return L"DATA_READ_ONLY_EXPAND_DOWN_ACCESSED";
+        case DATA_READ_WRITE_EXPAND_DOWN: return L"DATA_READ_WRITE_EXPAND_DOWN";
+        case DATA_READ_WRITE_EXPAND_DOWN_ACCESSED: return L"DATA_READ_WRITE_EXPAND_DOWN_ACCESSED";
+        case CODE_EXECUTE_ONLY: return L"CODE_EXECUTE_ONLY";
+        case CODE_EXECUTE_ONLY_ACCESSED: return L"CODE_EXECUTE_ONLY_ACCESSED";
+        case CODE_EXECUTE_READ: return L"CODE_EXECUTE_READ";
+        case CODE_EXECUTE_READ_ACCESSED: return L"CODE_EXECUTE_READ_ACCESSED";
+        case CODE_EXECUTE_ONLY_CONFORMING: return L"CODE_EXECUTE_ONLY_CONFORMING";
+        case CODE_EXECUTE_ONLY_CONFORMING_ACCESSED: return L"CODE_EXECUTE_ONLY_CONFORMING_ACCESSED";
+        case CODE_EXECUTE_READ_CONFORMING: return L"CODE_EXECUTE_READ_CONFORMING";
+        case CODE_EXECUTE_READ_CONFORMING_ACCESSED: return L"CODE_EXECUTE_READ_CONFORMING_ACCESSED";
         default: return L"";
     }
 }
 
-const wchar_t* to_string(code_type_t code_type) noexcept {
-    switch (code_type) {
-        case EXECUTE_ONLY: return L"EXECUTE_ONLY";
-        case EXECUTE_ONLY_ACCESSED: return L"EXECUTE_ONLY_ACCESSED";
-        case EXECUTE_READ: return L"EXECUTE_READ";
-        case EXECUTE_READ_ACCESSED: return L"EXECUTE_READ_ACCESSED";
-        case EXECUTE_ONLY_CONFORMING: return L"EXECUTE_ONLY_CONFORMING";
-        case EXECUTE_ONLY_CONFORMING_ACCESSED: return L"EXECUTE_ONLY_CONFORMING_ACCESSED";
-        case EXECUTE_READ_CONFORMING: return L"EXECUTE_READ_CONFORMING";
-        case EXECUTE_READ_CONFORMING_ACCESSED: return L"EXECUTE_READ_CONFORMING_ACCESSED";
-        default: return L"";
-    }
-}
-
-const wchar_t* to_string(system_type_t system_type) noexcept {
-    switch (system_type) {
-        case TYPE_SYSTEM_RESERVED0: return L"TYPE_SYSTEM_RESERVED0";
-        case TYPE_BITS16_TSS_AVAILABLE: return L"TYPE_BITS16_TSS_AVAILABLE";
-        case TYPE_LDT: return L"TYPE_LDT";
-        case TYPE_BITS16_TSS_BUSY: return L"TYPE_BITS16_TSS_BUSY";
-        case TYPE_BITS16_CALL_GATE: return L"TYPE_BITS16_CALL_GATE";
-        case TYPE_TASK_GATE: return L"TYPE_TASK_GATE";
-        case BITS16_INTERRUPT_GATE: return L"BITS16_INTERRUPT_GATE";
-        case BITS16_TRAP_GATE: return L"BITS16_TRAP_GATE";
-        case TYPE_SYSTEM_RESERVED1: return L"TYPE_SYSTEM_RESERVED1";
-        case TYPE_BITS32_TSS_AVAILABLE: return L"TYPE_BITS32_TSS_AVAILABLE";
-        case TYPE_SYSTEM_RESERVED2: return L"TYPE_SYSTEM_RESERVED2";
-        case TYPE_BITS32_TSS_BUSY: return L"TYPE_BITS32_TSS_BUSY";
-        case TYPE_BITS32_CALL_GATE: return L"TYPE_BITS32_CALL_GATE";
-        case TYPE_SYSTEM_RESERVED3: return L"TYPE_SYSTEM_RESERVED3";
-        case TYPE_BITS32_INTERRUPT: return L"TYPE_BITS32_INTERRUPT";
-        case TYPE_BITS32_TRAP_GATE: return L"TYPE_BITS32_TRAP_GATE";
+const wchar_t* to_string(segment_type_system_t segment_type) noexcept {
+    switch (segment_type) {
+        case SYSTEM_RESERVED0: return L"SYSTEM_RESERVED0";
+        case SYSTEM_BITS16_TSS_AVAILABLE: return L"TYPE_BITS16_TSS_AVAILABLE";
+        case SYSTEM_LDT: return L"TYPE_LDT";
+        case SYSTEM_BITS16_TSS_BUSY: return L"TYPE_BITS16_TSS_BUSY";
+        case SYSTEM_BITS16_CALL_GATE: return L"TYPE_BITS16_CALL_GATE";
+        case SYSTEM_TASK_GATE: return L"TYPE_TASK_GATE";
+        case SYSTEM_BITS16_INTERRUPT_GATE: return L"BITS16_INTERRUPT_GATE";
+        case SYSTEM_BITS16_TRAP_GATE: return L"BITS16_TRAP_GATE";
+        case SYSTEM_RESERVED1: return L"TYPE_SYSTEM_RESERVED1";
+        case SYSTEM_BITS32_TSS_AVAILABLE: return L"TYPE_BITS32_TSS_AVAILABLE";
+        case SYSTEM_RESERVED2: return L"TYPE_SYSTEM_RESERVED2";
+        case SYSTEM_BITS32_TSS_BUSY: return L"TYPE_BITS32_TSS_BUSY";
+        case SYSTEM_BITS32_CALL_GATE: return L"TYPE_BITS32_CALL_GATE";
+        case SYSTEM_RESERVED3: return L"TYPE_SYSTEM_RESERVED3";
+        case SYSTEM_BITS32_INTERRUPT: return L"TYPE_BITS32_INTERRUPT";
+        case SYSTEM_BITS32_TRAP_GATE: return L"TYPE_BITS32_TRAP_GATE";
         default: return L"";
     }
 }
@@ -199,11 +193,9 @@ const wchar_t* to_string(granularity_t granularity) noexcept {
 
 const wchar_t* type_to_string(const segment_descriptor_t& descriptor) noexcept {
     if (descriptor.is_system()) {
-        return to_string(static_cast<system_type_t>(descriptor.bits.type));
-    } else if (descriptor.is_data()) {
-        return to_string(static_cast<data_type_t>(descriptor.bits.type));
+        return to_string(static_cast<segment_type_system_t>(descriptor.bits.type));
     } else {
-        return to_string(static_cast<code_type_t>(descriptor.bits.type));
+        return to_string(static_cast<segment_type_data_code_t>(descriptor.bits.type));
     }
 }
 

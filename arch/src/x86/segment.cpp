@@ -58,30 +58,6 @@ bool x86::segment_descriptor_t::is_code() const noexcept {
     return !is_system() && bits.type >= CODE_EXECUTE_ONLY;
 }
 
-x86::descriptor_type_t x86::segment_descriptor_t::descriptor_type() const noexcept {
-    return static_cast<descriptor_type_t>(bits.descriptor_type);
-}
-
-void x86::segment_descriptor_t::descriptor_type(descriptor_type_t descriptor_type) noexcept {
-    bits.descriptor_type = descriptor_type;
-}
-
-x86::default_op_size_t x86::segment_descriptor_t::default_big() const noexcept {
-    return static_cast<default_op_size_t>(bits.default_big);
-}
-
-void x86::segment_descriptor_t::default_big(default_op_size_t default_big) noexcept {
-    bits.default_big = default_big;
-}
-
-x86::granularity_t x86::segment_descriptor_t::granularity() const noexcept {
-    return static_cast<granularity_t>(bits.granularity);
-}
-
-void x86::segment_descriptor_t::granularity(granularity_t granularity) noexcept {
-    bits.granularity = granularity;
-}
-
 const x86::segment_descriptor_t& x86::segment_table_t::operator[](const segment_selector_t& selector) const noexcept {
     return *reinterpret_cast<segment_descriptor_t*>(reinterpret_cast<uintn_t>(base_address()) + selector.bits.index * 8);
 }

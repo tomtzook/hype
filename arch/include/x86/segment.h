@@ -112,30 +112,14 @@ struct segment_descriptor_t {
     segment_descriptor_t();
 
     void* base_address() const noexcept;
-
     void base_address(void* value) noexcept;
 
     uint32_t limit() const noexcept;
-
     void limit(uint32_t value) noexcept;
 
     bool is_system() const noexcept;
-
     bool is_data() const noexcept;
-
     bool is_code() const noexcept;
-
-    descriptor_type_t descriptor_type() const noexcept;
-
-    void descriptor_type(descriptor_type_t descriptor_type) noexcept;
-
-    default_op_size_t default_big() const noexcept;
-
-    void default_big(default_op_size_t default_big) noexcept;
-
-    granularity_t granularity() const noexcept;
-
-    void granularity(granularity_t granularity) noexcept;
 } PACKED;
 
 struct segment_table_t {

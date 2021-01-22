@@ -94,14 +94,14 @@ const wchar_t* type_to_string(const segment_descriptor_t& descriptor) noexcept {
 void trace(const segment_descriptor_t& descriptor) noexcept {
     TRACE_DEBUG("BASE=%x LIMIT=%d DT=%s T=%s PRIV=%d PRES=%d AVAIL=%d LONG=%d D/B=%s GRAN=%s",
                 descriptor.base_address(), descriptor.limit(),
-                to_string(descriptor.descriptor_type()),
+                to_string(descriptor.bits.descriptor_type),
                 type_to_string(descriptor),
                 descriptor.bits.privilege,
                 descriptor.bits.present,
                 descriptor.bits.available,
                 descriptor.bits.long_mode,
-                to_string(descriptor.default_big()),
-                to_string(descriptor.granularity()));
+                to_string(descriptor.bits.default_big),
+                to_string(descriptor.bits.granularity));
 }
 
 void trace(const segment_table_t& table) noexcept {
@@ -113,14 +113,14 @@ void trace(const segment_table_t& table) noexcept {
 
         TRACE_DEBUG("(%d) BASE=%x LIMIT=%d DT=%s T=%s PRIV=%d PRES=%d AVAIL=%d LONG=%d D/B=%s GRAN=%s",
                     i, descriptor.base_address(), descriptor.limit(),
-                    to_string(descriptor.descriptor_type()),
+                    to_string(descriptor.bits.descriptor_type),
                     type_to_string(descriptor),
                     descriptor.bits.privilege,
                     descriptor.bits.present,
                     descriptor.bits.available,
                     descriptor.bits.long_mode,
-                    to_string(descriptor.default_big()),
-                    to_string(descriptor.granularity()));
+                    to_string(descriptor.bits.default_big),
+                    to_string(descriptor.bits.granularity));
 
     }
 

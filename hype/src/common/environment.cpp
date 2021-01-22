@@ -2,11 +2,13 @@
 
 #include "commonefi.h"
 #include "common.h"
+#include "hype.h"
 
 #include <environment.h>
 
 
-static const EFI_MEMORY_TYPE AllocationType = PoolAllocationType;
+static constexpr size_t ALLOCATION_HEADER_SIZE = sizeof(uintptr_t);
+
 
 static size_t alignment_to_size(environment::alignment_t alignment) {
     switch (alignment) {
@@ -19,33 +21,30 @@ static size_t alignment_to_size(environment::alignment_t alignment) {
 common::result environment::allocate(size_t size,
                                                void** out,
                                                alignment_t alignment) noexcept {
-    // EfiRuntimeServicesData -> memory for runtime drivers.
-    // This memory won't be deleted/overwritten when doing ExitBootServices. [UEFI-Specs 2.6 6.2 P152 "Note"]
-    // Using it when subsystem=efi-app doesn't work, returning EFIERR(9).
-    //
-    // PoolAllocationType changes by subsystem. For subsystem=efi-app it's EfiLoaderData.
-    // This actually works for allocation.
-    // https://github.com/vathpela/gnu-efi/blob/master/lib/misc.c (::AllocatePool)
-    EFI_STATUS status;
+    common::result status = common::result::SUCCESS;
+
     void* memory;
+    void* aligned_mem;
+    uintptr_t* header;
+    size_t alignment_size = alignment_to_size(alignment);
+
+    CHECK(hype::g_context->environment.get_efi_service().allocate(
+            size + alignment_size - 1,
+            &memory));
 
     if (alignment_t::NO_ALIGN != alignment) {
-        size_t alignment_size = alignment_to_size(alignment);
-        status = uefi_call_wrapper((void*)BS->AllocatePool, 3, AllocationType, size + alignment_size - 1, &memory);
-        if (EFI_ERROR(status)) {
-            memory = nullptr;
-        } else {
-            memory = reinterpret_cast<void*>(((uintptr_t)memory + alignment_size - 1) & ~(uintptr_t)(alignment_size - 1));
-        }
+        aligned_mem = reinterpret_cast<void*>(((uintptr_t)memory + ALLOCATION_HEADER_SIZE + alignment_size - 1)
+                & ~(uintptr_t)(alignment_size - 1));
     } else {
-        status = uefi_call_wrapper((void*)BS->AllocatePool, 3, AllocationType, size, &memory);
-        if (EFI_ERROR(status)) {
-            memory = nullptr;
-        }
+        aligned_mem = reinterpret_cast<void*>((uintptr_t)memory + ALLOCATION_HEADER_SIZE);
     }
 
-    *out = memory;
-    return efi::result::efi_result(status);
+    header = reinterpret_cast<uintptr_t*>((uintptr_t)aligned_mem + ALLOCATION_HEADER_SIZE);
+    *header = reinterpret_cast<uintptr_t>(memory);
+
+    *out = aligned_mem;
+cleanup:
+    return status;
 }
 
 common::result environment::free(void* memory) noexcept {
@@ -53,8 +52,10 @@ common::result environment::free(void* memory) noexcept {
         return hype::result::SUCCESS;
     }
 
-    EFI_STATUS status = uefi_call_wrapper((void*)BS->FreePool, 1, memory);
-    return efi::result::efi_result(status);
+    uintptr_t* header = reinterpret_cast<uintptr_t*>((uintptr_t)memory + ALLOCATION_HEADER_SIZE);
+    memory = reinterpret_cast<void*>(*header);
+
+    return hype::g_context->environment.get_efi_service().free(memory);
 }
 
 uintn_t environment::to_physical(void* address) noexcept {

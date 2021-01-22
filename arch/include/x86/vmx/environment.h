@@ -3,6 +3,7 @@
 #include <error.h>
 
 #include "x86/memory.h"
+#include "x86/cr.h"
 
 
 namespace x86::vmx {
@@ -20,6 +21,12 @@ struct vmcs_t {
 using vmxon_region_t = vmcs_t;
 
 bool is_supported() noexcept;
+
+uintn_t get_cr0_fixed_bits(bool for_unrestricted_guest = false) noexcept;
+void adjust_cr0_fixed_bits(x86::cr0_t& cr, bool for_unrestricted_guest = false) noexcept;
+
+uintn_t get_cr4_fixed_bits() noexcept;
+void adjust_cr4_fixed_bits(x86::cr4_t& cr) noexcept;
 
 static_assert(sizeof(vmcs_t) <= x86::PAGE_SIZE, "vmcs_t > PAGE_SIZE");
 static_assert(sizeof(vmxon_region_t) <= x86::PAGE_SIZE, "vmxon_region_t > PAGE_SIZE");

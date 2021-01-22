@@ -11,7 +11,7 @@ set(HEADERS
         include/x86/msr.h
         include/x86/vmx/environment.h
         include/x86/error.h
-        include/x86/memory.h include/x86/vmx/operations.h include/x86/vmx/instrinsic.h include/x86/paging.h)
+        include/x86/memory.h include/x86/vmx/operations.h include/x86/vmx/instrinsic.h include/x86/paging.h include/x86/vmx/msr.h)
 
 set(ASM_SOURCES
         src/x86/intrinsic/igen.asm

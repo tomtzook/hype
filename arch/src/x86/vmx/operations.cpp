@@ -4,11 +4,11 @@
 #include "x86/error.h"
 #include "x86/cpuid.h"
 #include "x86/cr.h"
-#include "x86/msr.h"
 #include "x86/memory.h"
 
 #include "x86/vmx/instrinsic.h"
 #include "x86/vmx/environment.h"
+#include "x86/vmx/msr.h"
 
 #include "x86/vmx/operations.h"
 
@@ -42,9 +42,17 @@ static common::result prepare_for_on() {
         ERROR(x86::result::STATE_NOT_SUPPORTED);
     }
 
-    // enable vmx CR4.VMXE[13] = 1 [SDM 3 23.7 P1051]
-    cr4.bits.vmx_enable = 1;
-    x86::write(cr4);
+    {
+        // Restrictions placed on CR0 and CR4 [SDM 3 23.8 P1051]
+        x86::cr0_t cr0;
+        x86::vmx::adjust_cr0_fixed_bits(cr0);
+        x86::write(cr0);
+
+        x86::vmx::adjust_cr4_fixed_bits(cr4);
+        // enable vmx CR4.VMXE[13] = 1 [SDM 3 23.7 P1051]
+        cr4.bits.vmx_enable = 1;
+        x86::write(cr4);
+    }
 
 cleanup:
     return status;
@@ -70,8 +78,6 @@ cleanup:
 
 common::result x86::vmx::on(physical_address_t vmxon_region) noexcept {
     common::result status = common::result::SUCCESS;
-
-    // TODO: modify CR0 & CR4 according to VMX restrictions
 
     CHECK(prepare_for_on());
 

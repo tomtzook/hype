@@ -8,19 +8,30 @@ struct cr0_t {
     union {
         struct {
             uint64_t protection_enable : 1;
+#define CR0_PE_MASK (1 << 0)
             uint64_t monitor_coprocessor : 1;
+#define CR0_MP_MASK (1 << 1)
             uint64_t emulate_fpu : 1;
+#define CR0_EM_MASK (1 << 2)
             uint64_t task_switched : 1;
+#define CR0_TS_MASK (1 << 3)
             uint64_t extension_type : 1;
+#define CR0_ET_MASK (1 << 4)
             uint64_t numeric_error : 1;
+#define CR0_NE_MASK (1 << 5)
             uint64_t reserved1 : 10;
             uint64_t write_protect : 1;
+#define CR0_WP_MASK (1 << 16)
             uint64_t reserved2 : 1;
             uint64_t alignment_mask : 1;
+#define CR0_AM_MASK (1 << 18)
             uint64_t reserved3 : 10;
             uint64_t not_write_through : 1;
+#define CR0_NW_MASK (1 << 29)
             uint64_t cache_disable : 1;
+#define CR0_CD_MASK (1 << 30)
             uint64_t paging_enable : 1;
+#define CR0_PG_MASK (1 << 31)
         } bits;
 
         uint64_t raw;

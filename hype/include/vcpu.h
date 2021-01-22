@@ -19,6 +19,8 @@ public:
     bool is_bootstrap() const noexcept;
 
     x86::vmx::vmxon_region_t vmxon_region PAGE_ALIGNED;
+    x86::vmx::vmcs_t vmcs PAGE_ALIGNED;
+
     bool is_in_vmx_operation;
 };
 

@@ -36,21 +36,20 @@ static common::result start_on_vcpu(void* param) noexcept {
 
     TRACE_DEBUG("Starting on core");
 
-    {
-        physical_address_t vmxon_physaddress;
-        CHECK(x86::vmx::initialize_vmxon_region(cpu.vmxon_region));
-        vmxon_physaddress = environment::to_physical(&cpu.vmxon_region);
-
-        CHECK(x86::vmx::on(vmxon_physaddress));
-    }
-
+    CHECK(x86::vmx::on(cpu.vmxon_region));
     cpu.is_in_vmx_operation = true;
 
+    CHECK(x86::vmx::clear(cpu.vmcs));
     // TODO: setup vmcs
     // TODO: load vmcs
     // TODO: launch
 
 cleanup:
+    if (status && cpu.is_in_vmx_operation) {
+        CHECK_SILENT(x86::vmx::off());
+        cpu.is_in_vmx_operation = false;
+    }
+
     return status;
 }
 
@@ -60,8 +59,10 @@ static common::result free_on_vcpu(void* param) noexcept {
     hype::context_t* context = reinterpret_cast<hype::context_t*>(param);
     hype::vcpu_t& cpu = context->environment.get_vcpu_service().get_current_vcpu();
 
-    CHECK(x86::vmx::off());
-    cpu.is_in_vmx_operation = false;
+    if (cpu.is_in_vmx_operation) {
+        CHECK(x86::vmx::off());
+        cpu.is_in_vmx_operation = false;
+    }
 
 cleanup:
     return status;

@@ -6,7 +6,9 @@
 
 namespace x86::vmx {
 
-common::result vmxon(physical_address_t address) noexcept;
-common::result vmxoff() noexcept;
+common::result _vmxon(physical_address_t address) noexcept;
+common::result _vmxoff() noexcept;
+
+common::result _vmclear(physical_address_t address) noexcept;
 
 }

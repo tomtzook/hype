@@ -10,7 +10,7 @@
 namespace x86::vmx {
 
 // format for VMCS [SDM 3 24.2 P1054]
-struct vmcs_t {
+struct vm_struct_t {
     uint32_t revision : 31;
     uint32_t shadow_indicator : 1;
     uint32_t abort_indicator;
@@ -19,7 +19,8 @@ struct vmcs_t {
 
 // format for vmxon region [SDM 3 24.11.5 P1079]
 // size = vmcs size
-using vmxon_region_t = vmcs_t;
+using vmcs_t = vm_struct_t;
+using vmxon_region_t = vm_struct_t;
 
 bool is_supported() noexcept;
 

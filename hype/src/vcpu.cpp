@@ -59,7 +59,16 @@ common::result hype::initialize(vcpu_service_t& service) noexcept {
     // can use MpServices from EFI if before exit boot services.
     return hype::result::UNSUPPORTED_FEATURE;
 #else
+    common::result status;
+    service.m_vcpus = new (environment::alignment_t::PAGE_ALIGN) vcpu_t[1];
+    CHECK_ALLOCATION(service.m_vcpus);
+
+    service.m_vcpus[0].is_in_vmx_operation = false;
+
+    service.m_vcpus_count = 1;
     x86::msr::write(x86::msr::ia32_fs_base_t::ID, BSP_CPU_ID);
-    return hype::result::SUCCESS;
+
+cleanup:
+    return status;
 #endif
 }

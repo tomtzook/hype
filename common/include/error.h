@@ -88,7 +88,7 @@ using result = result_t;
 template<>
 common::result_t::result_t(common::result_t::common_code_t code) noexcept;
 
-DEBUG_DECL(common,
+DEBUG_NAMESPACE_START(common);
 const wchar_t* to_string(const result_t& result) noexcept;
 const wchar_t* common_error_to_string(const result_t& result) noexcept;
-)
+DEBUG_NAMESPACE_END

@@ -8,7 +8,7 @@ common::result::result_t(x86::result::code_t code) noexcept
 , m_category(x86::result::CATEGORY)
 {}
 
-DEBUG_DECL(x86::result,
+DEBUG_NAMESPACE_START(x86::result);
 const wchar_t* to_string(const common::result& result) noexcept {
     switch (result.code()) {
         case x86::result::SUCCESS: return L"SUCCESS";
@@ -17,4 +17,4 @@ const wchar_t* to_string(const common::result& result) noexcept {
         default: return L"";
     }
 }
-)
+DEBUG_NAMESPACE_END

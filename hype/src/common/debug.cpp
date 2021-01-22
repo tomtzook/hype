@@ -3,7 +3,8 @@
 
 #include <debug.h>
 
-DEBUG_DECL(common,
+
+DEBUG_NAMESPACE_START(common);
 void trace(const wchar_t* fmt, ...) noexcept {
     va_list args;
     va_start(args, fmt);
@@ -28,4 +29,4 @@ const wchar_t* to_string(const result_t& result) noexcept {
         default: return L"";
     }
 }
-)
+DEBUG_NAMESPACE_END

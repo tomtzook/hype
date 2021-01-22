@@ -1,4 +1,6 @@
 
+#include <x86/segment.h>
+
 #include "common.h"
 #include "commonefi.h"
 #include "hype.h"

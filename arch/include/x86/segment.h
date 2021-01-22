@@ -160,8 +160,7 @@ struct segment_table_t {
 } PACKED;
 
 void write(const segment_table_t& gdt) noexcept;
-
-void store(segment_table_t& gdt) noexcept;
+void read(segment_table_t& gdt) noexcept;
 
 STATIC_ASSERT_SIZE(segment_selector_t, 2);
 
@@ -176,7 +175,7 @@ STATIC_ASSERT_SIZE(segment_table_t, 6);
 }
 
 
-DEBUG_DECL(x86,
+DEBUG_NAMESPACE_START(x86);
 const wchar_t* to_string(selector_table_t selector_table) noexcept;
 const wchar_t* to_string(segment_type_data_code_t segment_type) noexcept;
 const wchar_t* to_string(segment_type_system_t segment_type) noexcept;
@@ -187,4 +186,4 @@ const wchar_t* type_to_string(const segment_descriptor_t& descriptor) noexcept;
 
 void trace(const segment_descriptor_t& descriptor) noexcept;
 void trace(const segment_table_t& table) noexcept;
-)
+DEBUG_NAMESPACE_END

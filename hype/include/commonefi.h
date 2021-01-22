@@ -42,6 +42,6 @@ public:
 template<>
 common::result::result_t(EFI_STATUS code) noexcept;
 
-DEBUG_DECL(efi::result,
+DEBUG_NAMESPACE_START(efi::result);
 const wchar_t* to_string(const common::result& result) noexcept;
-)
+DEBUG_NAMESPACE_END

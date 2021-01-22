@@ -22,6 +22,6 @@ enum code_t {
 template<>
 common::result_t::result_t(hype::result::code_t code) noexcept;
 
-DEBUG_DECL(hype::result,
+DEBUG_NAMESPACE_START(hype::result);
 const wchar_t* to_string(const common::result& result) noexcept;
-)
+DEBUG_NAMESPACE_END

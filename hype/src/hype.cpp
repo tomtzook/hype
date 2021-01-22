@@ -116,7 +116,7 @@ common::result::result_t(hype::result::code_t code) noexcept
         , m_category(hype::result::CATEGORY)
 {}
 
-DEBUG_DECL(hype::result,
+DEBUG_NAMESPACE_START(hype::result);
 const wchar_t* to_string(const common::result& result) noexcept {
     switch (result.code()) {
         case hype::result::SUCCESS: return L"SUCCESS";
@@ -127,4 +127,4 @@ const wchar_t* to_string(const common::result& result) noexcept {
         default: return L"";
     }
 }
-)
+DEBUG_NAMESPACE_END

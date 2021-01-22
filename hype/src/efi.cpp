@@ -62,7 +62,7 @@ common::result efi::initialize(efi_service_t& service) noexcept {
 }
 
 
-DEBUG_DECL(efi::result,
+DEBUG_NAMESPACE_START(efi::result);
 const wchar_t* to_string(const common::result& result) noexcept {
     switch (result.code()) {
         case EFI_SUCCESS: return L"EFI_SUCCESS";
@@ -104,4 +104,4 @@ const wchar_t* to_string(const common::result& result) noexcept {
         default: return L"";
     }
 }
-)
+DEBUG_NAMESPACE_END

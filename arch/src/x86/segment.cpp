@@ -110,11 +110,11 @@ void x86::write(const segment_table_t &gdt) noexcept {
     _lgdt(const_cast<segment_table_t*>(&gdt));
 }
 
-void x86::store(segment_table_t& gdt) noexcept {
+void x86::read(segment_table_t& gdt) noexcept {
     _sgdt(&gdt);
 }
 
-DEBUG_DECL(x86,
+DEBUG_NAMESPACE_START(x86);
 const wchar_t* to_string(selector_table_t selector_table) noexcept {
     switch (selector_table) {
         case TABLE_GDT: return L"TABLE_GDT";
@@ -234,4 +234,4 @@ void trace(const segment_table_t& table) noexcept {
 
     TRACE_DEBUG("--END--GDT--------------------------");
 }
-)
+DEBUG_NAMESPACE_END

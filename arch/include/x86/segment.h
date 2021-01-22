@@ -169,14 +169,14 @@ void trace(const segment_table_t& table) noexcept;
 }
 #endif
 
-static_assert(sizeof(segment_selector_t) == 2, "segment_selector_t != 2");
+STATIC_ASSERT_SIZE(segment_selector_t, 2);
 
 #ifdef X86_64
-static_assert(sizeof(segment_descriptor_t) == 16, "segment_descriptor_t != 16");
-static_assert(sizeof(segment_table_t) == 10, "segment_table_t != 10");
+STATIC_ASSERT_SIZE(segment_descriptor_t, 16);
+STATIC_ASSERT_SIZE(segment_table_t, 10);
 #else
-static_assert(sizeof(segment_descriptor_t) == 8, "segment_descriptor_t != 8");
-static_assert(sizeof(segment_table_t) == 6, "segment_table_t != 6");
+STATIC_ASSERT_SIZE(segment_descriptor_t, 8);
+STATIC_ASSERT_SIZE(segment_table_t, 6);
 #endif
 
 }

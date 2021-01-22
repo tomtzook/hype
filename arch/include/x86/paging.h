@@ -76,7 +76,7 @@ bool are_huge_tables_supported() noexcept;
 common::result setup_identity_paging(huge_page_table_t& page_table) noexcept;
 
 
-static_assert(sizeof(huge_pdpte_t) == 8, "huge_pdpte_t != 8");
-static_assert(sizeof(pml4e_t) == 8, "pml4e_t != 8");
+STATIC_ASSERT_SIZE(huge_pdpte_t, 8);
+STATIC_ASSERT_SIZE(pml4e_t, 8);
 
 }

@@ -95,8 +95,9 @@ void cpu_id(cpuid_t leaf, cpuid_type& data_struct, unsigned int sub_leaf = 0) no
 template<typename cpuid_type>
 cpuid_type cpu_id(cpuid_t leaf, cpuid_t sub_leaf = 0) noexcept;
 
-static_assert(sizeof(cpuid_regs_t) == 16, "cpuid_regs_t != 16");
-static_assert(sizeof(cpuid_eax01_t) == 16, "cpuid_eax01_t != 16");
+
+STATIC_ASSERT_SIZE(cpuid_regs_t, 16);
+STATIC_ASSERT_SIZE(cpuid_eax01_t, 16);
 
 }
 

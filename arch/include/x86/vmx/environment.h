@@ -28,7 +28,8 @@ void adjust_cr0_fixed_bits(x86::cr0_t& cr, bool for_unrestricted_guest = false) 
 uintn_t get_cr4_fixed_bits() noexcept;
 void adjust_cr4_fixed_bits(x86::cr4_t& cr) noexcept;
 
-static_assert(sizeof(vmcs_t) <= x86::PAGE_SIZE, "vmcs_t > PAGE_SIZE");
-static_assert(sizeof(vmxon_region_t) <= x86::PAGE_SIZE, "vmxon_region_t > PAGE_SIZE");
+
+STATIC_ASSERT_UPTOSIZE(vmcs_t, x86::PAGE_SIZE);
+STATIC_ASSERT_UPTOSIZE(vmxon_region_t, x86::PAGE_SIZE);
 
 }

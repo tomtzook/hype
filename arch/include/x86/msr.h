@@ -57,10 +57,10 @@ void read(id_t msr_id, msr_type& msr) noexcept;
 template<typename msr_type>
 void write(id_t msr_id, const msr_type& msr) noexcept;
 
-static_assert(sizeof(ia32_efer_t) == 8, "ia32_efer_t != 8");
-static_assert(sizeof(ia32_feature_ctrl_t) == 8, "ia32_feature_ctrl_t != 8");
-static_assert(sizeof(ia32_vmx_basic_t) == 8, "ia32_vmx_basic_t != 8");
-static_assert(sizeof(ia32_fs_base_t) == 8, "ia32_fs_base_t != 8");
+
+STATIC_ASSERT_SIZE(ia32_efer_t, 8);
+STATIC_ASSERT_SIZE(ia32_feature_ctrl_t, 8);
+STATIC_ASSERT_SIZE(ia32_fs_base_t, 8);
 
 }
 

@@ -54,4 +54,11 @@ struct ia32_vmx_cr4_fixed1_t {
     };
 } PACKED;
 
+
+STATIC_ASSERT_SIZE(ia32_vmx_basic_t, 8);
+STATIC_ASSERT_SIZE(ia32_vmx_cr0_fixed0_t, 8);
+STATIC_ASSERT_SIZE(ia32_vmx_cr0_fixed1_t, 8);
+STATIC_ASSERT_SIZE(ia32_vmx_cr4_fixed0_t, 8);
+STATIC_ASSERT_SIZE(ia32_vmx_cr4_fixed1_t, 8);
+
 }

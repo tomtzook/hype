@@ -66,6 +66,7 @@ const wchar_t* efi::result::debug::to_string(const common::result& result) noexc
 
 static EFI_STATUS exit_boot_services_hook(EFI_HANDLE image_handle, UINTN map_key) {
     g_is_after_exit_boot_services = true;
+    return g_original_exit_boot_services(image_handle, map_key);
 }
 
 bool efi::efi_service_t::is_after_exit_boot_services() noexcept {
@@ -100,4 +101,6 @@ common::result efi::efi_service_t::free(void* memory) noexcept {
 common::result efi::initialize(efi_service_t& service) noexcept {
     g_original_exit_boot_services = gBS->ExitBootServices;
     gBS->ExitBootServices = exit_boot_services_hook;
+
+    return common::result::SUCCESS;
 }

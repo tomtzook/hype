@@ -102,4 +102,8 @@ void write(const cr3_t &reg) noexcept;
 void read(cr4_t& reg) noexcept;
 void write(const cr4_t &reg) noexcept;
 
+STATIC_ASSERT_SIZE(cr0_t, 8);
+STATIC_ASSERT_SIZE(cr3_t, 8);
+STATIC_ASSERT_SIZE(cr4_t, 8);
+
 }

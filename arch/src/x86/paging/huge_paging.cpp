@@ -4,10 +4,10 @@
 #include <types.h>
 
 #include "x86/error.h"
-#include "x86/cr.h"
-#include "x86/msr.h"
 #include "x86/cpuid.h"
 #include "x86/memory.h"
+
+#include "x86/paging/paging.h"
 
 #include "x86/paging/huge_paging.h"
 
@@ -69,19 +69,7 @@ x86::paging::huge_pdpte_t& x86::paging::huge_page_table_t::operator[](size_t ind
 }
 
 bool x86::paging::are_huge_tables_supported() noexcept {
-    // IA32e paging mode [SDM 3 4.1.1 P106]
-    //  CR0.PG = 1, CR4.PAE = 1, IA32_EFER.LME = 1
     // CPUID[0x80000001].EDX[26] = 1 -> 1gb pages supported [SDM 3 4.1.4 P109]
-    cr0_t cr0;
-    cr4_t cr4;
-    msr::ia32_efer_t efer {};
-
-    if (!cr0.bits.paging_enable ||
-            !cr4.bits.physical_address_extension ||
-            !efer.bits.lme) {
-        return false;
-    }
-
     cpuid_regs_t cpuid_regs {};
     cpu_id(PAGING_FEATURES_LEAF, cpuid_regs);
 
@@ -95,6 +83,7 @@ bool x86::paging::are_huge_tables_supported() noexcept {
 common::result x86::paging::setup_identity_paging(huge_page_table_t& page_table) noexcept {
     common::result status = x86::result::SUCCESS;
 
+    CHECK_ASSERT(mode_t::IA32E_PAGING == get_mode(), "not IA32e paging");
     CHECK_ASSERT(are_huge_tables_supported(), "huge pages not supported");
 
     {

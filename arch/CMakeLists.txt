@@ -11,7 +11,7 @@ set(HEADERS
         include/x86/msr.h
         include/x86/vmx/environment.h
         include/x86/error.h
-        include/x86/memory.h include/x86/vmx/operations.h include/x86/vmx/instrinsic.h include/x86/paging/huge_paging.h include/x86/vmx/msr.h)
+        include/x86/memory.h include/x86/vmx/operations.h include/x86/vmx/instrinsic.h include/x86/paging/huge_paging.h include/x86/vmx/msr.h include/x86/paging/paging.h)
 
 set(ASM_SOURCES
         src/x86/intrinsic/igen.asm
@@ -28,7 +28,7 @@ set(SOURCES
         src/x86/msr.cpp
         src/x86/vmx/environment.cpp
         src/x86/error.cpp
-        src/x86/memory.cpp src/x86/vmx/operations.cpp src/x86/vmx/intrinsic.cpp src/x86/paging/huge_paging.cpp)
+        src/x86/memory.cpp src/x86/vmx/operations.cpp src/x86/vmx/intrinsic.cpp src/x86/paging/huge_paging.cpp src/x86/paging/paging.cpp)
 
 add_library(arch_obj OBJECT ${HEADERS} ${SOURCES})
 target_compile_definitions(arch_obj PUBLIC _DEBUG)

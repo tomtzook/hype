@@ -1,7 +1,7 @@
 
 #include <x86/cpuid.h>
 #include <x86/segment.h>
-#include <x86/paging/huge_paging.h>
+#include <x86/paging/paging.h>
 
 #include "common.h"
 #include "vcpu.h"
@@ -20,7 +20,8 @@ static common::result check_environment_support() noexcept {
     // TODO: add check for secondary and primary controls
     // TODO: add check for unrestricted guest support
 
-    if (!x86::paging::are_huge_tables_supported()) {
+    if (x86::paging::mode_t::IA32E_PAGING != x86::paging::get_mode() ||
+        !x86::paging::are_huge_tables_supported()) {
         return hype::result::HUGE_PAGES_NOT_SUPPORTED;
     }
 

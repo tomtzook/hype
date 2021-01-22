@@ -2,7 +2,6 @@
 
 #include "commonefi.h"
 #include "common.h"
-#include "hype.h"
 
 #include <environment.h>
 
@@ -21,16 +20,14 @@ static size_t alignment_to_size(environment::alignment_t alignment) {
 common::result environment::allocate(size_t size,
                                                void** out,
                                                alignment_t alignment) noexcept {
-    common::result status = common::result::SUCCESS;
+    common::result status;
 
     void* memory;
     void* aligned_mem;
     uintptr_t* header;
     size_t alignment_size = alignment_to_size(alignment);
 
-    CHECK(hype::g_context->environment.get_efi_service().allocate(
-            size + alignment_size - 1,
-            &memory));
+    CHECK(efi::allocate(size + alignment_size - 1, &memory));
 
     if (alignment_t::NO_ALIGN != alignment) {
         aligned_mem = reinterpret_cast<void*>(((uintptr_t)memory + ALLOCATION_HEADER_SIZE + alignment_size - 1)
@@ -39,7 +36,7 @@ common::result environment::allocate(size_t size,
         aligned_mem = reinterpret_cast<void*>((uintptr_t)memory + ALLOCATION_HEADER_SIZE);
     }
 
-    header = reinterpret_cast<uintptr_t*>((uintptr_t)aligned_mem + ALLOCATION_HEADER_SIZE);
+    header = reinterpret_cast<uintptr_t*>((uintptr_t)aligned_mem - ALLOCATION_HEADER_SIZE);
     *header = reinterpret_cast<uintptr_t>(memory);
 
     *out = aligned_mem;
@@ -52,10 +49,10 @@ common::result environment::free(void* memory) noexcept {
         return hype::result::SUCCESS;
     }
 
-    uintptr_t* header = reinterpret_cast<uintptr_t*>((uintptr_t)memory + ALLOCATION_HEADER_SIZE);
+    uintptr_t* header = reinterpret_cast<uintptr_t*>((uintptr_t)memory - ALLOCATION_HEADER_SIZE);
     memory = reinterpret_cast<void*>(*header);
 
-    return hype::g_context->environment.get_efi_service().free(memory);
+    return efi::free(memory);
 }
 
 uintn_t environment::to_physical(void* address) noexcept {

@@ -6,7 +6,7 @@
 namespace x86::paging {
 
 enum class mode_t {
-    BIT32_PAGING,
+    BIT32_PAGING = 0,
     PAE_PAGING,
     IA32E_PAGING
 };

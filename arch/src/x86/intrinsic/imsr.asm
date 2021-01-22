@@ -6,7 +6,7 @@ section .text
 
 global _read_msr
 _read_msr:
-    mov ecx, edi
+    mov rcx, rdi
     rdmsr
     shl rdx, 32
     or rax, rdx
@@ -14,7 +14,9 @@ _read_msr:
 
 global _write_msr
 _write_msr:
-    shr rsi, 32
-    mov edx, esi
+    mov rax, rsi
+    mov rdx, rsi
+    shr rdx, 32
+    mov rcx, rdi
     wrmsr
     ret

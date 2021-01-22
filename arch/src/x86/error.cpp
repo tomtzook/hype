@@ -13,6 +13,7 @@ const wchar_t* to_string(const common::result& result) noexcept {
     switch (result.code()) {
         case x86::result::SUCCESS: return L"SUCCESS";
         case x86::result::STATE_NOT_SUPPORTED: return L"STATE_NOT_SUPPORTED";
+        case x86::result::INSTRUCTION_FAILED: return L"INSTRUCTION_FAILED";
         default: return L"";
     }
 }

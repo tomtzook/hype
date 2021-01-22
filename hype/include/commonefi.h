@@ -27,13 +27,12 @@ common::result efi_result(EFI_STATUS efi_status) noexcept;
 
 } // namespace result
 
+common::result allocate(size_t size, void** out) noexcept;
+common::result free(void* memory) noexcept;
 
 class efi_service_t {
 public:
     bool is_after_exit_boot_services() noexcept;
-
-    common::result allocate(size_t size, void** out) noexcept;
-    common::result free(void* memory) noexcept;
 
     friend common::result efi::initialize(efi_service_t& service) noexcept;
 };

@@ -18,7 +18,8 @@ set(ASM_SOURCES
         src/x86/intrinsic/iregs.asm
         src/x86/intrinsic/iseg.asm
         src/x86/intrinsic/imsr.asm
-        src/x86/intrinsic/icpuid.asm)
+        src/x86/intrinsic/icpuid.asm
+        src/x86/intrinsic/ivmx.asm)
 
 set(SOURCES
         src/x86/cpuid.cpp

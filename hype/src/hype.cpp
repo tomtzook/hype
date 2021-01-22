@@ -29,15 +29,18 @@ static common::result check_environment_support() noexcept {
 }
 
 static common::result start_on_vcpu(void* param) noexcept {
-    common::result status = hype::result::SUCCESS;
+    common::result status;
 
     hype::context_t* context = reinterpret_cast<hype::context_t*>(param);
     hype::vcpu_t& cpu = context->environment.get_vcpu_service().get_current_vcpu();
+
+    TRACE_DEBUG("Starting on core");
 
     {
         physical_address_t vmxon_physaddress;
         CHECK(x86::vmx::initialize_vmxon_region(cpu.vmxon_region));
         vmxon_physaddress = environment::to_physical(&cpu.vmxon_region);
+
         CHECK(x86::vmx::on(vmxon_physaddress));
     }
 
@@ -52,7 +55,7 @@ cleanup:
 }
 
 static common::result free_on_vcpu(void* param) noexcept {
-    common::result status = hype::result::SUCCESS;
+    common::result status;
 
     hype::context_t* context = reinterpret_cast<hype::context_t*>(param);
     hype::vcpu_t& cpu = context->environment.get_vcpu_service().get_current_vcpu();
@@ -65,19 +68,22 @@ cleanup:
 }
 
 common::result hype::initialize() noexcept {
-    common::result status = hype::result::SUCCESS;
+    common::result status;
     if (nullptr != g_context) {
         return hype::result::ALREADY_INITIALIZED;
     }
 
     CHECK(check_environment_support());
+    TRACE_DEBUG("Environment supported");
 
-    g_context = new hype::context_t;
+    g_context = new (environment::alignment_t::PAGE_ALIGN) hype::context_t;
     CHECK_ALLOCATION(g_context);
 
     CHECK(initialize(g_context->environment));
     CHECK(x86::paging::setup_identity_paging(g_context->page_table));
     // TODO: initialize EPT
+
+    TRACE_DEBUG("Context initialized");
 cleanup:
     if (!status) {
         ::operator delete(g_context);
@@ -86,7 +92,7 @@ cleanup:
 }
 
 common::result hype::start() noexcept {
-    common::result status = hype::result::SUCCESS;
+    common::result status;
 
     CHECK(g_context->environment.get_vcpu_service().run_on_each_vcpu(
             start_on_vcpu,
@@ -116,6 +122,7 @@ const wchar_t* to_string(const common::result& result) noexcept {
         case hype::result::VMX_NOT_SUPPORTED: return L"VMX_NOT_SUPPORTED";
         case hype::result::ALREADY_INITIALIZED: return L"ALREADY_INITIALIZED";
         case hype::result::HUGE_PAGES_NOT_SUPPORTED: return L"HUGE_PAGES_NOT_SUPPORTED";
+        case hype::result::UNSUPPORTED_FEATURE: return L"UNSUPPORTED_FEATURE";
         default: return L"";
     }
 }

@@ -9,7 +9,8 @@ const common::result_category_t CATEGORY = 3;
 
 enum code_t {
     SUCCESS = 0,
-    STATE_NOT_SUPPORTED
+    STATE_NOT_SUPPORTED,
+    INSTRUCTION_FAILED
 };
 
 }

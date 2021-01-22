@@ -59,7 +59,7 @@ public:
         ASSERTION_ERROR
     };
 
-    result_t() = delete;
+    result_t() noexcept;
     result_t(result_t&& other) noexcept;
     result_t(result_code_t code, result_category_t category) noexcept;
 
@@ -73,6 +73,8 @@ public:
     const wchar_t* message() const noexcept;
 
     explicit operator bool() const noexcept;
+
+    result_t& operator=(const result_t& other) noexcept;
     result_t& operator=(result_t&& other) noexcept;
 private:
     result_code_t m_code;
@@ -82,6 +84,9 @@ private:
 using result = result_t;
 
 }
+
+template<>
+common::result_t::result_t(common::result_t::common_code_t code) noexcept;
 
 DEBUG_DECL(common,
 const wchar_t* to_string(const result_t& result) noexcept;

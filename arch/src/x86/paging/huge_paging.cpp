@@ -73,11 +73,7 @@ bool x86::paging::are_huge_tables_supported() noexcept {
     cpuid_regs_t cpuid_regs {};
     cpu_id(PAGING_FEATURES_LEAF, cpuid_regs);
 
-    if (CHECK_BIT(cpuid_regs.edx, 26)) {
-        return false;
-    }
-
-    return true;
+    return CHECK_BIT(cpuid_regs.edx, 26);
 }
 
 common::result x86::paging::setup_identity_paging(huge_page_table_t& page_table) noexcept {

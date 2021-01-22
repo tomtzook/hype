@@ -41,7 +41,7 @@ struct ia32_feature_ctrl_t {
 } PACKED;
 
 struct ia32_fs_base_t {
-    static const id_t ID = 0x480;
+    static const id_t ID = 0xC0000100;
     union {
         uint64_t raw;
     };

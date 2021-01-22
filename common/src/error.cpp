@@ -2,6 +2,10 @@
 #include "error.h"
 
 
+common::result_t::result_t() noexcept
+    : m_code(common_code_t::SUCCESS)
+    , m_category(COMMON)
+{}
 common::result_t::result_t(result_t&& other) noexcept
     : m_code(other.m_code)
     , m_category(other.m_category)
@@ -35,11 +39,23 @@ common::result_t::operator bool() const noexcept {
     return success();
 }
 
+common::result_t& common::result_t::operator=(const result_t& other) noexcept {
+    m_code = other.m_code;
+    m_category = other.m_category;
+    return *this;
+}
+
 common::result_t& common::result_t::operator=(result_t&& other) noexcept {
     m_code = other.m_code;
     m_category = other.m_category;
     return *this;
 }
+
+template<>
+common::result_t::result_t(common::result_t::common_code_t code) noexcept
+    : m_code(code)
+    , m_category(COMMON)
+{}
 
 DEBUG_DECL(common,
 const wchar_t* common_error_to_string(const common::result& result) noexcept {

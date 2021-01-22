@@ -1,6 +1,7 @@
 #pragma once
 
 #include <error.h>
+#include <macros.h>
 
 #include "x86/memory.h"
 #include "x86/cr.h"
@@ -14,7 +15,7 @@ struct vmcs_t {
     uint32_t shadow_indicator : 1;
     uint32_t abort_indicator;
     uint8_t data[x86::PAGE_SIZE - 8];
-};
+} PACKED;
 
 // format for vmxon region [SDM 3 24.11.5 P1079]
 // size = vmcs size

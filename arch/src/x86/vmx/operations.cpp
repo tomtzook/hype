@@ -77,7 +77,7 @@ cleanup:
 }
 
 common::result x86::vmx::on(physical_address_t vmxon_region) noexcept {
-    common::result status = common::result::SUCCESS;
+    common::result status;
 
     CHECK(prepare_for_on());
 
@@ -98,5 +98,5 @@ cleanup:
 }
 
 common::result x86::vmx::off() noexcept {
-    return x86::result::SUCCESS;
+    return vmxoff();
 }

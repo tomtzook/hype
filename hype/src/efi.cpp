@@ -16,20 +16,11 @@ common::result efi::result::efi_result(EFI_STATUS efi_status) noexcept {
 
 template<>
 common::result::result_t(EFI_STATUS code) noexcept
-: m_code(code)
-, m_category(efi::result::CATEGORY)
+    : m_code(code)
+    , m_category(efi::result::CATEGORY)
 {}
 
-static EFI_STATUS exit_boot_services_hook(EFI_HANDLE image_handle, UINTN map_key) {
-    g_is_after_exit_boot_services = true;
-    return g_original_exit_boot_services(image_handle, map_key);
-}
-
-bool efi::efi_service_t::is_after_exit_boot_services() noexcept {
-    return g_is_after_exit_boot_services;
-}
-
-common::result efi::efi_service_t::allocate(size_t size, void** out) noexcept {
+common::result efi::allocate(size_t size, void** out) noexcept {
     // EfiRuntimeServicesData -> memory for runtime drivers.
     // This memory won't be deleted/overwritten when doing ExitBootServices. [UEFI-Specs 2.6 6.2 P152 "Note"]
     // Using it when subsystem=efi-app doesn't work, returning EFIERR(9).
@@ -49,9 +40,18 @@ common::result efi::efi_service_t::allocate(size_t size, void** out) noexcept {
     return efi::result::efi_result(status);
 }
 
-common::result efi::efi_service_t::free(void* memory) noexcept {
+common::result efi::free(void* memory) noexcept {
     EFI_STATUS status = uefi_call_wrapper((void*)BS->FreePool, 1, memory);
     return efi::result::efi_result(status);
+}
+
+static EFI_STATUS exit_boot_services_hook(EFI_HANDLE image_handle, UINTN map_key) {
+    g_is_after_exit_boot_services = true;
+    return g_original_exit_boot_services(image_handle, map_key);
+}
+
+bool efi::efi_service_t::is_after_exit_boot_services() noexcept {
+    return g_is_after_exit_boot_services;
 }
 
 common::result efi::initialize(efi_service_t& service) noexcept {

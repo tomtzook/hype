@@ -13,7 +13,7 @@ efi::efi_service_t& hype::environment_t::get_efi_service() noexcept {
 }
 
 common::result hype::initialize(environment_t& environment) noexcept {
-    common::result status = hype::result::SUCCESS;
+    common::result status;
 
     CHECK(initialize(environment.m_vcpu_service));
     CHECK(initialize(environment.m_efi_service));

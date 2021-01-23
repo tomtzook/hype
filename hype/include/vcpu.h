@@ -3,6 +3,7 @@
 #include <x86/memory.h>
 #include <x86/vmx/environment.h>
 #include <x86/vmx/operations.h>
+#include <x86/vmx/vmcs.h>
 
 
 namespace hype {
@@ -19,7 +20,7 @@ public:
     bool is_bootstrap() const noexcept;
 
     x86::vmx::vmxon_region_t vmxon_region PAGE_ALIGNED;
-    x86::vmx::vmcs_t vmcs PAGE_ALIGNED;
+    x86::vmx::vmcs_t vmcs;
 
     bool is_in_vmx_operation;
 };

@@ -9,8 +9,12 @@
 #include "x86/vmx/instrinsic.h"
 #include "x86/vmx/environment.h"
 #include "x86/vmx/msr.h"
+#include "x86/vmx/vmcs.h"
 
 #include "x86/vmx/operations.h"
+
+
+static x86::vmx::vmcs_t* g_loaded_vmcs = nullptr;
 
 
 static common::result prepare_for_on() {
@@ -58,24 +62,6 @@ cleanup:
     return status;
 }
 
-common::result initialize_vm_struct(x86::vmx::vm_struct_t& vm_struct) noexcept {
-    common::result status;
-
-    // check the size according to IA32_VMX_BASIC [SDM 3 24.11.5 P1079]
-    x86::msr::ia32_vmx_basic_t vmx_basic {};
-    x86::msr::read(x86::msr::ia32_vmx_basic_t::ID, vmx_basic);
-
-    CHECK_ASSERT(sizeof(vm_struct) >= vmx_basic.bits.vm_struct_size,
-                 "vm struct size too small");
-
-    // initialize the revision indicator
-    vm_struct.revision = vmx_basic.bits.vmcs_revision;
-    vm_struct.shadow_indicator = false;
-
-cleanup:
-    return status;
-}
-
 common::result x86::vmx::on(vmxon_region_t& vmxon_region) noexcept {
     common::result status;
 
@@ -105,12 +91,29 @@ common::result x86::vmx::off() noexcept {
     return _vmxoff();
 }
 
-common::result x86::vmx::clear(vmcs_t& vmcs) noexcept {
+common::result x86::vmx::read(vmcs_t& vmcs) noexcept {
     common::result status;
 
-    CHECK(initialize_vm_struct(vmcs));
+    CHECK(_vmptrst(&vmcs));
 
-    CHECK(_vmclear(environment::to_physical(&vmcs)));
+cleanup:
+    return status;
+}
+
+common::result x86::vmx::write(vmcs_t& vmcs) noexcept {
+    common::result status;
+
+    if (g_loaded_vmcs == &vmcs || vmcs.m_loaded) {
+        goto cleanup;
+    }
+
+    CHECK(_vmptrld(environment::to_physical(&vmcs)));
+    vmcs.m_loaded = true;
+    if (nullptr != g_loaded_vmcs) {
+        g_loaded_vmcs->m_loaded = false;
+    }
+    g_loaded_vmcs = &vmcs;
+
 cleanup:
     return status;
 }

@@ -49,3 +49,21 @@ uintn_t x86::vmx::get_cr4_fixed_bits() noexcept {
 void x86::vmx::adjust_cr4_fixed_bits(x86::cr4_t& cr) noexcept {
     cr.raw |= get_cr4_fixed_bits();
 }
+
+common::result x86::vmx::initialize_vm_struct(x86::vmx::vm_struct_t& vm_struct) noexcept {
+    common::result status;
+
+    // check the size according to IA32_VMX_BASIC [SDM 3 24.11.5 P1079]
+    x86::msr::ia32_vmx_basic_t vmx_basic {};
+    x86::msr::read(x86::msr::ia32_vmx_basic_t::ID, vmx_basic);
+
+    CHECK_ASSERT(sizeof(vm_struct) >= vmx_basic.bits.vm_struct_size,
+                 "vm struct size too small");
+
+    // initialize the revision indicator
+    vm_struct.revision = vmx_basic.bits.vmcs_revision;
+    vm_struct.shadow_indicator = false;
+
+cleanup:
+    return status;
+}

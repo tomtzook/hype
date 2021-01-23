@@ -39,9 +39,10 @@ static common::result start_on_vcpu(void* param) noexcept {
     CHECK(x86::vmx::on(cpu.vmxon_region));
     cpu.is_in_vmx_operation = true;
 
-    CHECK(x86::vmx::clear(cpu.vmcs));
+    cpu.vmcs.clear();
     // TODO: setup vmcs
     // TODO: load vmcs
+    CHECK(x86::vmx::write(cpu.vmcs));
     // TODO: launch
 
 cleanup:

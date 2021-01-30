@@ -11,6 +11,7 @@ extern "C" uint32_t _vmread(uint32_t field, uintn_t* value) noexcept;
 extern "C" uint32_t _vmwrite(uint32_t field, uintn_t value) noexcept;
 extern "C" uint32_t _vmptrld(void* vmcs) noexcept;
 extern "C" uint32_t _vmptrst(void* vmcs) noexcept;
+extern "C" uint32_t _vmlaunch() noexcept;
 
 
 // TODO: ADD BETTER CHECKS FOR INSTRUCTION ERRORS
@@ -53,5 +54,10 @@ common::result x86::vmx::_vmptrld(physical_address_t address) noexcept {
 
 common::result x86::vmx::_vmptrst(void* address) noexcept {
     uint32_t result = ::_vmptrst(address);
+    return vmx_result(result);
+}
+
+common::result x86::vmx::_vmlaunch() noexcept {
+    uint32_t result = ::_vmlaunch();
     return vmx_result(result);
 }

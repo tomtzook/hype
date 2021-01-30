@@ -28,6 +28,11 @@ static common::result check_environment_support() noexcept {
     return hype::result::SUCCESS;
 }
 
+static common::result setup_vmcs(hype::vcpu_t& cpu, x86::vmx::vmcs_t& vmcs) noexcept {
+
+    return hype::result::SUCCESS;
+}
+
 static common::result start_on_vcpu(void* param) noexcept {
     common::result status;
 
@@ -40,10 +45,9 @@ static common::result start_on_vcpu(void* param) noexcept {
     cpu.is_in_vmx_operation = true;
 
     cpu.vmcs.clear();
-    // TODO: setup vmcs
-    // TODO: load vmcs
     CHECK(x86::vmx::write(cpu.vmcs));
-    // TODO: launch
+    CHECK(setup_vmcs(cpu, cpu.vmcs));
+    CHECK(x86::vmx::launch());
 
 cleanup:
     if (status && cpu.is_in_vmx_operation) {

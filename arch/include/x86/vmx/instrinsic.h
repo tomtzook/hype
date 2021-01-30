@@ -15,4 +15,6 @@ common::result _vmwrite(uint32_t field, uintn_t value) noexcept;
 common::result _vmptrld(physical_address_t address) noexcept;
 common::result _vmptrst(void* address) noexcept;
 
+common::result _vmlaunch() noexcept;
+
 }

@@ -117,3 +117,11 @@ common::result x86::vmx::write(vmcs_t& vmcs) noexcept {
 cleanup:
     return status;
 }
+
+common::result x86::vmx::launch() noexcept {
+    return x86::vmx::_vmlaunch();
+}
+
+common::result x86::vmx::resume() noexcept {
+    return common::result::UNSUPPORTED;
+}

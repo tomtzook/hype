@@ -56,7 +56,8 @@ public:
     enum common_code_t {
         SUCCESS = 0,
         ALLOCATION_ERROR,
-        ASSERTION_ERROR
+        ASSERTION_ERROR,
+        UNSUPPORTED
     };
 
     result_t() noexcept;

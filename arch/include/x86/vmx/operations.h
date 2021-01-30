@@ -13,4 +13,7 @@ common::result off() noexcept;
 common::result read(vmcs_t& vmcs) noexcept;
 common::result write(vmcs_t& vmcs) noexcept;
 
+common::result launch() noexcept;
+common::result resume() noexcept;
+
 }

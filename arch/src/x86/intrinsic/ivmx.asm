@@ -46,6 +46,11 @@ _vmptrst:
     jbe _vmx_failure
     jmp _vmx_success
 
+global _vmlaunch
+_vmlaunch:
+    vmlaunch
+    jmp _vmx_failure
+
 _vmx_failure:
     mov rax, 0x0
     ret

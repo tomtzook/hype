@@ -7,6 +7,8 @@ __Hype__ is capable of booting directly from _UEFI_.
 At the moment, the project is planned for running a _linux distro_,
 but this may change.
 
+__Note: THIS IS STILL A WORK IN PROGRESS__.
+
 This is mostly a research and experimentation project rather then
 a product for use.
 

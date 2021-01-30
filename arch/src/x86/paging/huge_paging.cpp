@@ -77,7 +77,7 @@ bool x86::paging::are_huge_tables_supported() noexcept {
 }
 
 common::result x86::paging::setup_identity_paging(huge_page_table_t& page_table) noexcept {
-    common::result status = x86::result::SUCCESS;
+    common::result status;
 
     CHECK_ASSERT(mode_t::IA32E_PAGING == get_mode(), "not IA32e paging");
     CHECK_ASSERT(are_huge_tables_supported(), "huge pages not supported");

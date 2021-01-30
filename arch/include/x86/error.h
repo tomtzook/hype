@@ -8,9 +8,7 @@ namespace x86::result {
 constexpr common::result_category_t CATEGORY = 3;
 
 enum code_t {
-    SUCCESS = 0,
-    STATE_NOT_SUPPORTED,
-    INSTRUCTION_FAILED
+    INSTRUCTION_FAILED = 1
 };
 
 }

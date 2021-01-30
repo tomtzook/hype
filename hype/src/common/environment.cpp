@@ -46,7 +46,7 @@ cleanup:
 
 common::result environment::free(void* memory) noexcept {
     if (nullptr == memory) {
-        return hype::result::SUCCESS;
+        return common::result::SUCCESS;
     }
 
     uintptr_t* header = reinterpret_cast<uintptr_t*>((uintptr_t)memory - ALLOCATION_HEADER_SIZE);

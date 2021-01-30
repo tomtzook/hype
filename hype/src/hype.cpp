@@ -25,12 +25,12 @@ static common::result check_environment_support() noexcept {
         return hype::result::HUGE_PAGES_NOT_SUPPORTED;
     }
 
-    return hype::result::SUCCESS;
+    return common::result::SUCCESS;
 }
 
 static common::result setup_vmcs(hype::vcpu_t& cpu, x86::vmx::vmcs_t& vmcs) noexcept {
 
-    return hype::result::SUCCESS;
+    return common::result::SUCCESS;
 }
 
 static common::result start_on_vcpu(void* param) noexcept {

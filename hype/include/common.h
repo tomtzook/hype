@@ -10,11 +10,9 @@ namespace hype::result {
 constexpr common::result_category_t CATEGORY = 1;
 
 enum code_t {
-    SUCCESS = 0,
-    VMX_NOT_SUPPORTED,
+    VMX_NOT_SUPPORTED = 1,
     ALREADY_INITIALIZED,
     HUGE_PAGES_NOT_SUPPORTED,
-    UNSUPPORTED_FEATURE
 };
 
 }

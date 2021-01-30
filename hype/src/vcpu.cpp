@@ -47,7 +47,7 @@ size_t hype::vcpu_service_t::get_vcpu_count() noexcept {
 common::result hype::vcpu_service_t::run_on_each_vcpu(vcpu_procedure_t procedure, void* param) noexcept {
 #ifdef _MP
     // can use MpServices from EFI if before exit boot services.
-    return hype::result::UNSUPPORTED_FEATURE;
+    return common::result::UNSUPPORTED_ERROR;
 #else
     // single processor
     return procedure(param);

@@ -43,7 +43,7 @@ static common::result prepare_for_on() {
     } else if ((cr4.bits.smx_enable && !feature_ctrl.bits.vmx_smx) ||
                (!cr4.bits.smx_enable && !feature_ctrl.bits.vmx_no_smx)) {
         // ia32_feature_ctrl does not support the current SMX mode
-        ERROR(common::result::UNSUPPORTED);
+        ERROR(common::result::UNSUPPORTED_ERROR);
     }
 
     {
@@ -123,5 +123,5 @@ common::result x86::vmx::launch() noexcept {
 }
 
 common::result x86::vmx::resume() noexcept {
-    return common::result::UNSUPPORTED;
+    return common::result::UNSUPPORTED_ERROR;
 }

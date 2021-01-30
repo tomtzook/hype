@@ -9,14 +9,14 @@ include_directories(include)
 
 set(HEADERS
         include/commonefi.h
-        include/hype.h include/common.h include/vcpu.h include/env.h)
+        include/hype.h include/common.h include/vcpu.h include/env.h include/vmcs.h)
 
 set(SOURCES
         src/common/environment.cpp
         src/common/debug.cpp
         src/main.cpp
         src/efi.cpp
-        src/hype.cpp src/vcpu.cpp src/env.cpp)
+        src/hype.cpp src/vcpu.cpp src/env.cpp src/vmcs.cpp)
 
 set(TARGET_NAME hype)
 

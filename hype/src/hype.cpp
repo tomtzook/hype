@@ -6,6 +6,7 @@
 #include "common.h"
 #include "vcpu.h"
 #include "env.h"
+#include "vmcs.h"
 
 #include "hype.h"
 
@@ -24,11 +25,6 @@ static common::result check_environment_support() noexcept {
         !x86::paging::are_huge_tables_supported()) {
         return hype::result::HUGE_PAGES_NOT_SUPPORTED;
     }
-
-    return common::result::SUCCESS;
-}
-
-static common::result setup_vmcs(hype::vcpu_t& cpu, x86::vmx::vmcs_t& vmcs) noexcept {
 
     return common::result::SUCCESS;
 }

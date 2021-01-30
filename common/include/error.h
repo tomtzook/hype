@@ -57,7 +57,7 @@ public:
         SUCCESS = 0,
         ALLOCATION_ERROR,
         ASSERTION_ERROR,
-        UNSUPPORTED
+        UNSUPPORTED_ERROR
     };
 
     result_t() noexcept;

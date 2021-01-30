@@ -10,7 +10,7 @@ const wchar_t* common_error_to_string(const common::result& result) noexcept {
         case common::result::SUCCESS: return L"SUCCESS";
         case common::result::ALLOCATION_ERROR: return L"ALLOCATION_ERROR";
         case common::result::ASSERTION_ERROR: return L"ASSERTION_ERROR";
-        case common::result::UNSUPPORTED: return L"UNSUPPORTED";
+        case common::result::UNSUPPORTED_ERROR: return L"UNSUPPORTED_ERROR";
         default: return L"";
     }
 }

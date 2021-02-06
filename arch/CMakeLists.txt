@@ -24,7 +24,7 @@ set(ASM_SOURCES
 set(SOURCES
         src/x86/cpuid.cpp
         src/x86/segment.cpp
-        src/x86/vmcs.cpp
+        src/x86/cr.cpp
         ${ASM_SOURCES}
         src/x86/msr.cpp
         src/x86/vmx/environment.cpp

@@ -16,7 +16,10 @@ extern "C" uint32_t _vmlaunch() noexcept;
 
 // TODO: ADD BETTER CHECKS FOR INSTRUCTION ERRORS
 inline static common::result vmx_result(uint32_t result) {
-    return result ? common::result::SUCCESS : x86::result::INSTRUCTION_FAILED;
+    if (!result) {
+        return x86::result::INSTRUCTION_FAILED;
+    }
+    return common::result::SUCCESS;
 }
 
 common::result x86::vmx::_vmxon(physical_address_t address) noexcept {

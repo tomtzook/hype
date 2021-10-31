@@ -1,8 +1,6 @@
 #pragma once
 
-#include <bits/wordsize.h>
-
-#if __WORDSIZE == 64
+#ifdef _WIN64
 #define X86_64
 #else
 #define X86

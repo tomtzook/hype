@@ -1,5 +1,3 @@
-set(CMAKE_CXX_FLAGS "-fno-stack-protector -fpic -fshort-wchar -mno-red-zone -Wall")
-
 include_directories(../common/include)
 include_directories(include)
 

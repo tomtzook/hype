@@ -1,6 +1,6 @@
+#include <efi/commonefi.h>
 
-#include <Uefi.h>
-#include <Library/PrintLib.h>
+#include "hype.h"
 
 
 extern "C"
@@ -9,7 +9,20 @@ UefiMain(
         IN EFI_HANDLE ImageHandle,
         IN EFI_SYSTEM_TABLE* SystemTable
 ) {
-    SystemTable->ConOut->OutputString(SystemTable->ConOut, (CHAR16*) L"Hello");
+    hype::result::status status = {};
+
+    TRACE_DEBUG("Main Start");
+
+    CHECK_AND_JUMP(status, hype::initialize());
+    CHECK_AND_JUMP(status, hype::start());
+
+cleanup:
+    hype::free();
+
+    TRACE_DEBUG("Finished");
+    TRACE_STATUS(status);
+
+    DEBUG_ONLY(hype::debug::deadloop());
 
     return EFI_SUCCESS;
 }

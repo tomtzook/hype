@@ -1,0 +1,3 @@
+[submodule "arch"]
+	path = arch
+	url = https://github.com/tomtzook/ia32-arch.git

@@ -1,25 +1,19 @@
 #!/bin/bash
 
-BUILD_PATH=build
-RUN_PATH=build/qemu
+if [[ -z "$1" ]]; then
+  echo path to binary missing.
+  exit 1
+fi
 
-OVMF_DISK_IMG=.edk2build/OVMF.fd
-BINARY_PATH=${BUILD_PATH}/bin/hype.efi
-
-# clean previous
-rm -rf ${BUILD_PATH}
-
-# build
-mkdir ${BUILD_PATH}
-cd ${BUILD_PATH}
-cmake ..
-make
-cd ..
+BINARY_PATH="$1"
 
 if [ ! -f ${BINARY_PATH} ]; then
-    echo "Compilation failed!"
+    echo "path given is of missing file"
     exit 1
 fi
+
+OVMF_DISK_IMG=.edk2build/OVMF.fd
+RUN_PATH=build_qemu
 
 # make image
 mkdir -p ${RUN_PATH}

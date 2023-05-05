@@ -1,3 +1,7 @@
 cmake-build-debug
 .idea
 build
+.edk2build
+build_qemu
+build_temp
+build_tmp

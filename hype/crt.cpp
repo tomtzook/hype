@@ -4,11 +4,11 @@
 #include "crt.h"
 
 
-void* __cdecl operator new(size_t size) noexcept {
+void* __cdecl operator new(size_t size) {
     return ::operator new(size, hype::memory::alignment_t::NO_ALIGN);
 }
 
-void* __cdecl operator new(size_t size, std::align_val_t) noexcept {
+void* __cdecl operator new(size_t size, std::align_val_t) {
     return ::operator new(size);
 }
 
@@ -22,11 +22,11 @@ void* __cdecl operator new(size_t size, hype::memory::alignment_t alignment) noe
     return out;
 }
 
-void* __cdecl operator new[](size_t size) noexcept {
+void* __cdecl operator new[](size_t size) {
     return ::operator new(size);
 }
 
-void* __cdecl operator new[](size_t size, std::align_val_t) noexcept {
+void* __cdecl operator new[](size_t size, std::align_val_t) {
     return ::operator new(size);
 }
 

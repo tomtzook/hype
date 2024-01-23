@@ -11,8 +11,10 @@ SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 echo Copying package to edk2 root
 cp -r ${SCRIPT_DIR}/edk/HypePkg ${EDK2_PATH}/
 
-echo Creating backup of original Conf/target.txt
-cp ${EDK2_PATH}/Conf/target.txt ${EDK2_PATH}/Conf/target.txt.old
+if [ ! -f ${EDK2_PATH}/Conf/target.txt ]; then
+    echo Creating backup of original Conf/target.txt
+    cp ${EDK2_PATH}/Conf/target.txt ${EDK2_PATH}/Conf/target.txt.old
+fi
 
 echo Copying target definitions to edk2 root
 cp ${SCRIPT_DIR}/edk/target.txt ${EDK2_PATH}/Conf/target.txt
@@ -20,7 +22,7 @@ cp ${SCRIPT_DIR}/edk/target.txt ${EDK2_PATH}/Conf/target.txt
 echo Running build for HypePkg
 
 pushd ${EDK2_PATH}
-. ./edksetup.sh
+. ./edksetup.sh BaseTools
 build
 popd
 
@@ -30,12 +32,17 @@ cp ${SCRIPT_DIR}/edk/target_ovmf.txt ${EDK2_PATH}/Conf/target.txt
 echo Running build for OvmfPkg
 
 pushd ${EDK2_PATH}
-. ./edksetup.sh
+. ./edksetup.sh BaseTools
 build
 popd
 
+
 echo Restoring edk2 root
-mv ${EDK2_PATH}/Conf/target.txt.old ${EDK2_PATH}/Conf/target.txt
+
+if [ ! -f ${EDK2_PATH}/Conf/target.txt.old ]; then
+  mv ${EDK2_PATH}/Conf/target.txt.old ${EDK2_PATH}/Conf/target.txt
+fi
+
 rm -r ${EDK2_PATH}/HypePkg
 
 echo Copying build data

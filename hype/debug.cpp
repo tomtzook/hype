@@ -1,5 +1,5 @@
 
-#include <efi/commonefi.h>
+#include "efi_base.h"
 #include "debug.h"
 
 #ifdef _DEBUG

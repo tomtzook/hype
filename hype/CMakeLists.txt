@@ -6,19 +6,19 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 add_executable(hype
         main.cpp
-        hype.cpp hype.h
-        common/result.h
-        common/hype_defs.h
-        environment/allocation.h
-        environment/allocation.cpp
-        common/result.cpp
-        common/common.h
-        efi/memory.h
-        efi/memory.cpp
-        efi/commonefi.h
-        efi/commonefi.cpp
-        common/debug.h
-        common/debug.cpp environment/paging.h environment/paging.cpp environment/memory.h environment/memory.cpp common/crt.h common/crt.cpp common/hype_types.h)
+        hype.cpp
+        hype.h
+        debug.h
+        debug.cpp
+        crt.h
+        crt.cpp
+        environment.h
+        base.h
+        status.h
+        status.cpp
+        memory.h
+        memory.cpp
+        efi_base.h environment.cpp context.h vmx.h vmx.cpp)
 
 target_compile_definitions(hype PUBLIC _DEBUG)
 target_compile_options(hype PRIVATE ${COMPILE_FLAGS})

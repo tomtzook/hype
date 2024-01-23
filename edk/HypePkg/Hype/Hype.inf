@@ -13,8 +13,10 @@
   MdePkg/MdePkg.dec
 
 [LibraryClasses]
+  BaseLib
   UefiLib
   UefiApplicationEntryPoint
 
 [Protocols]
+  gEfiMpServiceProtocolGuid
 

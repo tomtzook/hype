@@ -1,20 +1,19 @@
 
-#include "environment/allocation.h"
-
+#include "memory.h"
 #include "crt.h"
 
 
 void* __cdecl operator new(size_t size) {
-    return ::operator new(size, hype::memory::alignment_t::NO_ALIGN);
+    return ::operator new(size, 0);
 }
 
 void* __cdecl operator new(size_t size, std::align_val_t) {
     return ::operator new(size);
 }
 
-void* __cdecl operator new(size_t size, hype::memory::alignment_t alignment) noexcept {
+void* __cdecl operator new(size_t size, size_t alignment) noexcept {
     void* out;
-    auto status = hype::environment::allocate(size, out, alignment);
+    auto status = hype::memory::allocate(out, size, alignment, hype::memory::memory_type_t::data);
     if (!status) {
         return nullptr;
     }
@@ -30,12 +29,12 @@ void* __cdecl operator new[](size_t size, std::align_val_t) {
     return ::operator new(size);
 }
 
-void* __cdecl operator new[](size_t size, hype::memory::alignment_t alignment) noexcept {
+void* __cdecl operator new[](size_t size, size_t alignment) noexcept {
     return ::operator new(size, alignment);
 }
 
 void __cdecl operator delete(void* memory) noexcept {
-    hype::environment::free(memory);
+    hype::memory::free(memory);
 }
 
 void __cdecl operator delete(void* memory, std::align_val_t) noexcept {

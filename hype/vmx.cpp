@@ -51,7 +51,7 @@ status_t vmxon_for_vcpu(vcpu_t& cpu) noexcept {
     CHECK_ASSERT(x86::vmx::initialize_vmstruct(cpu.vmxon_region), "initialize_vmstruct failed");
 
     auto vmxon_region = environment::to_physical(&cpu.vmxon_region);
-    CHECK_ASSERT(x86::vmx::vmxon(vmxon_region), "vmxon failed");
+    CHECK_VMX(x86::vmx::vmxon(vmxon_region));
 
     return {};
 }

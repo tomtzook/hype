@@ -1,6 +1,7 @@
 #pragma once
 
 #include <x86/vmx/vmx.h>
+
 #include "memory.h"
 #include "environment.h"
 

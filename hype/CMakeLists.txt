@@ -18,7 +18,11 @@ add_executable(hype
         status.cpp
         memory.h
         memory.cpp
-        efi_base.h environment.cpp context.h vmx.h vmx.cpp)
+        efi_base.h
+        environment.cpp
+        context.h
+        vmx.h
+        vmx.cpp)
 
 target_compile_definitions(hype PUBLIC _DEBUG)
 target_compile_options(hype PRIVATE ${COMPILE_FLAGS})

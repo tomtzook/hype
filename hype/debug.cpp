@@ -1,4 +1,5 @@
 
+#include "base.h"
 #include "efi_base.h"
 #include "debug.h"
 
@@ -13,7 +14,7 @@ void trace(const wchar_t* fmt, ...) noexcept {
     VA_START(args, fmt);
 
     UnicodeVSPrint(reinterpret_cast<UINT16*>(buffer),
-                   ARRAY_SIZE(buffer),
+                   array_size(buffer),
                    reinterpret_cast<const UINT16*>(fmt),
                    args);
 

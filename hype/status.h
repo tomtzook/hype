@@ -8,7 +8,8 @@ namespace status {
 
 enum class category_t {
     hype,
-    efi
+    efi,
+    vmx_instruction
 };
 
 using code_t = uint64_t;
@@ -18,7 +19,7 @@ enum hype_code_t {
     error_allocation,
     error_unsupported,
     error_assert,
-    error_bad_argument
+    error_bad_argument,
 };
 
 class status_t {
@@ -83,6 +84,17 @@ private:
             TRACE_STATUS(__status);  \
             __status_var = __status; \
             goto __label; \
+        } \
+    } while(0)
+
+#define CHECK_VMX(...) \
+    do {                             \
+        auto __status = hype::status::status_t { \
+            hype::status::category_t::vmx_instruction, static_cast<hype::status::code_t>(__VA_ARGS__) \
+        }; \
+        if (!__status) { \
+            TRACE_STATUS(__status); \
+            return __status; \
         } \
     } while(0)
 

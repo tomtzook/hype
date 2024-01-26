@@ -11,6 +11,6 @@ namespace hype {
 
 status_t vmxon_for_vcpu(vcpu_t& cpu) noexcept;
 
-status_t setup_vmcs(vcpu_t& cpu) noexcept;
+status_t setup_vmcs(context_t& context, vcpu_t& cpu) noexcept;
 
 }

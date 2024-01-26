@@ -3,6 +3,7 @@
 #include <x86/vmx/vmx.h>
 #include <x86/msr.h>
 #include <x86/vmx/controls.h>
+#include <x86/segments.h>
 
 #include "base.h"
 #include "memory.h"
@@ -15,14 +16,6 @@
 namespace hype {
 
 context_t* g_context = nullptr;
-
-struct wanted_vm_controls_t {
-    x86::vmx::pin_based_exec_controls_t pinbased;
-    x86::vmx::processor_based_exec_controls_t procbased;
-    x86::vmx::secondary_processor_based_exec_controls_t secondary_procbased;
-    x86::vmx::vmexit_controls_t vmexit;
-    x86::vmx::vmentery_controls_t vmentry;
-};
 
 wanted_vm_controls_t get_wanted_vm_controls() noexcept {
     wanted_vm_controls_t controls{};
@@ -60,6 +53,10 @@ static status_t check_environment_support() noexcept {
     CHECK_ASSERT(vmx_basic.bits.vm_ctrls_fixed == 1,
                  "VMX True MSR Controls not supported");
 
+    auto ept_cap = x86::read<x86::msr::ia32_vmx_ept_vpid_cap_t>();
+    CHECK_ASSERT(ept_cap.bits.ept_large_pages && ept_cap.bits.invept && ept_cap.bits.memory_type_write_back,
+                 "Wanted EPT/VPID features not supported");
+
     CHECK_ASSERT(check_wanted_vm_controls(),
                  "Wanted VM Controls not supported");
 
@@ -79,13 +76,16 @@ static status_t start_on_vcpu(void*) noexcept {
 
     TRACE_DEBUG("Starting on core");
 
+    // todo: setup gdt with tss
+    // todo: setup idt
+
     CHECK(vmxon_for_vcpu(cpu));
     cpu.is_in_vmx_operation = true;
 
     auto vmcs_physical = environment::to_physical(&cpu.vmcs);
     CHECK_VMX(x86::vmx::vmclear(vmcs_physical));
-    CHECK(setup_vmcs(cpu));
     CHECK_VMX(x86::vmx::vmptrld(vmcs_physical));
+    CHECK(setup_vmcs(*g_context, cpu));
     CHECK_VMX(x86::vmx::vmlaunch());
 
     return {};
@@ -108,13 +108,35 @@ status_t initialize() noexcept {
     TRACE_DEBUG("Checking environment support");
     CHECK(check_environment_support());
 
+    auto gdtr = x86::segments::table_t(x86::read<x86::segments::gdtr_t>());
+    for (int i = 0; i < gdtr.count(); ++i) {
+        auto segment = gdtr[i];
+        TRACE_DEBUG("SEGMENT: i=0x%x, base=0x%x, limit=0x%x, s=0x%x, type=0x%x",
+                    i,
+                    segment.base_address(), segment.limit(),
+                    segment.bits.s, segment.bits.type);
+    }
+
+    // todo: handle mtrrs
+    // todo: setup gdt
+
     TRACE_DEBUG("Initializing context");
     g_context = new (x86::paging::page_size) context_t;
     CHECK_ALLOCATION(g_context, "context initialization failed");
 
+    g_context->wanted_vm_controls = get_wanted_vm_controls();
+
     status_t status{};
+    CHECK_AND_JUMP(cleanup, status, environment::get_active_cpu_count(g_context->cpu_count));
     CHECK_AND_JUMP(cleanup, status, memory::setup_identity_paging(g_context->page_table));
-    // todo: initialize ept
+    CHECK_AND_JUMP(cleanup, status, memory::setup_identity_ept(g_context->ept));
+
+    {
+        auto cr3 = x86::read<x86::cr3_t>();
+        cr3.ia32e.address = environment::to_physical(&g_context->page_table.m_pml4) << x86::paging::page_bits_4k;
+
+        x86::write(cr3);
+    }
 
 cleanup:
     if (!status && g_context != nullptr) {

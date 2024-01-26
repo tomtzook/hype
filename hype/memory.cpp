@@ -15,11 +15,6 @@ struct allocation_header_t {
 } packed;
 
 status_t setup_identity_paging(page_table_t& page_table) noexcept {
-    CHECK_ASSERT(x86::paging::current_mode() == x86::paging::mode_t::ia32e,
-                 "paging mode is not ia32e");
-    CHECK_ASSERT(x86::paging::ia32e::are_huge_tables_supported(),
-                 "paging huge tables not supported");
-
     {
         auto& pml4e = page_table.m_pml4;
         pml4e.raw = 0;
@@ -36,6 +31,39 @@ status_t setup_identity_paging(page_table_t& page_table) noexcept {
         pdpte.huge.ps = true;
         pdpte.address(i * x86::paging::page_size_1g);
     }
+
+    return {};
+}
+
+status_t setup_identity_ept(ept_t& ept) noexcept {
+    {
+        auto& pml4e = ept.m_pml4;
+        pml4e.raw = 0;
+        pml4e.bits.read = true;
+        pml4e.bits.write = true;
+        pml4e.bits.execute = true;
+        pml4e.address(environment::to_physical(ept.m_pdpt));
+    }
+
+    for (int i = 0; i < x86::vmx::pdptes_in_pdpt; i++) {
+        auto& pdpte = ept.m_pdpt[i];
+        pdpte.raw = 0;
+        pdpte.small.read = true;
+        pdpte.small.write = true;
+        pdpte.small.execute = true;
+        pdpte.address(environment::to_physical(ept.m_pd[i]));
+
+        for (int j = 0; j < x86::vmx::pdes_in_directory; j++) {
+            auto& pde = ept.m_pd[i][j];
+            pde.raw = 0;
+            pde.large.read = true;
+            pde.large.write = true;
+            pde.large.execute = true;
+            pde.large.ps = true;
+            pdpte.address(i * x86::paging::page_size_1g + j * x86::paging::page_size_2m);
+        }
+    }
+
 
     return {};
 }

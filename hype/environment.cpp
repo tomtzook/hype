@@ -71,6 +71,18 @@ void set_current_vcpu_id(size_t id) noexcept {
     x86::write<x86::msr::ia32_fs_base_t>(fs_base);
 }
 
+status_t get_active_cpu_count(size_t& count) noexcept {
+    EFI_MP_SERVICES_PROTOCOL* mp_services;
+    CHECK(status::category_t::efi, gBS->LocateProtocol(&gEfiMpServiceProtocolGuid, nullptr, reinterpret_cast<void**>(&mp_services)));
+
+    uintn_t cpu_count;
+    uintn_t enabled_cpu_count;
+    CHECK(status::category_t::efi, mp_services->GetNumberOfProcessors(mp_services, &cpu_count, &enabled_cpu_count));
+
+    count = enabled_cpu_count;
+    return {};
+}
+
 status_t run_on_all_vcpu(vcpu_procedure_t procedure, void* param) noexcept {
     EFI_MP_SERVICES_PROTOCOL* mp_services;
     CHECK(status::category_t::efi, gBS->LocateProtocol(&gEfiMpServiceProtocolGuid, nullptr, reinterpret_cast<void**>(&mp_services)));

@@ -24,6 +24,7 @@ struct ept_t {
 };
 
 status_t setup_identity_paging(page_table_t& page_table) noexcept;
+status_t setup_identity_ept(ept_t& ept) noexcept;
 
 status_t allocate(void*& out, size_t size, size_t alignment, memory_type_t memory_type) noexcept;
 void free(void* ptr) noexcept;

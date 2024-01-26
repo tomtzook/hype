@@ -3,6 +3,7 @@
 #include <x86/paging/paging.h>
 #include <x86/vmx/vmx.h>
 #include <x86/vmx/controls.h>
+#include <x86/atomic.h>
 
 #include "memory.h"
 #include "environment.h"
@@ -30,6 +31,8 @@ struct context_t {
     vcpu_t cpus[environment::max_vcpu_supported];
     size_t cpu_count;
     wanted_vm_controls_t wanted_vm_controls;
+
+    volatile uint8_t cpu_init_index;
 };
 
 extern context_t* g_context;

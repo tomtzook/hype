@@ -18,7 +18,7 @@ namespace hype {
 
 context_t* g_context = nullptr;
 
-wanted_vm_controls_t get_wanted_vm_controls() noexcept {
+static wanted_vm_controls_t get_wanted_vm_controls() noexcept {
     wanted_vm_controls_t controls{};
     controls.procbased.bits.activate_secondary_controls = true;
     controls.procbased.bits.use_io_bitmaps = true;
@@ -74,12 +74,13 @@ static status_t check_environment_support() noexcept {
 
 
 static status_t start_on_vcpu(void*) noexcept {
-    environment::set_current_vcpu_id(0); // TODO: VALUE?
+    auto cpu_id = x86::atomic::fetchadd8(&g_context->cpu_init_index, 1);
+    environment::set_current_vcpu_id(cpu_id);
+
+    TRACE_DEBUG("Starting on core id=0x%x", cpu_id);
 
     auto& cpu = get_current_vcpu();
     cpu.is_in_vmx_operation = false;
-
-    TRACE_DEBUG("Starting on core");
 
     // todo: setup gdt with tss
     // todo: setup idt
@@ -138,6 +139,7 @@ status_t initialize() noexcept {
     CHECK_ALLOCATION(g_context, "context initialization failed");
 
     g_context->wanted_vm_controls = get_wanted_vm_controls();
+    g_context->cpu_init_index = 0;
 
     status_t status{};
     CHECK_AND_JUMP(cleanup, status, environment::get_active_cpu_count(g_context->cpu_count));
@@ -148,7 +150,7 @@ status_t initialize() noexcept {
     TRACE_DEBUG("Initializing EPT");
     CHECK_AND_JUMP(cleanup, status, memory::setup_identity_ept(g_context->ept, mtrr_cache));
 
-    TRACE_DEBUG("setting page table");
+    TRACE_DEBUG("loading page table");
     // todo: this causes problems for freepages, we need to modify the page table before allocation?
     {
         auto cr3 = x86::read<x86::cr3_t>();
@@ -178,8 +180,6 @@ void free() noexcept {
     environment::run_on_all_vcpu(stop_on_vcpu, nullptr);
 
     if (g_context != nullptr) {
-        TRACE_DEBUG("doing delete");
-        environment::sleep(1000000);
         delete g_context;
         g_context = nullptr;
     }

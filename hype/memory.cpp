@@ -62,7 +62,7 @@ status_t setup_identity_ept(ept_t& ept, const x86::mtrr::mtrr_cache_t& mtrr_cach
             pde.large.ps = true;
 
             auto address = i * x86::paging::page_size_1g + j * x86::paging::page_size_2m;
-            auto type = mtrr_cache.type_for_range(address, x86::paging::page_size_2m);
+            auto type = mtrr_cache.type_for_2m(address);
             CHECK_ASSERT(x86::mtrr::memory_type_invalid != type,
                          "mtrr for range is invalid");
 
@@ -70,7 +70,6 @@ status_t setup_identity_ept(ept_t& ept, const x86::mtrr::mtrr_cache_t& mtrr_cach
             pde.address(address);
         }
     }
-
 
     return {};
 }

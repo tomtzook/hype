@@ -138,6 +138,7 @@ status_t vmxon_for_vcpu(vcpu_t& cpu) noexcept {
     CHECK_ASSERT(x86::vmx::prepare_for_vmxon(), "prepare_for_vmxon failed");
     CHECK_ASSERT(x86::vmx::initialize_vmstruct(cpu.vmxon_region), "initialize_vmstruct failed");
 
+    TRACE_DEBUG("Doing vmxon");
     auto vmxon_region = environment::to_physical(&cpu.vmxon_region);
     CHECK_VMX(x86::vmx::vmxon(vmxon_region));
 
@@ -147,8 +148,6 @@ status_t vmxon_for_vcpu(vcpu_t& cpu) noexcept {
 status_t setup_vmcs(context_t& context, vcpu_t& cpu) noexcept {
     // [SDM 3 24.4]
     // [SDM 3 24.5]
-
-    CHECK_ASSERT(x86::vmx::initialize_vmstruct(cpu.vmcs), "initialize_vmstruct failed");
 
     CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::guest_link_pointer, ~0ull));
 

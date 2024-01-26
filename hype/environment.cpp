@@ -94,13 +94,18 @@ status_t run_on_all_vcpu(vcpu_procedure_t procedure, void* param) noexcept {
     // run on bsp first
     mp_procedure(&context);
 
-    auto status = mp_services->StartupAllAPs(mp_services, mp_procedure, false, &context, 0, nullptr, nullptr);
+    auto status = mp_services->StartupAllAPs(mp_services, mp_procedure, true, &context, 0, nullptr, nullptr);
     if (EFI_ERROR(status) && status != EFI_NOT_STARTED) {
         // EFI_NOT_STARTED = no other APs are started, likely only because they do not exist and
         //  this system only has one.
         CHECK(status::category_t::efi, status);
     }
 
+    return {};
+}
+
+status_t sleep(size_t microseconds) noexcept {
+    CHECK(status::category_t::efi, gBS->Stall(microseconds));
     return {};
 }
 

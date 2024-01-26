@@ -21,4 +21,6 @@ status_t get_active_cpu_count(size_t& count) noexcept;
 using vcpu_procedure_t = status_t(void* param) noexcept;
 status_t run_on_all_vcpu(vcpu_procedure_t procedure, void* param) noexcept;
 
+status_t sleep(size_t microseconds) noexcept;
+
 }

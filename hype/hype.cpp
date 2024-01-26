@@ -67,6 +67,8 @@ static status_t check_environment_support() noexcept {
                  x86::paging::ia32e::are_huge_tables_supported(),
                  "required paging not supported");
 
+    // todo: check mtrr supported
+
     return {};
 }
 
@@ -85,10 +87,14 @@ static status_t start_on_vcpu(void*) noexcept {
     CHECK(vmxon_for_vcpu(cpu));
     cpu.is_in_vmx_operation = true;
 
+    TRACE_DEBUG("Initializing vmcs");
     auto vmcs_physical = environment::to_physical(&cpu.vmcs);
     CHECK_VMX(x86::vmx::vmclear(vmcs_physical));
+    CHECK_ASSERT(x86::vmx::initialize_vmstruct(cpu.vmcs), "initialize_vmstruct failed");
     CHECK_VMX(x86::vmx::vmptrld(vmcs_physical));
     CHECK(setup_vmcs(*g_context, cpu));
+
+    TRACE_DEBUG("Doing vmlaunch");
     CHECK_VMX(x86::vmx::vmlaunch());
 
     return {};
@@ -97,7 +103,10 @@ static status_t start_on_vcpu(void*) noexcept {
 static status_t stop_on_vcpu(void*) noexcept {
     auto& cpu = get_current_vcpu();
 
+    TRACE_DEBUG("Running stop on core");
+
     if (cpu.is_in_vmx_operation) {
+        TRACE_DEBUG("Doing vmxoff on core");
         x86::vmx::vmxoff();
         cpu.is_in_vmx_operation = false;
     }
@@ -132,12 +141,18 @@ status_t initialize() noexcept {
 
     status_t status{};
     CHECK_AND_JUMP(cleanup, status, environment::get_active_cpu_count(g_context->cpu_count));
+
+    TRACE_DEBUG("Initializing Page Table");
     CHECK_AND_JUMP(cleanup, status, memory::setup_identity_paging(g_context->page_table));
+
+    TRACE_DEBUG("Initializing EPT");
     CHECK_AND_JUMP(cleanup, status, memory::setup_identity_ept(g_context->ept, mtrr_cache));
 
+    TRACE_DEBUG("setting page table");
+    // todo: this causes problems for freepages, we need to modify the page table before allocation?
     {
         auto cr3 = x86::read<x86::cr3_t>();
-        cr3.ia32e.address = environment::to_physical(&g_context->page_table.m_pml4) << x86::paging::page_bits_4k;
+        cr3.ia32e.address = environment::to_physical(&g_context->page_table.m_pml4) >> x86::paging::page_bits_4k;
 
         x86::write(cr3);
     }
@@ -152,14 +167,19 @@ cleanup:
 }
 
 status_t start() noexcept {
+    TRACE_DEBUG("Starting Hype on all cores");
     CHECK(environment::run_on_all_vcpu(start_on_vcpu, nullptr));
     return {};
 }
 
 void free() noexcept {
+    TRACE_DEBUG("Doing free on all cores");
+    // todo: only stop on cpus that ran
     environment::run_on_all_vcpu(stop_on_vcpu, nullptr);
 
     if (g_context != nullptr) {
+        TRACE_DEBUG("doing delete");
+        environment::sleep(1000000);
         delete g_context;
         g_context = nullptr;
     }

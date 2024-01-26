@@ -1,6 +1,6 @@
 #pragma once
 
-#include "types.h"
+#include "x86/types.h"
 #include "debug.h"
 
 namespace hype {

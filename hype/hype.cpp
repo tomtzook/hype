@@ -4,6 +4,7 @@
 #include <x86/msr.h>
 #include <x86/vmx/controls.h>
 #include <x86/segments.h>
+#include <x86/mtrr.h>
 
 #include "base.h"
 #include "memory.h"
@@ -47,6 +48,8 @@ static status_t check_wanted_vm_controls() noexcept {
 }
 
 static status_t check_environment_support() noexcept {
+    // todo: check intel
+
     CHECK_ASSERT(x86::vmx::is_supported(), "vmx not supported");
 
     auto vmx_basic = x86::read<x86::msr::ia32_vmx_basic_t>();
@@ -117,8 +120,9 @@ status_t initialize() noexcept {
                     segment.bits.s, segment.bits.type);
     }
 
-    // todo: handle mtrrs
     // todo: setup gdt
+
+    auto mtrr_cache = x86::mtrr::initialize_cache();
 
     TRACE_DEBUG("Initializing context");
     g_context = new (x86::paging::page_size) context_t;
@@ -129,7 +133,7 @@ status_t initialize() noexcept {
     status_t status{};
     CHECK_AND_JUMP(cleanup, status, environment::get_active_cpu_count(g_context->cpu_count));
     CHECK_AND_JUMP(cleanup, status, memory::setup_identity_paging(g_context->page_table));
-    CHECK_AND_JUMP(cleanup, status, memory::setup_identity_ept(g_context->ept));
+    CHECK_AND_JUMP(cleanup, status, memory::setup_identity_ept(g_context->ept, mtrr_cache));
 
     {
         auto cr3 = x86::read<x86::cr3_t>();

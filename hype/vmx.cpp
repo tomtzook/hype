@@ -145,6 +145,9 @@ status_t vmxon_for_vcpu(vcpu_t& cpu) noexcept {
 }
 
 status_t setup_vmcs(context_t& context, vcpu_t& cpu) noexcept {
+    // [SDM 3 24.4]
+    // [SDM 3 24.5]
+
     CHECK_ASSERT(x86::vmx::initialize_vmstruct(cpu.vmcs), "initialize_vmstruct failed");
 
     CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::guest_link_pointer, ~0ull));

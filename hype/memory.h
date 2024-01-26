@@ -1,6 +1,7 @@
 #pragma once
 
 #include <x86/paging/ia32e.h>
+#include <x86/mtrr.h>
 #include <x86/vmx/ept.h>
 
 #include "base.h"
@@ -24,7 +25,7 @@ struct ept_t {
 };
 
 status_t setup_identity_paging(page_table_t& page_table) noexcept;
-status_t setup_identity_ept(ept_t& ept) noexcept;
+status_t setup_identity_ept(ept_t& ept, const x86::mtrr::mtrr_cache_t& mtrr_cache) noexcept;
 
 status_t allocate(void*& out, size_t size, size_t alignment, memory_type_t memory_type) noexcept;
 void free(void* ptr) noexcept;

@@ -2,8 +2,8 @@
 
 
 // from arch
-#include "types.h"
-#include "macros.h"
+#include "x86/types.h"
+#include "x86/macros.h"
 
 // ours
 #include "crt.h"

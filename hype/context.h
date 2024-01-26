@@ -1,7 +1,7 @@
 #pragma once
 
-#include <x86/vmx/vmx.h>
 #include <x86/paging/paging.h>
+#include <x86/vmx/vmx.h>
 #include <x86/vmx/controls.h>
 
 #include "memory.h"

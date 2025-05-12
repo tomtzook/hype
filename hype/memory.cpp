@@ -14,7 +14,7 @@ struct allocation_header_t {
     size_t pages;
 } packed;
 
-status_t setup_identity_paging(page_table_t& page_table) noexcept {
+status_t setup_identity_paging(page_table_t& page_table) {
     {
         auto& pml4e = page_table.m_pml4;
         pml4e.raw = 0;
@@ -35,7 +35,7 @@ status_t setup_identity_paging(page_table_t& page_table) noexcept {
     return {};
 }
 
-status_t setup_identity_ept(ept_t& ept, const x86::mtrr::mtrr_cache_t& mtrr_cache) noexcept {
+status_t setup_identity_ept(ept_t& ept, const x86::mtrr::mtrr_cache_t& mtrr_cache) {
     {
         auto& pml4e = ept.m_pml4;
         pml4e.raw = 0;
@@ -74,7 +74,7 @@ status_t setup_identity_ept(ept_t& ept, const x86::mtrr::mtrr_cache_t& mtrr_cach
     return {};
 }
 
-status_t allocate(void*& out, size_t size, size_t alignment, memory_type_t memory_type) noexcept {
+status_t allocate(void*& out, size_t size, size_t alignment, memory_type_t memory_type) {
     void* memory;
     size_t pages = (size + sizeof(allocation_header_t) + alignment - 1) / x86::paging::page_size;
     CHECK(environment::allocate_pages(memory, pages, memory_type));
@@ -95,7 +95,7 @@ status_t allocate(void*& out, size_t size, size_t alignment, memory_type_t memor
     return {};
 }
 
-void free(void* ptr) noexcept {
+void free(void* ptr) {
     auto header = reinterpret_cast<allocation_header_t*>(reinterpret_cast<uintptr_t>(ptr) - sizeof(allocation_header_t));
     environment::free_pages(reinterpret_cast<void*>(header->ptr), header->pages);
 }

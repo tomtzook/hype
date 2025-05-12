@@ -25,7 +25,7 @@ static void mp_procedure(void* param) {
     }
 }
 
-status_t allocate_pages(void*& out, size_t pages, memory::memory_type_t heap_type) noexcept {
+status_t allocate_pages(void*& out, size_t pages, memory::memory_type_t heap_type) {
     EFI_MEMORY_TYPE memory_type;
     switch (heap_type) {
         case memory::memory_type_t::code:
@@ -45,33 +45,33 @@ status_t allocate_pages(void*& out, size_t pages, memory::memory_type_t heap_typ
     return {};
 }
 
-void free_pages(void* ptr, size_t pages) noexcept {
+void free_pages(void* ptr, size_t pages) {
     auto address = to_physical(ptr);
     gBS->FreePages(address, pages);
 }
 
-physical_address_t to_physical(void* address) noexcept {
+physical_address_t to_physical(void* address) {
     // 1-to-1 mapping because of UEFI
     return reinterpret_cast<physical_address_t>(address);
 }
 
-void* to_virtual(physical_address_t address) noexcept {
+void* to_virtual(physical_address_t address) {
     // 1-to-1 mapping because of UEFI
     return reinterpret_cast<void*>(address);
 }
 
-size_t get_current_vcpu_id() noexcept {
+size_t get_current_vcpu_id() {
     auto fs_base = x86::read<x86::msr::ia32_fs_base_t>();
     return fs_base.raw;
 }
 
-void set_current_vcpu_id(size_t id) noexcept {
+void set_current_vcpu_id(size_t id) {
     x86::msr::ia32_fs_base_t fs_base{};
     fs_base.raw = id;
     x86::write<x86::msr::ia32_fs_base_t>(fs_base);
 }
 
-status_t get_active_cpu_count(size_t& count) noexcept {
+status_t get_active_cpu_count(size_t& count) {
     EFI_MP_SERVICES_PROTOCOL* mp_services;
     CHECK(status::category_t::efi, gBS->LocateProtocol(&gEfiMpServiceProtocolGuid, nullptr, reinterpret_cast<void**>(&mp_services)));
 
@@ -83,7 +83,7 @@ status_t get_active_cpu_count(size_t& count) noexcept {
     return {};
 }
 
-status_t run_on_all_vcpu(vcpu_procedure_t procedure, void* param) noexcept {
+status_t run_on_all_vcpu(vcpu_procedure_t procedure, void* param) {
     EFI_MP_SERVICES_PROTOCOL* mp_services;
     CHECK(status::category_t::efi, gBS->LocateProtocol(&gEfiMpServiceProtocolGuid, nullptr, reinterpret_cast<void**>(&mp_services)));
 
@@ -104,7 +104,7 @@ status_t run_on_all_vcpu(vcpu_procedure_t procedure, void* param) noexcept {
     return {};
 }
 
-status_t sleep(size_t microseconds) noexcept {
+status_t sleep(size_t microseconds) {
     CHECK(status::category_t::efi, gBS->Stall(microseconds));
     return {};
 }

@@ -7,7 +7,7 @@
 
 namespace hype::debug {
 
-void trace(const wchar_t* fmt, ...) noexcept {
+void trace(const wchar_t* fmt, ...) {
     wchar_t buffer[1024];
 
     VA_LIST args;
@@ -23,7 +23,7 @@ void trace(const wchar_t* fmt, ...) noexcept {
     Print(reinterpret_cast<UINT16*>(buffer));
 }
 
-void deadloop() noexcept {
+void deadloop() {
     TRACE_DEBUG("Entering Deadloop");
 
     int wait = 1;

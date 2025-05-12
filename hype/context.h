@@ -19,15 +19,15 @@ struct wanted_vm_controls_t {
 };
 
 struct vcpu_t {
-    x86::vmx::vmstruct_t vmxon_region page_aligned;
-    x86::vmx::vmstruct_t vmcs page_aligned;
-    uint8_t msr_bitmap[x86::paging::page_size] page_aligned;
+    page_aligned x86::vmx::vmstruct_t vmxon_region;
+    page_aligned x86::vmx::vmstruct_t vmcs;
+    page_aligned uint8_t msr_bitmap[x86::paging::page_size];
     bool is_in_vmx_operation;
 };
 
 struct context_t {
-    memory::page_table_t page_table page_aligned;
-    memory::ept_t ept page_aligned;
+    page_aligned memory::page_table_t page_table;
+    page_aligned memory::ept_t ept;
     vcpu_t cpus[environment::max_vcpu_supported];
     size_t cpu_count;
     wanted_vm_controls_t wanted_vm_controls;

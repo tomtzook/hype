@@ -18,7 +18,7 @@ namespace hype {
 
 context_t* g_context = nullptr;
 
-static wanted_vm_controls_t get_wanted_vm_controls() noexcept {
+static wanted_vm_controls_t get_wanted_vm_controls() {
     wanted_vm_controls_t controls{};
     controls.procbased.bits.activate_secondary_controls = true;
     controls.procbased.bits.use_io_bitmaps = true;
@@ -30,7 +30,7 @@ static wanted_vm_controls_t get_wanted_vm_controls() noexcept {
     return controls;
 }
 
-static status_t check_wanted_vm_controls() noexcept {
+static status_t check_wanted_vm_controls() {
     auto controls = get_wanted_vm_controls();
 
     CHECK_ASSERT(x86::vmx::are_vm_controls_supported(controls.pinbased),
@@ -47,7 +47,7 @@ static status_t check_wanted_vm_controls() noexcept {
     return {};
 }
 
-static status_t check_environment_support() noexcept {
+static status_t check_environment_support() {
     // todo: check intel
 
     CHECK_ASSERT(x86::vmx::is_supported(), "vmx not supported");
@@ -73,7 +73,7 @@ static status_t check_environment_support() noexcept {
 }
 
 
-static status_t start_on_vcpu(void*) noexcept {
+static status_t start_on_vcpu(void*) {
     auto cpu_id = x86::atomic::fetchadd8(&g_context->cpu_init_index, 1);
     environment::set_current_vcpu_id(cpu_id);
 
@@ -101,7 +101,7 @@ static status_t start_on_vcpu(void*) noexcept {
     return {};
 }
 
-static status_t stop_on_vcpu(void*) noexcept {
+static status_t stop_on_vcpu(void*) {
     auto& cpu = get_current_vcpu();
 
     TRACE_DEBUG("Running stop on core");
@@ -115,7 +115,7 @@ static status_t stop_on_vcpu(void*) noexcept {
     return {};
 }
 
-status_t initialize() noexcept {
+status_t initialize() {
     CHECK_ASSERT(g_context == nullptr, "context not null");
 
     TRACE_DEBUG("Checking environment support");
@@ -131,6 +131,7 @@ status_t initialize() noexcept {
     }
 
     // todo: setup gdt
+    // todo: setup gdt with rr
 
     auto mtrr_cache = x86::mtrr::initialize_cache();
 
@@ -168,13 +169,13 @@ cleanup:
     return status;
 }
 
-status_t start() noexcept {
+status_t start() {
     TRACE_DEBUG("Starting Hype on all cores");
     CHECK(environment::run_on_all_vcpu(start_on_vcpu, nullptr));
     return {};
 }
 
-void free() noexcept {
+void free() {
     TRACE_DEBUG("Doing free on all cores");
     // todo: only stop on cpus that ran
     environment::run_on_all_vcpu(stop_on_vcpu, nullptr);

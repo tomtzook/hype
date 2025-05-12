@@ -15,7 +15,7 @@ set(CMAKE_CXX_COMPILER /usr/bin/clang)
 
 set(CMAKE_BUILD_TYPE Debug)
 set(CMAKE_C_STANDARD 11)
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 
 set(CMAKE_C_FLAGS "-fno-stack-protector -fshort-wchar -mno-red-zone -Wall -target x86_64-unknown-windows -D__x86_64__ -fno-exceptions")
 set(CMAKE_CXX_FLAGS "-fno-stack-protector -fshort-wchar -mno-red-zone -Wall -target x86_64-unknown-windows -D__x86_64__ -fno-exceptions")

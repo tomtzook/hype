@@ -6,8 +6,8 @@
 
 namespace hype {
 
-status_t initialize() noexcept;
-status_t start() noexcept;
-void free() noexcept;
+status_t initialize();
+status_t start();
+void free();
 
 }

@@ -24,20 +24,20 @@ enum hype_code_t {
 
 class status_t {
 public:
-    status_t() noexcept;
-    status_t(category_t category, code_t code) noexcept;
-    status_t(hype_code_t code) noexcept;
-    status_t(status_t&& other) noexcept;
+    status_t();
+    status_t(category_t category, code_t code);
+    status_t(hype_code_t code);
+    status_t(status_t&& other);
 
-    [[nodiscard]] category_t category() const noexcept;
-    [[nodiscard]] code_t code() const noexcept;
+    [[nodiscard]] category_t category() const;
+    [[nodiscard]] code_t code() const;
 
-    [[nodiscard]] bool success() const noexcept;
+    [[nodiscard]] bool success() const;
 
-    explicit operator bool() const noexcept;
+    explicit operator bool() const;
 
-    status_t& operator=(const status_t& other) noexcept;
-    status_t& operator=(status_t&& other) noexcept;
+    status_t& operator=(const status_t& other);
+    status_t& operator=(status_t&& other);
 
 private:
     category_t m_category;

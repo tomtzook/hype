@@ -17,8 +17,8 @@
 
 namespace hype::debug {
 
-void trace(const wchar_t* fmt, ...) noexcept;
-void deadloop() noexcept;
+void trace(const wchar_t* fmt, ...);
+void deadloop();
 
 }
 

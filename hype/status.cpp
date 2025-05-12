@@ -4,22 +4,22 @@
 
 namespace hype::status {
 
-status_t::status_t() noexcept
+status_t::status_t()
         : status_t(hype_code_t::success) {
 }
 
-status_t::status_t(category_t category, code_t code) noexcept
+status_t::status_t(category_t category, code_t code)
         : m_category(category)
         , m_code(code) {
 }
 
-status_t::status_t(hype_code_t code) noexcept
+status_t::status_t(hype_code_t code)
     : m_category(category_t::hype)
     , m_code(code) {
 
 }
 
-status_t::status_t(status_t&& other) noexcept
+status_t::status_t(status_t&& other)
         : m_category(other.m_category)
         , m_code(other.m_code) {
 }

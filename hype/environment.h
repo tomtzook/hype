@@ -7,7 +7,7 @@ namespace hype::environment {
 
 static constexpr size_t max_vcpu_supported = 15;
 
-status_t allocate_pages(void*& out, size_t pages, memory::memory_type_t heap_type);
+status_t allocate_pages(void*& out, size_t pages, memory::memory_type_t memory_type);
 void free_pages(void* ptr, size_t pages);
 
 physical_address_t to_physical(void* address);

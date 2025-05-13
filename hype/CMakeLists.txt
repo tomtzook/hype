@@ -1,5 +1,5 @@
 
-list(APPEND COMPILE_FLAGS "-fno-stack-protector" "-fshort-wchar" "-mno-red-zone" "-Wall" "-DEFI_FUNCTION_WRAPPER")
+list(APPEND CXX_COMPILE_FLAGS "-fno-stack-protector" "-fshort-wchar" "-mno-red-zone" "-Wall" "-DEFI_FUNCTION_WRAPPER")
 set(LINK_FLAGS -target x86_64-unknown-windows -nostdlib -Wl,-entry:EfiMain -Wl,-subsystem:efi_application -fuse-ld=lld-link)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
@@ -22,10 +22,20 @@ add_executable(hype
         environment.cpp
         context.h
         vmx.h
-        vmx.cpp)
+        vmx.cpp
+        interrupts.h
+        interrupts.cpp
+        cpu.h
+        cpu.cpp
+        cpu.asm
+        vmexit.asm
+        vmexit.cpp
+        vmexit.h
+        vmentry.h
+        vmentry.asm)
 
 target_compile_definitions(hype PUBLIC _DEBUG)
-target_compile_options(hype PRIVATE ${COMPILE_FLAGS})
+target_compile_options(hype PRIVATE $<$<COMPILE_LANGUAGE:CXX>:${CXX_COMPILE_FLAGS}>)
 target_link_options(hype PRIVATE ${LINK_FLAGS})
 target_link_libraries(hype PRIVATE edk2 arch)
 set_target_properties(hype PROPERTIES SUFFIX ".efi")

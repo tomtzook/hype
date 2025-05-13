@@ -93,7 +93,8 @@ private:
             hype::status::category_t::vmx_instruction, static_cast<hype::status::code_t>(__VA_ARGS__) \
         }; \
         if (!__status) { \
-            TRACE_STATUS(__status); \
+            const auto __error = x86::vmx::vm_instruction_error(); \
+            TRACE_ERROR("ErrorStatus{category=0x%x code=0x%x, error=0x%x}", __status.category(), __status.code(), static_cast<uint16_t>(__error)); \
             return __status; \
         } \
     } while(0)

@@ -17,7 +17,7 @@ struct mp_procedure_context_t {
 static void mp_procedure(void* param) {
     // TODO MAKE ATOMIC STUFF
     // TODO HOW TO MARK FAILURE HERE?
-    auto context = reinterpret_cast<mp_procedure_context_t*>(param);
+    const auto context = static_cast<mp_procedure_context_t*>(param);
     auto status = context->procedure(context->param);
     if (!status) {
         TRACE_ERROR("Failed to run procedure on core");
@@ -25,21 +25,21 @@ static void mp_procedure(void* param) {
     }
 }
 
-status_t allocate_pages(void*& out, size_t pages, memory::memory_type_t heap_type) {
-    EFI_MEMORY_TYPE memory_type;
-    switch (heap_type) {
+status_t allocate_pages(void*& out, size_t pages, memory::memory_type_t memory_type) {
+    EFI_MEMORY_TYPE efi_memory_type;
+    switch (memory_type) {
         case memory::memory_type_t::code:
-            memory_type = EfiRuntimeServicesCode;
+            efi_memory_type = EfiRuntimeServicesCode;
             break;
         case memory::memory_type_t::data:
-            memory_type = EfiRuntimeServicesData;
+            efi_memory_type = EfiRuntimeServicesData;
             break;
         default:
             CHECK(status::error_bad_argument);
     }
 
     EFI_PHYSICAL_ADDRESS address;
-    CHECK(status::category_t::efi, gBS->AllocatePages(AllocateAnyPages, memory_type, pages, &address));
+    CHECK(status::category_t::efi, gBS->AllocatePages(AllocateAnyPages, efi_memory_type, pages, &address));
 
     out = to_virtual(address);
     return {};
@@ -65,7 +65,7 @@ size_t get_current_vcpu_id() {
     return fs_base.raw;
 }
 
-void set_current_vcpu_id(size_t id) {
+void set_current_vcpu_id(const size_t id) {
     x86::msr::ia32_fs_base_t fs_base{};
     fs_base.raw = id;
     x86::write<x86::msr::ia32_fs_base_t>(fs_base);

@@ -1,0 +1,44 @@
+
+#include "environment.h"
+#include "interrupts.h"
+
+
+namespace hype::interrupts {
+
+void trace_idt(const x86::interrupts::idtr_t& idtr) {
+    auto table = x86::interrupts::table64_t(idtr);
+    for (int i = 0; i < table.count(); i++) {
+        auto& descriptor = table[i];
+        TRACE_DEBUG("DESCRIPTOR: i=0x%x, address=0x%llx, selector=0x%x, dpl=0x%x, present=0x%x, ist=0x%x, type=0x%x, low=0x%llx, high=0x%llx",
+                    i,
+                    descriptor.address(),
+                    descriptor.low.bits.segment_selector,
+                    descriptor.low.bits.dpl,
+                    descriptor.low.bits.present,
+                    descriptor.low.bits.ist,
+                    static_cast<uint16_t>(descriptor.low.bits.type),
+                    descriptor.low.raw,
+                    descriptor.high.raw);
+    }
+}
+
+status_t setup_idt(x86::interrupts::idtr_t& idtr, idt_t& idt, const interrupt_handler& handler) {
+    memset(&idt, 0, sizeof(idt));
+
+    idtr.base_address = environment::to_physical(&idt);
+    idtr.limit = sizeof(idt) - 1;
+
+    for (int i = 0; i < idt_t::descriptor_count; ++i) {
+        auto& descriptor = idt.descriptors[i];
+        descriptor.low.bits.dpl = 0;
+        descriptor.low.bits.present = 1;
+        descriptor.low.bits.ist = 0;
+        descriptor.low.bits.segment_selector = handler.segment_selector;
+        descriptor.low.bits.type = x86::interrupts::gate_type_t::interrupt_32;
+        descriptor.address(reinterpret_cast<uint64_t>(handler.address));
+    }
+
+    return {};
+}
+
+}

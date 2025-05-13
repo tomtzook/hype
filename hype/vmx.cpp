@@ -2,8 +2,11 @@
 #include <x86/vmx/segments.h>
 #include <x86/vmx/controls.h>
 #include <x86/interrupts.h>
+#include <x86/rflags.h>
 
 #include "environment.h"
+#include "vmexit.h"
+#include "vmentry.h"
 #include "vmx.h"
 
 
@@ -20,6 +23,14 @@ static uintn_t get_cr4_host_mask() {
     x86::cr4_t cr4(0);
 
     return cr4.raw;
+}
+
+static x86::segments::selector_t host_selector(uint16_t index) {
+    x86::segments::selector_t selector{};
+    selector.bits.table = x86::segments::table_type_t::gdt;
+    selector.bits.rpl = 0;
+    selector.bits.index = index;
+    return selector;
 }
 
 template<typename _controls>
@@ -55,7 +66,6 @@ static status_t setup_segment(x86::segments::table_t& table) {
     CHECK_VMX(x86::vmx::vmwrite(_vmcs_segment_defs::guest_base, descriptor.base_address()));
     CHECK_VMX(x86::vmx::vmwrite(_vmcs_segment_defs::guest_limit, descriptor.limit()));
     CHECK_VMX(x86::vmx::vmwrite(_vmcs_segment_defs::guest_ar, x86::vmx::segment_access_rights(descriptor).raw));
-    CHECK_VMX(x86::vmx::vmwrite(_vmcs_segment_defs::host_selector, segment.value & 0xf8)); // clear 3 less significant bits
 
     return {};
 }
@@ -97,7 +107,7 @@ static status_t setup_cr_dr_vmcs() {
     return {};
 }
 
-static status_t setup_segments_vmcs() {
+static status_t setup_segments_vmcs(context_t& context) {
     auto gdtr = x86::read<x86::segments::gdtr_t>();
     auto gdt_table = x86::segments::table_t(gdtr);
 
@@ -110,21 +120,44 @@ static status_t setup_segments_vmcs() {
 
     // todo: update TR and LDT
 
-    CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::host_tr_base, gdtr.base_address));
+    const auto host_code_selector = host_selector(memory::gdt_t::code_descriptor_index);
+    const auto host_data_selector = host_selector(memory::gdt_t::data_descriptor_index);
+    const auto host_tr_selector = host_selector(memory::gdt_t::tss_descriptor_index);
+
+    // load host selectors
+    // clear 3 less significant bits
+    CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::host_ds_selector, host_data_selector.value & 0xf8));
+    CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::host_ss_selector, host_data_selector.value & 0xf8));
+    CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::host_es_selector, host_data_selector.value & 0xf8));
+    CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::host_gs_selector, host_data_selector.value & 0xf8));
+    CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::host_fs_selector, host_data_selector.value & 0xf8));
+    CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::host_cs_selector, host_code_selector.value & 0xf8));
+    CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::host_tr_selector, host_tr_selector.value & 0xf8));
+
+    CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::host_tr_base, context.gdt.tr.base_address()));
+    CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::host_fs_base, x86::read<x86::msr::ia32_fs_base_t>().raw));
+    CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::host_gs_base, x86::read<x86::msr::ia32_gs_base_t>().raw));
+    CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::host_gdtr_base, context.gdtr.base_address));
 
     CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::guest_gdtr_base, gdtr.base_address));
-    CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::guest_gdtr_base, gdtr.limit));
-    CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::host_gdtr_base, gdtr.base_address));
+    CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::guest_gdtr_limit, gdtr.limit));
 
     auto idtr = x86::read<x86::interrupts::idtr_t>();
     CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::guest_idtr_base, idtr.base_address));
     CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::guest_idtr_limit, idtr.limit));
-    CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::host_idtr_base, idtr.base_address));
+    CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::host_idtr_base, context.idtr.base_address));
 
-    auto fs_base = x86::read<x86::msr::ia32_fs_base_t>();
-    auto gs_base = x86::read<x86::msr::ia32_gs_base_t>();
-    CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::host_fs_base, fs_base.raw));
-    CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::host_gs_base, gs_base.raw));
+    return {};
+}
+
+static status_t setup_entry_exit(vcpu_t& cpu) {
+    const auto host_stack_start = reinterpret_cast<uint64_t>(&cpu.host_stack) + vcpu_t::stack_size - 1;
+    CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::host_rsp, host_stack_start));
+    CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::host_rip, reinterpret_cast<uint64_t>(&asm_vm_exit)));
+
+    CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::guest_rflags, x86::read<x86::rflags_t>().raw)); // todo: what?
+    CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::guest_rsp, host_stack_start));
+    CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::guest_rip, reinterpret_cast<uint64_t>(&asm_vm_entry))); // todo: vmentry
 
     return {};
 }
@@ -165,9 +198,8 @@ status_t setup_vmcs(context_t& context, vcpu_t& cpu) {
     CHECK(setup_vm_controls(context.wanted_vm_controls.vmentry));
 
     CHECK(setup_cr_dr_vmcs());
-    CHECK(setup_segments_vmcs());
-
-    // todo: (host and guest) rsp, rip, rflags
+    CHECK(setup_segments_vmcs(context));
+    CHECK(setup_entry_exit(cpu));
 
     return {};
 }

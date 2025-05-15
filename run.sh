@@ -21,9 +21,13 @@ mkdir -p ${RUN_PATH}/image/EFI/BOOT
 cp ${BINARY_PATH} ${RUN_PATH}/image/EFI/BOOT/BOOTX64.efi
 
 # run
+# -gdb tcp::9000 -S
 qemu-system-x86_64 \
   -cpu host \
   -m 1G \
+  -M q35,accel=tcg \
+  -gdb tcp::9000 \
+  -d int,cpu_reset,pcall,guest_errors -no-reboot -no-shutdown \
   -enable-kvm \
   -bios ${OVMF_DISK_IMG} \
   -drive if=ide,format=raw,file=fat:rw:${RUN_PATH}/image,index=0,media=disk

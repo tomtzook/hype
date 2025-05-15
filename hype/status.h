@@ -47,7 +47,7 @@ private:
 #define TRACE_STATUS(__status) \
     do {   \
         if (!__status) { \
-            TRACE_ERROR("ErrorStatus{category=0x%x code=0x%x}", __status.category(), __status.code());\
+            TRACE_ERROR("%s:%d: ErrorStatus{category=0x%x code=0x%x}", __FILE__, __LINE__, __status.category(), __status.code());\
         } \
     } while(0)
 

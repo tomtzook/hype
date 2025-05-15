@@ -140,6 +140,8 @@ status_t initialize() {
     g_context->wanted_vm_controls = get_wanted_vm_controls();
     g_context->cpu_init_index = 0;
 
+    TRACE_DEBUG("maxphys=0x%llx", x86::paging::max_physical_address_width());
+
     status_t status{};
     CHECK_AND_JUMP(cleanup, status, environment::get_active_cpu_count(g_context->cpu_count));
 

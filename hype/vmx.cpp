@@ -181,7 +181,7 @@ status_t setup_vmcs(context_t& context, vcpu_t& cpu) {
 
     {
         x86::vmx::ept_pointer_t eptp{};
-        eptp.bits.mem_type = 3; // TODO: MAKE TYPE FOR MEMTYPE
+        eptp.bits.mem_type = x86::mtrr::memory_type_t::writeback;
         eptp.bits.walk_length = 3; // todo: WHAT IS WALK LENGTH
         eptp.address(environment::to_physical(&context.ept.m_pml4));
 

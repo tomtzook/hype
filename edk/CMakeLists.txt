@@ -3,7 +3,7 @@ if(NOT DEFINED EDK2_PATH)
     message(FATAL_ERROR "Missing EDK2_PATH definition")
 endif()
 
-list(APPEND COMPILE_FLAGS "-fno-stack-protector" "-fshort-wchar" "-mno-red-zone" "-Wall" "-DEFI_FUNCTION_WRAPPER")
+list(APPEND COMPILE_FLAGS "-fno-stack-protector" "-fshort-wchar" "-mno-red-zone" "-Wall" "-DEFI_FUNCTION_WRAPPER" "-include${CMAKE_CURRENT_SOURCE_DIR}/header_fix.h")
 
 set(EDK2_HEADERS
         ${EDK2_PATH}/MdePkg/Include

@@ -16,3 +16,18 @@
 
 #define EXTRACT_BITS(value, start_idx, mask) (((value) >> (start_idx)) & (mask))
 #define CHECK_BIT(value, bit_idx) EXTRACT_BITS(value, bit_idx, 0x1)
+
+
+namespace hype {
+
+template<typename _t, typename _t2>
+constexpr bool is_any_of(_t first, _t2 second) {
+    return first == second;
+}
+
+template<typename _t, typename _t2, typename... _args>
+constexpr bool is_any_of(_t first, _t2 second, _args... args) {
+    return first == second || is_any_of(first, args...);
+}
+
+}

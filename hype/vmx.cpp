@@ -50,9 +50,6 @@ static status_t setup_vm_controls(const _controls& controls) {
 
 template<typename _vmcs_segment_defs>
 static status_t setup_segment(x86::segments::table_t& table) {
-    // todo: for guest, use original efi segments
-    // todo: handle null segments: set access rights as unusable
-
     auto segment = x86::read<typename _vmcs_segment_defs::segment>();
     if (segment.bits.index == 0) {
         x86::vmx::segment_access_rights_t ar{};
@@ -62,7 +59,6 @@ static status_t setup_segment(x86::segments::table_t& table) {
         CHECK_VMX(x86::vmx::vmwrite(_vmcs_segment_defs::guest_base, 0));
         CHECK_VMX(x86::vmx::vmwrite(_vmcs_segment_defs::guest_limit, 0));
         CHECK_VMX(x86::vmx::vmwrite(_vmcs_segment_defs::guest_ar, ar.raw));
-        CHECK_VMX(x86::vmx::vmwrite(_vmcs_segment_defs::host_selector, 0));
 
         return {};
     }
@@ -123,8 +119,8 @@ static status_t setup_segments_vmcs(context_t& context) {
     CHECK(setup_segment<x86::vmx::vmcs_ss_segment>(gdt_table));
     CHECK(setup_segment<x86::vmx::vmcs_es_segment>(gdt_table));
     CHECK(setup_segment<x86::vmx::vmcs_fs_segment>(gdt_table));
-
-    // todo: update TR and LDT
+    CHECK(setup_segment<x86::vmx::vmcs_tr_segment>(gdt_table));
+    CHECK(setup_segment<x86::vmx::vmcs_ldtr_segment>(gdt_table));
 
     const auto host_code_selector = host_selector(memory::gdt_t::code_descriptor_index);
     const auto host_data_selector = host_selector(memory::gdt_t::data_descriptor_index);

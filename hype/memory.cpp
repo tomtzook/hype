@@ -37,6 +37,53 @@ void trace_gdt(const x86::segments::gdtr_t& gdtr) {
     }
 }
 
+status_t setup_initial_guest_gdt() {
+    const auto current_gdtr = x86::read<x86::segments::gdtr_t>();
+
+    // make a copy of the current gdt + a tss
+    const auto gdt_size = current_gdtr.limit + 1;
+    const auto wanted_size = gdt_size + sizeof(x86::segments::descriptor64_t);
+    void* new_gdt;
+    CHECK(allocate(new_gdt, wanted_size, x86::paging::page_size, memory_type_t::data));
+
+    memset(new_gdt, 0, wanted_size);
+    memcpy(new_gdt, reinterpret_cast<const void*>(current_gdtr.base_address), gdt_size);
+
+    // todo: free new_gdt on failure. best be done with raii stuff
+    constexpr auto tss_size = sizeof(x86::segments::tss64_t);
+    const auto tr_index = gdt_size / sizeof(x86::segments::descriptor_t);
+    void* tss;
+    CHECK(allocate(tss, tss_size, x86::paging::page_size, memory_type_t::data));
+
+    memset(tss, 0, tss_size);
+
+    auto tss_descriptor = reinterpret_cast<x86::segments::descriptor64_t*>(static_cast<uint8_t*>(new_gdt) + gdt_size);
+    tss_descriptor->base_address(environment::to_physical(tss));
+    tss_descriptor->limit(tss_size);
+    tss_descriptor->base.bits.type = x86::segments::type_t::system_bits32_tss_available;
+    tss_descriptor->base.bits.s = x86::segments::descriptor_type_t::system;
+    tss_descriptor->base.bits.dpl = 0;
+    tss_descriptor->base.bits.present = 1;
+    tss_descriptor->base.bits.available = 0;
+    tss_descriptor->base.bits.long_mode = 0;
+    tss_descriptor->base.bits.default_db = 0;
+    tss_descriptor->base.bits.granularity = x86::segments::granularity_t::byte;
+
+    x86::segments::gdtr_t gdtr{};
+    gdtr.base_address = reinterpret_cast<uint64_t>(new_gdt);
+    gdtr.limit = wanted_size - 1;
+    x86::segments::tr_t tr{};
+    tr.bits.index = tr_index;
+    tr.bits.rpl = 0;
+    tr.bits.table = x86::segments::table_type_t::gdt;
+
+    TRACE_DEBUG("trindex=0x%x", tr_index);
+    x86::write(gdtr);
+    x86::write(tr);
+
+    return {};
+}
+
 status_t setup_gdt(x86::segments::gdtr_t& gdtr, gdt_t& gdt, x86::segments::tss64_t& tss) {
     memset(&gdt, 0, sizeof(gdt));
     memset(&tss, 0, sizeof(tss));

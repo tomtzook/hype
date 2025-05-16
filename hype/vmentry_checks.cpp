@@ -508,7 +508,9 @@ static status_t verify_guest_registers() {
     }
 
     const auto features = x86::cpuid<x86::cpuid_extended_processor_info_t>();
-    if (features.edx.bits.long_mode) {
+    const bool is_cpu_intel64 = features.edx.bits.long_mode;
+
+    if (is_cpu_intel64) {
         CHECK_ASSERT(!vmentry_controls.bits.ia32e_mode_guest || (x86::cr0_t{cr0}.bits.paging_enable && x86::cr4_t{cr4}.bits.physical_address_extension), "Guest set to IA32e mode, but CR0.PG or CR4.PAE are not 1");
         CHECK_ASSERT(vmentry_controls.bits.ia32e_mode_guest || !x86::cr4_t{cr4}.bits.pcid_enable, "Guest not set to IA32e mode, but CR4.PCIDE is not 0");
         CHECK_ASSERT((cr3 & 0xffd0000000000000) == 0, "Guest CR3 bits 63:52 must be 0");
@@ -561,6 +563,33 @@ static status_t verify_guest_registers() {
 
     // todo: handle load ia32_bndcfg, field missing
 
+    {
+        uint64_t rip;
+        CHECK_VMX(x86::vmx::vmread(x86::vmx::field_t::guest_rip, rip));
+        uint64_t rflags_raw;
+        CHECK_VMX(x86::vmx::vmread(x86::vmx::field_t::guest_rflags, rflags_raw));
+
+        if (is_cpu_intel64) {
+            uint64_t cs_access_rights_raw;
+            CHECK_VMX(x86::vmx::vmread(x86::vmx::field_t::guest_cs_access_rights, cs_access_rights_raw));
+
+            const auto cs_l = x86::vmx::segment_access_rights_t{static_cast<uint32_t>(cs_access_rights_raw)}.bits.long_mode;
+            CHECK_ASSERT((cs_l && vmentry_controls.bits.ia32e_mode_guest) || (rip & 0xffffffff00000000) == 0, "Guest RIP bits 63:32 must be 0 when guest is not IA32e mode");
+            CHECK_ASSERT(!(cs_l && vmentry_controls.bits.ia32e_mode_guest) || rip == x86::paging::sign_extended(rip), "Guest RIP is not properly sign extended");
+        }
+
+        x86::rflags_t rflags{rflags_raw};
+        CHECK_ASSERT(rflags.bits.reserved0 == 1, "Guest RFLAGS bit 1 must be 1");
+        CHECK_ASSERT(rflags.bits.reserved1 == 0 && rflags.bits.reserved2 == 0 && rflags.bits.reserved3 == 0 && rflags.bits.reserved4 == 0, "Guest RFLAGS Reserved bits must be 0");
+        CHECK_ASSERT((!vmentry_controls.bits.ia32e_mode_guest && x86::cr0_t{cr0}.bits.protection_enable) || rflags.bits.virtual_8086 == 0, "Guest RFLAGS.VM must be 0");
+
+        uint64_t interrupt_info_raw;
+        CHECK_VMX(x86::vmx::vmread(x86::vmx::field_t::ctrl_vmentry_interruption_information_field, interrupt_info_raw));
+        x86::vmx::vmentry_interruption_info_t interruption_info{};
+        interruption_info.raw = interrupt_info_raw;
+        CHECK_ASSERT(!(interruption_info.bits.valid && interruption_info.bits.type == x86::vmx::vmentry_interrupt_type_t::external_interrupt) || rflags.bits.interrupt_enable_flag, "Guest RFLAGS.IF must be 1");
+    }
+
     return {};
 }
 
@@ -587,6 +616,10 @@ static status_t verify_guest_segments() {
     CHECK_VMX(x86::vmx::vmread(x86::vmx::field_t::guest_tr_selector, tr_selector));
     uint64_t tr_base;
     CHECK_VMX(x86::vmx::vmread(x86::vmx::field_t::guest_tr_base, tr_base));
+    uint64_t tr_limit;
+    CHECK_VMX(x86::vmx::vmread(x86::vmx::field_t::guest_tr_limit, tr_limit));
+    uint64_t tr_access_rights_raw;
+    CHECK_VMX(x86::vmx::vmread(x86::vmx::field_t::guest_tr_access_rights, tr_access_rights_raw));
     uint64_t cs_selector;
     CHECK_VMX(x86::vmx::vmread(x86::vmx::field_t::guest_cs_selector, cs_selector));
     uint64_t cs_base;
@@ -639,12 +672,14 @@ static status_t verify_guest_segments() {
     CHECK_VMX(x86::vmx::vmread(x86::vmx::field_t::guest_ldtr_selector, ldtr_selector));
     uint64_t ldtr_base;
     CHECK_VMX(x86::vmx::vmread(x86::vmx::field_t::guest_ldtr_base, ldtr_base));
-    uint64_t ldtr_access_rights;
-    CHECK_VMX(x86::vmx::vmread(x86::vmx::field_t::guest_ldtr_access_rights, ldtr_access_rights));
+    uint64_t ldtr_limit;
+    CHECK_VMX(x86::vmx::vmread(x86::vmx::field_t::guest_fs_limit, ldtr_limit));
+    uint64_t ldtr_access_rights_raw;
+    CHECK_VMX(x86::vmx::vmread(x86::vmx::field_t::guest_ldtr_access_rights, ldtr_access_rights_raw));
 
     CHECK_ASSERT(x86::segments::selector_t{static_cast<uint16_t>(tr_selector)}.bits.table == x86::segments::table_type_t::gdt, "Guest TR.TI must be 0");
     CHECK_ASSERT(
-        x86::vmx::segment_access_rights_t{static_cast<uint32_t>(ldtr_access_rights)}.bits.unusable ||
+        x86::vmx::segment_access_rights_t{static_cast<uint32_t>(ldtr_access_rights_raw)}.bits.unusable ||
         x86::segments::selector_t{static_cast<uint16_t>(tr_selector)}.bits.table == x86::segments::table_type_t::gdt,
         "Guest LDTR.TI must be 0");
     if (!is_virtual_8086 && !is_unrestricted_guest) {
@@ -666,7 +701,7 @@ static status_t verify_guest_segments() {
         CHECK_ASSERT(x86::paging::is_canonical(fs_base), "Guest FS Base must be canonical");
         CHECK_ASSERT(x86::paging::is_canonical(gs_base), "Guest GS Base must be canonical");
 
-        CHECK_ASSERT(x86::vmx::segment_access_rights_t{static_cast<uint32_t>(ldtr_access_rights)}.bits.unusable ||
+        CHECK_ASSERT(x86::vmx::segment_access_rights_t{static_cast<uint32_t>(ldtr_access_rights_raw)}.bits.unusable ||
             x86::paging::is_canonical(ldtr_base), "Guest LDTR Base must be canonical");
         CHECK_ASSERT((cs_base & ~((1ull << 32) - 1)) == 0, "Guest CS Base bits 63:32 must be 0");
         CHECK_ASSERT(x86::vmx::segment_access_rights_t{static_cast<uint32_t>(ss_access_rights_raw)}.bits.unusable || (ss_base & ~((1ull << 32) - 1)) == 0, "Guest SS Base bits 63:32 must be 0");
@@ -769,6 +804,48 @@ static status_t verify_guest_segments() {
         CHECK_ASSERT(gs_ar.bits.unusable || (((gs_limit & 0xfff) != 0xfff && gs_ar.bits.granularity == 0) || ((gs_limit & 0xfff00000) != 0xfff00000 && gs_ar.bits.granularity == 1)), "Guest GS Access Rights Bad Granularity");
     }
 
+    {
+        const auto tr_ar = x86::vmx::segment_access_rights_t{static_cast<uint32_t>(tr_access_rights_raw)};
+
+        CHECK_ASSERT(is_ia32e_mode || is_any_of(tr_ar.bits.type, 3, 11), "Guest TR Access Rights Type invalid");
+        CHECK_ASSERT(!is_ia32e_mode || tr_ar.bits.type == 11, "Guest TR Access Rights Type invalid");
+        CHECK_ASSERT(tr_ar.bits.s == 0, "Guest TR Access Rights S must be 0");
+        CHECK_ASSERT(tr_ar.bits.present, "Guest TR Access Rights P must be 1");
+        CHECK_ASSERT(tr_ar.bits.unusable == 0, "Guest TR Access Rights must be usable");
+        CHECK_ASSERT(((tr_limit & 0xfff) != 0xfff && tr_ar.bits.granularity == 0) || ((tr_limit & 0xfff00000) != 0xfff00000 && tr_ar.bits.granularity == 1), "Guest TR Access Rights Bad Granularity");
+        CHECK_ASSERT(tr_ar.bits.reserved0 == 0 && tr_ar.bits.reserved1 == 0, "Guest TR Access Rights Reserved must be 0");
+    }
+
+    {
+        const auto ldtr_ar = x86::vmx::segment_access_rights_t{static_cast<uint32_t>(ldtr_access_rights_raw)};
+        if (!ldtr_ar.bits.unusable) {
+            CHECK_ASSERT(ldtr_ar.bits.type == 2, "Guest LDTR Access Rights Type must be 2");
+            CHECK_ASSERT(ldtr_ar.bits.s == 0, "Guest LDTR Access Rights S must be 0");
+            CHECK_ASSERT(ldtr_ar.bits.present == 1, "Guest LDTR Access Rights P must be 1");
+            CHECK_ASSERT(((ldtr_limit & 0xfff) != 0xfff && ldtr_ar.bits.granularity == 0) || ((tr_limit & 0xfff00000) != 0xfff00000 && ldtr_ar.bits.granularity == 1), "Guest LDTR Access Rights Bad Granularity");
+            CHECK_ASSERT(ldtr_ar.bits.reserved0 == 0 && ldtr_ar.bits.reserved1, "Guest LDTR Access Rights Reserved must be 0");
+        }
+    }
+
+    {
+        uint64_t gdtr_base;
+        CHECK_VMX(x86::vmx::vmread(x86::vmx::field_t::guest_gdtr_base, gdtr_base));
+        uint64_t gdtr_limit;
+        CHECK_VMX(x86::vmx::vmread(x86::vmx::field_t::guest_gdtr_limit, gdtr_limit));
+        uint64_t idtr_base;
+        CHECK_VMX(x86::vmx::vmread(x86::vmx::field_t::guest_idtr_base, idtr_base));
+        uint64_t idtr_limit;
+        CHECK_VMX(x86::vmx::vmread(x86::vmx::field_t::guest_idtr_limit, idtr_limit));
+
+        if (is_cpu_intel64) {
+            CHECK_ASSERT(x86::paging::is_canonical(gdtr_base), "Guest GDTR Base not canonical");
+            CHECK_ASSERT(x86::paging::is_canonical(idtr_base), "Guest iDTR Base not canonical");
+        }
+
+        CHECK_ASSERT((gdtr_limit & 0xffff0000) == 0, "Guest GDTR Limit bits 31:16 must be 0");
+        CHECK_ASSERT((idtr_limit & 0xffff0000) == 0, "Guest IDTR Limit bits 31:16 must be 0");
+    }
+
     return {};
 }
 
@@ -781,7 +858,9 @@ status_t do_vm_entry_checks() {
     CHECK(verify_host_state());
     CHECK(verify_guest_registers());
     CHECK(verify_guest_segments());
+
     // todo: add guest state checks SDM 26.3.1 P1106
+    //      need to add non-register state checks (26.3.1.5, P1110)
 
     TRACE_DEBUG("Done VMENTRY Checks");
 

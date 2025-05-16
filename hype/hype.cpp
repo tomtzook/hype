@@ -133,8 +133,13 @@ status_t initialize() {
     TRACE_DEBUG("Checking environment support");
     CHECK(check_environment_support());
 
-    //memory::trace_gdt(x86::read<x86::segments::gdtr_t>());
+    TRACE_DEBUG("Setting up new GDT");
+    CHECK(memory::setup_initial_guest_gdt());
+    memory::trace_gdt(x86::read<x86::segments::gdtr_t>());
     //interrupts::trace_idt(x86::read<x86::interrupts::idtr_t>());
+    TRACE_DEBUG("TR index=%d", x86::read<x86::segments::tr_t>().bits.index);
+
+    // todo: add TR for guest if not in original gdt
 
     auto mtrr_cache = x86::mtrr::initialize_cache();
 
@@ -144,8 +149,6 @@ status_t initialize() {
 
     g_context->wanted_vm_controls = get_wanted_vm_controls();
     g_context->cpu_init_index = 0;
-
-    TRACE_DEBUG("maxphys=0x%llx", x86::paging::max_physical_address_width());
 
     status_t status{};
     CHECK_AND_JUMP(cleanup, status, environment::get_active_cpu_count(g_context->cpu_count));

@@ -10,6 +10,7 @@ extern "C" {
 #include <Library/MemoryAllocationLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiRuntimeServicesTableLib.h>
+#include <Protocol/LoadedImage.h>
 #include <Pi/PiMultiPhase.h>
 #include <Protocol/MpService.h>
 

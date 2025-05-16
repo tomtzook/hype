@@ -19,6 +19,13 @@ static uintn_t get_cr0_host_mask() {
     return cr0.raw;
 }
 
+static uintn_t get_cr4_read_shadow(const uintn_t cr4_raw) {
+    x86::cr4_t cr4(cr4_raw);
+    cr4.bits.vmx_enable = false;
+
+    return cr4.raw;
+}
+
 static uintn_t get_cr4_host_mask() {
     x86::cr4_t cr4(0);
 
@@ -83,9 +90,8 @@ static status_t setup_cr_dr_vmcs() {
     CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::host_cr4, cr4.raw));
 
     x86::vmx::adjust_cr4_fixed_bits(cr4);
-    cr4.bits.vmx_enable = false; // hide that vmx is enabled
     CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::guest_cr4, cr4.raw));
-    CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::ctrl_cr4_read_shadow, cr4.raw));
+    CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::ctrl_cr4_read_shadow, get_cr4_read_shadow(cr4.raw)));
     CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::ctrl_cr4_guest_host_mask, get_cr4_host_mask()));
 
     auto cr3 = x86::read<x86::cr3_t>();
@@ -163,7 +169,7 @@ static status_t setup_entry_exit(vcpu_t& cpu) {
 }
 
 status_t vmxon_for_vcpu(vcpu_t& cpu) {
-    CHECK_ASSERT(x86::vmx::prepare_for_vmxon(), "prepare_for_vmxon failed");
+    CHECK_ASSERT(x86::vmx::prepare_for_vmxon(true), "prepare_for_vmxon failed");
     CHECK_ASSERT(x86::vmx::initialize_vmstruct(cpu.vmxon_region), "initialize_vmstruct failed");
 
     TRACE_DEBUG("Doing vmxon");

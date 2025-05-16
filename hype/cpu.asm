@@ -60,11 +60,6 @@ asm_cpu_load_registers:
 
     ; intentionally not touching segment selectors
 
-    ; mov rflags, [rcx+0h]
-    ; mov rbp, [rcx+0h]
-    ; mov rsp, [rcx+0h]
-    ; mov rip, [rcx+0h]
-
     ; rflags
     mov rax, [rcx+70h]
     push rax

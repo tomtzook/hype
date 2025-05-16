@@ -17,6 +17,8 @@ status_t handle_vmexit(cpu_registers_t& registers) {
 
     const auto exit_reason = static_cast<x86::vmx::exit_reason_t>(exit_reason_raw);
 
+    TRACE_DEBUG("EXIT %d", exit_reason);
+
     // todo: handle exit
 
     // todo: resume
@@ -29,4 +31,6 @@ status_t handle_vmexit(cpu_registers_t& registers) {
 extern "C" void vm_exit_handler(hype::cpu_registers_t& registers) {
     const auto status = handle_vmexit(registers);
     // todo: handle error
+
+    hype::debug::deadloop();
 }

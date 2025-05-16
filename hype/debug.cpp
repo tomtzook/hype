@@ -26,10 +26,12 @@ void trace(const wchar_t* fmt, ...) {
 void deadloop() {
     TRACE_DEBUG("Entering Deadloop");
 
-    int wait = 1;
+    static volatile int wait = 1;
     while (wait) {
         __asm__ __volatile__("hlt");
     }
+
+    TRACE_DEBUG("Leaving Deadloop");
 }
 
 }

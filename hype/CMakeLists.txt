@@ -33,7 +33,7 @@ add_executable(hype
         vmexit.h
         vmentry.h
         vmentry.asm
-        vmcs_checks.cpp)
+        vmentry_checks.cpp)
 
 target_compile_definitions(hype PUBLIC _DEBUG)
 target_compile_options(hype PRIVATE $<$<COMPILE_LANGUAGE:CXX>:${CXX_COMPILE_FLAGS}>)

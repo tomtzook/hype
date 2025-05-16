@@ -18,5 +18,6 @@
   UefiApplicationEntryPoint
 
 [Protocols]
+  gEfiLoadedImageProtocolGuid
   gEfiMpServiceProtocolGuid
 

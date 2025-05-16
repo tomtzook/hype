@@ -11,6 +11,7 @@
 #include "memory.h"
 #include "context.h"
 #include "vmx.h"
+#include "vmentry.h"
 
 #include "hype.h"
 
@@ -25,7 +26,7 @@ static wanted_vm_controls_t get_wanted_vm_controls() {
     //controls.procbased.bits.use_io_bitmaps = true;
     //controls.procbased.bits.use_msr_bitmaps = true;
     controls.secondary_procbased.bits.enable_ept = true;
-    //controls.secondary_procbased.bits.enable_xsaves_xstors = true;
+    controls.secondary_procbased.bits.enable_xsaves_xstors = true;
     controls.secondary_procbased.bits.unrestricted_guest = true;
     controls.vmentry.bits.ia32e_mode_guest = true;
     controls.vmexit.bits.host_address_space_size = true;
@@ -92,6 +93,7 @@ static status_t start_on_vcpu(void*) {
         return {};
     }
 
+    TRACE_DEBUG("Doing VMXON");
     CHECK(vmxon_for_vcpu(cpu));
     cpu.is_in_vmx_operation = true;
 
@@ -102,7 +104,10 @@ static status_t start_on_vcpu(void*) {
     CHECK_VMX(x86::vmx::vmptrld(vmcs_physical));
     CHECK(setup_vmcs(*g_context, cpu));
 
+    CHECK(do_vm_entry_checks());
+
     TRACE_DEBUG("Doing vmlaunch");
+    //hype::debug::deadloop();
     CHECK_VMX(x86::vmx::vmlaunch());
 
     return {};

@@ -28,7 +28,7 @@ void deadloop() {
 
     static volatile int wait = 1;
     while (wait) {
-        __asm__ __volatile__("hlt");
+        __asm__ __volatile__("pause");
     }
 
     TRACE_DEBUG("Leaving Deadloop");

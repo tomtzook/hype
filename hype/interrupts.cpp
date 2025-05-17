@@ -1,7 +1,17 @@
 
 #include "environment.h"
+#include "memory.h"
 #include "interrupts.h"
 
+
+extern "C" void* isr_stub_table[];
+
+extern "C" void idt_handler(const uint64_t vector) {
+    // todo: get error code and rip
+    TRACE_ERROR("IDT Called for vector=0x%llx", vector);
+    //hype::debug::deadloop();
+    __asm__ volatile ("cli; hlt");
+}
 
 namespace hype::interrupts {
 
@@ -22,7 +32,7 @@ void trace_idt(const x86::interrupts::idtr_t& idtr) {
     }
 }
 
-status_t setup_idt(x86::interrupts::idtr_t& idtr, idt_t& idt, const interrupt_handler& handler) {
+status_t setup_idt(x86::interrupts::idtr_t& idtr, idt_t& idt) {
     memset(&idt, 0, sizeof(idt));
 
     idtr.base_address = environment::to_physical(&idt);
@@ -33,9 +43,9 @@ status_t setup_idt(x86::interrupts::idtr_t& idtr, idt_t& idt, const interrupt_ha
         descriptor.low.bits.dpl = 0;
         descriptor.low.bits.present = 1;
         descriptor.low.bits.ist = 0;
-        descriptor.low.bits.segment_selector = handler.segment_selector;
+        descriptor.low.bits.segment_selector = memory::gdt_t::code_descriptor_index;
         descriptor.low.bits.type = x86::interrupts::gate_type_t::interrupt_32;
-        descriptor.address(reinterpret_cast<uint64_t>(handler.address));
+        descriptor.address(reinterpret_cast<uint64_t>(isr_stub_table[i]));
     }
 
     return {};

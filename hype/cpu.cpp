@@ -6,6 +6,10 @@ extern "C" void asm_cpu_load_registers(const hype::cpu_registers_t& registers);
 
 namespace hype {
 
+void hlt_cpu() {
+    __asm__ volatile ("cli; hlt");
+}
+
 void read_registers(cpu_registers_t& registers) {
     asm_cpu_store_registers(registers);
 }

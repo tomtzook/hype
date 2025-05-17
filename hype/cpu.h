@@ -32,6 +32,7 @@ struct cpu_registers_t {
     uint16_t ss;
 };
 
+[[noreturn]] void hlt_cpu();
 
 void read_registers(cpu_registers_t& registers);
 void write_registers(const cpu_registers_t& registers);

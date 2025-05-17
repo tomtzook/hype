@@ -90,6 +90,9 @@ static status_t start_on_vcpu(void*) {
     // if operation is on, then we were returned here from the registers being restored,
     // meaning we launched.
     if (cpu.is_in_vmx_operation) {
+        // TODO
+        TRACE_DEBUG("FROM GUEST HELLO");
+        __asm__ volatile ("cli; hlt");
         return {};
     }
 
@@ -137,9 +140,6 @@ status_t initialize() {
     CHECK(memory::setup_initial_guest_gdt());
     memory::trace_gdt(x86::read<x86::segments::gdtr_t>());
     //interrupts::trace_idt(x86::read<x86::interrupts::idtr_t>());
-    TRACE_DEBUG("TR index=%d", x86::read<x86::segments::tr_t>().bits.index);
-
-    // todo: add TR for guest if not in original gdt
 
     auto mtrr_cache = x86::mtrr::initialize_cache();
 
@@ -156,13 +156,10 @@ status_t initialize() {
     TRACE_DEBUG("Initializing GDT");
     CHECK_AND_JUMP(cleanup, status, memory::setup_gdt(g_context->gdtr, g_context->gdt, g_context->tss));
     TRACE_DEBUG("Initializing IDT");
-    interrupts::interrupt_handler handler{};    // todo: create routines for idt
-    CHECK_AND_JUMP(cleanup, status, interrupts::setup_idt(g_context->idtr, g_context->idt, handler));
+    CHECK_AND_JUMP(cleanup, status, interrupts::setup_idt(g_context->idtr, g_context->idt));
 
     TRACE_DEBUG("Initializing Page Table");
     CHECK_AND_JUMP(cleanup, status, memory::setup_identity_paging(g_context->page_table));
-    // todo: this causes problems for freepages, we need to modify the page table before allocation?
-    CHECK_AND_JUMP(cleanup, status, memory::load_page_table(g_context->page_table));
 
     TRACE_DEBUG("Initializing EPT");
     CHECK_AND_JUMP(cleanup, status, memory::setup_identity_ept(g_context->ept, mtrr_cache));

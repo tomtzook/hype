@@ -25,6 +25,7 @@ add_executable(hype
         vmx.cpp
         interrupts.h
         interrupts.cpp
+        interrupts.asm
         cpu.h
         cpu.cpp
         cpu.asm

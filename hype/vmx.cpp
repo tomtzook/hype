@@ -73,7 +73,7 @@ static status_t setup_segment(x86::segments::table_t& table) {
     return {};
 }
 
-static status_t setup_cr_dr_vmcs() {
+static status_t setup_cr_dr_vmcs(context_t& context) {
     auto cr0 = x86::read<x86::cr0_t>();
     CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::host_cr0, cr0.raw));
 
@@ -91,10 +91,9 @@ static status_t setup_cr_dr_vmcs() {
     CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::ctrl_cr4_guest_host_mask, get_cr4_host_mask()));
 
     auto cr3 = x86::read<x86::cr3_t>();
-
+    CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::guest_cr3, cr3.raw));
+    cr3.ia32e.address = environment::to_physical(&context.page_table.m_pml4) >> x86::paging::page_bits_4k;
     CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::host_cr3, cr3.raw));
-    // todo: what value
-    CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::guest_cr3, 0));
 
     auto efer = x86::read<x86::msr::ia32_efer_t>();
     CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::host_efer, efer.raw));
@@ -157,9 +156,10 @@ static status_t setup_entry_exit(vcpu_t& cpu) {
     CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::host_rsp, host_stack_start));
     CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::host_rip, reinterpret_cast<uint64_t>(&asm_vm_exit)));
 
-    CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::guest_rflags, x86::read<x86::rflags_t>().raw)); // todo: what?
+    CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::guest_rflags, x86::read<x86::rflags_t>().raw));
     CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::guest_rsp, host_stack_start));
-    CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::guest_rip, reinterpret_cast<uint64_t>(&asm_vm_entry))); // todo: vmentry
+    CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::guest_rip, reinterpret_cast<uint64_t>(&asm_vm_entry)));
+    TRACE_DEBUG("guest rip 0x%llx", reinterpret_cast<uint64_t>(&asm_vm_entry));
 
     return {};
 }
@@ -199,7 +199,7 @@ status_t setup_vmcs(context_t& context, vcpu_t& cpu) {
     CHECK(setup_vm_controls(context.wanted_vm_controls.vmexit));
     CHECK(setup_vm_controls(context.wanted_vm_controls.vmentry));
 
-    CHECK(setup_cr_dr_vmcs());
+    CHECK(setup_cr_dr_vmcs(context));
     CHECK(setup_segments_vmcs(context));
     CHECK(setup_entry_exit(cpu));
 

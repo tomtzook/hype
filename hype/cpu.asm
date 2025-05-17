@@ -78,3 +78,7 @@ asm_cpu_load_registers:
 
     ret
 
+section .data
+
+asm_deadloop_v:
+    dq 1

@@ -32,5 +32,6 @@ extern "C" void vm_exit_handler(hype::cpu_registers_t& registers) {
     const auto status = handle_vmexit(registers);
     // todo: handle error
 
-    hype::debug::deadloop();
+    //hype::debug::deadloop(); // TODO: this causes vm to pause (fault?)
+    hype::hlt_cpu();
 }

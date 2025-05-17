@@ -1,11 +1,25 @@
 
 #include <x86/vmx/vmcs.h>
 #include <x86/vmx/vmexit.h>
+#include <x86/vmx/vmx.h>
+#include <x86/cpuid.h>
 
 #include "base.h"
 #include "cpu.h"
+#include "vmentry.h"
 
 namespace hype {
+
+static status_t handle_cpuid(cpu_registers_t& registers) {
+    const auto cpuid = x86::cpuid(registers.rax, registers.rcx);
+
+    registers.rax = cpuid.eax;
+    registers.rbx = cpuid.ebx;
+    registers.rcx = cpuid.ecx;
+    registers.rdx = cpuid.edx;
+
+    return {};
+}
 
 status_t handle_vmexit(cpu_registers_t& registers) {
     CHECK_VMX(x86::vmx::vmread(x86::vmx::field_t::guest_rip, registers.rip));
@@ -15,23 +29,40 @@ status_t handle_vmexit(cpu_registers_t& registers) {
     uint64_t exit_reason_raw;
     CHECK_VMX(x86::vmx::vmread(x86::vmx::field_t::exit_reason, exit_reason_raw));
 
-    const auto exit_reason = static_cast<x86::vmx::exit_reason_t>(exit_reason_raw);
+    const auto exit_reason = static_cast<x86::vmx::exit_reason_t>(exit_reason_raw & 0xffff);
 
     TRACE_DEBUG("EXIT %d", exit_reason);
 
-    // todo: handle exit
+    switch (exit_reason) {
+        case x86::vmx::exit_reason_t::cpuid:
+            CHECK(handle_cpuid(registers));
+            break;
+        default:
+            return status::error_unsupported;
+    }
 
-    // todo: resume
+    // move guest to next instruction
+    // todo: sometimes we don't want to do this, let handlers choose
+    uint64_t instruction_len;
+    CHECK_VMX(x86::vmx::vmread(x86::vmx::field_t::vmexit_instruction_length, instruction_len));
+    registers.rip += instruction_len;
+    CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::guest_rip, registers.rip));
+
+    TRACE_DEBUG("Resume guest");
+    CHECK(do_vm_entry_checks());
+    //CHECK_VMX(x86::vmx::vmresume());
 
     return {};
 }
 
 }
 
-extern "C" void vm_exit_handler(hype::cpu_registers_t& registers) {
+extern "C" [[noreturn]] void vm_exit_handler(hype::cpu_registers_t& registers) {
     const auto status = handle_vmexit(registers);
-    // todo: handle error
+    TRACE_ERROR("Error from VMEXIT handler!");
+    TRACE_STATUS(status);
 
     //hype::debug::deadloop(); // TODO: this causes vm to pause (fault?)
-    hype::hlt_cpu();
+    //hype::hlt_cpu();
+    __asm__ volatile ("cli; hlt");
 }

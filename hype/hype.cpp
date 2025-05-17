@@ -92,11 +92,12 @@ static status_t start_on_vcpu(void*) {
     if (cpu.is_in_vmx_operation) {
         // TODO
         TRACE_DEBUG("FROM GUEST HELLO");
+        //hype::hlt_cpu();
         __asm__ volatile ("cli; hlt");
         return {};
     }
 
-    TRACE_DEBUG("Doing VMXON");
+    TRACE_DEBUG("Entering VMX");
     CHECK(vmxon_for_vcpu(cpu));
     cpu.is_in_vmx_operation = true;
 
@@ -157,10 +158,8 @@ status_t initialize() {
     CHECK_AND_JUMP(cleanup, status, memory::setup_gdt(g_context->gdtr, g_context->gdt, g_context->tss));
     TRACE_DEBUG("Initializing IDT");
     CHECK_AND_JUMP(cleanup, status, interrupts::setup_idt(g_context->idtr, g_context->idt));
-
     TRACE_DEBUG("Initializing Page Table");
     CHECK_AND_JUMP(cleanup, status, memory::setup_identity_paging(g_context->page_table));
-
     TRACE_DEBUG("Initializing EPT");
     CHECK_AND_JUMP(cleanup, status, memory::setup_identity_ept(g_context->ept, mtrr_cache));
 

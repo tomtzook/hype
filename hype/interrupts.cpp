@@ -1,5 +1,6 @@
 
 #include "environment.h"
+#include "cpu.h"
 #include "memory.h"
 #include "interrupts.h"
 
@@ -10,6 +11,7 @@ extern "C" void idt_handler(const uint64_t vector) {
     // todo: get error code and rip
     TRACE_ERROR("IDT Called for vector=0x%llx", vector);
     //hype::debug::deadloop();
+    //hype::hlt_cpu();
     __asm__ volatile ("cli; hlt");
 }
 

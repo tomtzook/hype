@@ -129,8 +129,33 @@ status_t setup_gdt(x86::segments::gdtr_t& gdtr, gdt_t& gdt, x86::segments::tss64
 }
 
 status_t setup_identity_paging(page_table_t& page_table) {
+    /*{
+        auto& pml4e = page_table.m_pml4[0];
+        pml4e.raw = 0;
+        pml4e.bits.present = true;
+        pml4e.bits.rw = true;
+        pml4e.address(environment::to_physical(page_table.m_pdpt));
+    }
+
+    for(size_t i = 0; i < x86::paging::ia32e::pdptes_in_pdpt; i++) {
+        auto& pdpte = page_table.m_pdpt[i];
+        pdpte.raw = 0;
+        pdpte.small.present = true;
+        pdpte.small.rw = true;
+        pdpte.address(environment::to_physical(page_table.m_pd[i]));
+
+        for(size_t j = 0; j < x86::paging::ia32e::pdes_in_directory; j++) {
+            auto& pde = page_table.m_pd[i][j];
+            pde.raw = 0;
+            pde.large.present = true;
+            pde.large.rw = true;
+            pde.large.ps = true;
+            pde.large.pfn = (i * 512) + j;
+        }
+    }*/
+
     {
-        auto& pml4e = page_table.m_pml4;
+        auto& pml4e = page_table.m_pml4[0];
         pml4e.raw = 0;
         pml4e.bits.present = true;
         pml4e.bits.rw = true;
@@ -151,7 +176,7 @@ status_t setup_identity_paging(page_table_t& page_table) {
 
 status_t setup_identity_ept(ept_t& ept, const x86::mtrr::mtrr_cache_t& mtrr_cache) {
     {
-        auto& pml4e = ept.m_pml4;
+        auto& pml4e = ept.m_pml4[0];
         pml4e.raw = 0;
         pml4e.bits.read = true;
         pml4e.bits.write = true;
@@ -175,8 +200,7 @@ status_t setup_identity_ept(ept_t& ept, const x86::mtrr::mtrr_cache_t& mtrr_cach
             pde.large.execute = true;
             pde.large.ps = true;
 
-            //auto address = i * x86::paging::page_size_1g + j * x86::paging::page_size_2m;
-            auto address = (i * 512 + j) * x86::paging::page_size_2m;
+            const auto address = (i * 512 + j) * x86::paging::page_size_2m;
             auto type = mtrr_cache.type_for_2m(address);
             CHECK_ASSERT(x86::mtrr::memory_type_invalid != type,
                          "mtrr for range is invalid");
@@ -190,8 +214,8 @@ status_t setup_identity_ept(ept_t& ept, const x86::mtrr::mtrr_cache_t& mtrr_cach
 }
 
 status_t load_page_table(page_table_t& page_table) {
-    auto cr3 = x86::read<x86::cr3_t>();
-    cr3.ia32e.address = environment::to_physical(&page_table.m_pml4) >> x86::paging::page_bits_4k;
+    x86::cr3_t cr3(0);
+    cr3.ia32e.address = environment::to_physical(page_table.m_pml4) >> x86::paging::page_bits_4k;
     x86::write(cr3);
 
     return {};

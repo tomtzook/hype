@@ -92,7 +92,8 @@ static status_t setup_cr_dr_vmcs(context_t& context) {
 
     auto cr3 = x86::read<x86::cr3_t>();
     CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::guest_cr3, cr3.raw));
-    cr3.ia32e.address = environment::to_physical(&context.page_table.m_pml4) >> x86::paging::page_bits_4k;
+    cr3.raw = 0;
+    cr3.ia32e.address = environment::to_physical(context.page_table.m_pml4) >> x86::paging::page_bits_4k;
     CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::host_cr3, cr3.raw));
 
     auto efer = x86::read<x86::msr::ia32_efer_t>();
@@ -126,14 +127,13 @@ static status_t setup_segments_vmcs(context_t& context) {
     const auto host_tr_selector = host_selector(memory::gdt_t::tss_descriptor_index);
 
     // load host selectors
-    // clear 3 less significant bits
-    CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::host_ds_selector, host_data_selector.value & 0xf8));
-    CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::host_ss_selector, host_data_selector.value & 0xf8));
-    CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::host_es_selector, host_data_selector.value & 0xf8));
-    CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::host_gs_selector, host_data_selector.value & 0xf8));
-    CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::host_fs_selector, host_data_selector.value & 0xf8));
-    CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::host_cs_selector, host_code_selector.value & 0xf8));
-    CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::host_tr_selector, host_tr_selector.value & 0xf8));
+    CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::host_ds_selector, host_data_selector.value));
+    CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::host_ss_selector, host_data_selector.value));
+    CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::host_es_selector, host_data_selector.value));
+    CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::host_gs_selector, host_data_selector.value));
+    CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::host_fs_selector, host_data_selector.value));
+    CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::host_cs_selector, host_code_selector.value));
+    CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::host_tr_selector, host_tr_selector.value));
 
     CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::host_tr_base, context.gdt.tr.base_address()));
     CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::host_fs_base, x86::read<x86::msr::ia32_fs_base_t>().raw));
@@ -152,14 +152,15 @@ static status_t setup_segments_vmcs(context_t& context) {
 }
 
 static status_t setup_entry_exit(vcpu_t& cpu) {
-    const auto host_stack_start = reinterpret_cast<uint64_t>(&cpu.host_stack) + vcpu_t::stack_size - 1;
+    const auto host_stack_start = reinterpret_cast<uint64_t>(cpu.host_stack) + vcpu_t::stack_size - 0x10;
+    CHECK_ASSERT(host_stack_start % 16 == 0, "stack must be aligned to 16");
+
     CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::host_rsp, host_stack_start));
-    CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::host_rip, reinterpret_cast<uint64_t>(&asm_vm_exit)));
+    CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::host_rip, reinterpret_cast<uint64_t>(asm_vm_exit)));
 
     CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::guest_rflags, x86::read<x86::rflags_t>().raw));
     CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::guest_rsp, host_stack_start));
-    CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::guest_rip, reinterpret_cast<uint64_t>(&asm_vm_entry)));
-    TRACE_DEBUG("guest rip 0x%llx", reinterpret_cast<uint64_t>(&asm_vm_entry));
+    CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::guest_rip, reinterpret_cast<uint64_t>(asm_vm_entry)));
 
     return {};
 }
@@ -184,7 +185,7 @@ status_t setup_vmcs(context_t& context, vcpu_t& cpu) {
     {
         x86::vmx::ept_pointer_t eptp{};
         eptp.bits.mem_type = x86::mtrr::memory_type_t::writeback;
-        eptp.bits.walk_length = 3; // todo: WHAT IS WALK LENGTH
+        eptp.bits.walk_length = 3;
         eptp.address(environment::to_physical(&context.ept.m_pml4));
 
         CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::ctrl_ept_pointer, eptp.raw));

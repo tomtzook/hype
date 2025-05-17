@@ -21,7 +21,9 @@ struct wanted_vm_controls_t {
 };
 
 struct vcpu_t {
-    static constexpr size_t stack_size = 0x8000;
+    static constexpr size_t stack_size = 0x8000 * 4; // todo: it seems there are some stack issues..... had to increase size to make it fine
+    static_assert(stack_size % 16 == 0, "stack size must be aligned to 16");
+
     page_aligned x86::vmx::vmstruct_t vmxon_region;
     page_aligned x86::vmx::vmstruct_t vmcs;
     page_aligned uint8_t msr_bitmap[x86::paging::page_size];

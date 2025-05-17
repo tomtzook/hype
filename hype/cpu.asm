@@ -77,8 +77,3 @@ asm_cpu_load_registers:
     mov rcx, [rax+10h]
 
     ret
-
-section .data
-
-asm_deadloop_v:
-    dq 1

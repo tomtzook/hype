@@ -8,13 +8,13 @@
 namespace hype::debug {
 
 void trace(const wchar_t* fmt, ...) {
-    wchar_t buffer[1024];
+    wchar_t buffer[512];
 
     VA_LIST args;
     VA_START(args, fmt);
 
     UnicodeVSPrint(reinterpret_cast<UINT16*>(buffer),
-                   array_size(buffer),
+                   sizeof(buffer),
                    reinterpret_cast<const UINT16*>(fmt),
                    args);
 

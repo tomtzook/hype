@@ -28,9 +28,9 @@ asm_cpu_store_registers:
     mov word [rcx+98h], gs
     mov word [rcx+9ah], ss
 
-    lea rax, [rsp+8h]  ; get rsp
+    lea rax, [rsp+8h]   ; get rsp
     mov [rcx+80h], rax
-    lea rax, [rsp]  ; get return address as rip
+    mov rax, [rsp]      ; get return address as rip
     mov [rcx+88h], rax
 
     ; rflags
@@ -43,6 +43,18 @@ asm_cpu_store_registers:
 
 asm_cpu_load_registers:
     ; rcx = address to struct cpu_registers_t
+    ; put ss, rsp, rflags, cs, rip on stack, will be popped in the end by iretq
+    mov ax, [rcx+9ah]
+    mov [rsp+20h], ax   ; ss
+    mov rax, [rcx+80h]
+    mov [rsp+18h], rax  ; rsp
+    mov rax, [rcx+70h]
+    mov [rsp+10h], rax  ; rflags
+    mov ax, [rcx+90h]
+    mov [rsp+8], ax     ; cs
+    mov rax, [rcx+88h]
+    mov [rsp], rax      ; rip
+
     mov rax, [rcx+0h]
     mov rbx, [rcx+8h]
     mov rdx, [rcx+18h]
@@ -57,23 +69,15 @@ asm_cpu_load_registers:
     mov rsi, [rcx+60h]
     mov rdi, [rcx+68h]
     mov rbp, [rcx+78h]
-
-    ; intentionally not touching segment selectors
-
-    ; rflags
-    mov rax, [rcx+70h]
-    push rax
-    popfq
-
-    ; we now have a new stack
-    mov rsp, [rcx+80h]
-
-    ; write rip into return address
-    mov rax, [rcx+88h]
-    mov [rsp], rax
-
     ; rcx must be last
     mov rax, rcx
     mov rcx, [rax+10h]
 
-    ret
+    ; rflags
+    ; todo: kvm crashes because stack is unaligned, but unable to align manually (also crashes)
+    ; sub rsp, 8h ; realign rsp, no need to restore
+    ; mov rax, [rcx+70h]
+    ; push rax
+    ; popfq
+
+    iretq

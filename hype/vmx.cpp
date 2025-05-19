@@ -152,7 +152,7 @@ static status_t setup_segments_vmcs(context_t& context) {
 }
 
 static status_t setup_entry_exit(vcpu_t& cpu) {
-    const auto host_stack_start = reinterpret_cast<uint64_t>(cpu.host_stack) + vcpu_t::stack_size - 0x10;
+    const auto host_stack_start = reinterpret_cast<uint64_t>(cpu.host_stack) + vcpu_t::stack_size;
     CHECK_ASSERT(host_stack_start % 16 == 0, "stack must be aligned to 16");
 
     CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::host_rsp, host_stack_start));

@@ -13,6 +13,9 @@ namespace hype {
 static status_t handle_cpuid(cpu_registers_t& registers) {
     const auto cpuid = x86::cpuid(registers.rax, registers.rcx);
 
+    TRACE_DEBUG("CPUID[rax=0x%lx, rcx=0x%lx]: eax=0x%lx, ebx=0x%lx, ecx=0x%lx, edx=0x%lx",
+        registers.rax, registers.rcx, cpuid.eax, cpuid.ebx, cpuid.ecx, cpuid.edx);
+
     registers.rax = cpuid.eax;
     registers.rbx = cpuid.ebx;
     registers.rcx = cpuid.ecx;
@@ -63,6 +66,5 @@ extern "C" [[noreturn]] void vm_exit_handler(hype::cpu_registers_t& registers) {
     TRACE_STATUS(status);
 
     //hype::debug::deadloop(); // TODO: this causes vm to pause (fault?)
-    //hype::hlt_cpu();
-    __asm__ volatile ("cli; hlt");
+    hype::hlt_cpu();
 }

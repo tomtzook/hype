@@ -5,13 +5,21 @@ extern idt_handler
 
 %macro isr_err_stub 1
 isr_stub_%+%1:
-    mov rcx, %1
+    mov rcx, [rsp]      ; int
+    ;mov rdx, [rsp+8h]   ; errorcode
+    ;mov r8, [rsp+10h]   ; rip
+    ;mov r9, [rsp+18h]   ; cs
+    ;sub rsp, 20h
     call idt_handler
     iret
 %endmacro
 %macro isr_no_err_stub 1
 isr_stub_%+%1:
-    mov rcx, %1
+    mov rcx, [rsp]      ; int
+    ;mov rdx, [rsp+8h]   ; rip
+    ;mov r8, [rsp+10h]   ; cs
+    ;mov r9, [rsp+18h]   ; rflags
+    ;sub rsp, 20h
     call idt_handler
     iret
 %endmacro

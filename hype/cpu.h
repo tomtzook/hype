@@ -1,10 +1,11 @@
 #pragma once
+#include "base.h"
 #include "x86/types.h"
 
 
 namespace hype {
 
-struct cpu_registers_t {
+struct b16_aligned cpu_registers_t {
     uint64_t rax;
     uint64_t rbx;
     uint64_t rcx;
@@ -34,7 +35,7 @@ struct cpu_registers_t {
 
 [[noreturn]] void hlt_cpu();
 
-void read_registers(cpu_registers_t& registers);
-void write_registers(const cpu_registers_t& registers);
-
 }
+
+extern "C" void asm_cpu_store_registers(hype::cpu_registers_t* registers);
+extern "C" [[noreturn]] void asm_cpu_load_registers(const hype::cpu_registers_t* registers);

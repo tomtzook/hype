@@ -5,6 +5,7 @@
 #include <x86/vmx/controls.h>
 #include <x86/segments.h>
 #include <x86/mtrr.h>
+#include <x86/cpuid.h>
 
 #include "base.h"
 #include "cpu.h"
@@ -86,16 +87,20 @@ static status_t start_on_vcpu(void*) {
     auto& cpu = get_current_vcpu();
     cpu.is_in_vmx_operation = false;
 
-    read_registers(cpu.context_registers);
+    //read_registers(&cpu.context_registers);
+    asm_cpu_store_registers(&cpu.context_registers);
     // if operation is on, then we were returned here from the registers being restored,
     // meaning we launched.
     if (cpu.is_in_vmx_operation) {
         // TODO
-        TRACE_DEBUG("FROM GUEST HELLO");
+        //TRACE_DEBUG("FROM GUEST HELLO");
+        x86::cpuid(1, 1);
         //hype::hlt_cpu();
         __asm__ volatile ("cli; hlt");
         return {};
     }
+    TRACE_DEBUG("SAVED RIP=0x%llx, RSP=0x%llx", cpu.context_registers.rip, cpu.context_registers.rsp);
+    TRACE_DEBUG("SAVED REGS=0x%llx, OSTACK=0x%llx", &cpu.context_registers, cpu.host_stack + vcpu_t::stack_size);
 
     TRACE_DEBUG("Entering VMX");
     CHECK(vmxon_for_vcpu(cpu));

@@ -5,23 +5,21 @@ extern idt_handler
 
 %macro isr_err_stub 1
 isr_stub_%+%1:
-    mov rcx, [rsp]      ; int
-    ;mov rdx, [rsp+8h]   ; errorcode
-    ;mov r8, [rsp+10h]   ; rip
-    ;mov r9, [rsp+18h]   ; cs
-    ;sub rsp, 20h
+    mov rcx, %1         ; int
+    mov rdx, [rsp]      ; errorcode
+    mov r8, [rsp+8h]    ; rip
+    sub rsp, 20h
     call idt_handler
-    iret
+    iretq
 %endmacro
 %macro isr_no_err_stub 1
 isr_stub_%+%1:
-    mov rcx, [rsp]      ; int
-    ;mov rdx, [rsp+8h]   ; rip
-    ;mov r8, [rsp+10h]   ; cs
-    ;mov r9, [rsp+18h]   ; rflags
-    ;sub rsp, 20h
+    mov rcx, %1     ; int
+    mov rdx, 0      ; errorcode
+    mov r8, [rsp]   ; rip
+    sub rsp, 20h
     call idt_handler
-    iret
+    iretq
 %endmacro
 
 isr_no_err_stub 0
@@ -61,6 +59,6 @@ global isr_stub_table
 isr_stub_table:
 %assign i 0
 %rep    32
-    dd isr_stub_%+i ; use DQ instead if targeting 64-bit
+    dq isr_stub_%+i ; use DQ instead if targeting 64-bit
 %assign i i+1
 %endrep

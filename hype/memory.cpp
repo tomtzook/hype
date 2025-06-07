@@ -69,16 +69,19 @@ status_t setup_initial_guest_gdt() {
     tss_descriptor->base.bits.default_db = 0;
     tss_descriptor->base.bits.granularity = x86::segments::granularity_t::byte;
 
-    x86::segments::gdtr_t gdtr{};
-    gdtr.base_address = reinterpret_cast<uint64_t>(new_gdt);
-    gdtr.limit = wanted_size - 1;
-    x86::segments::tr_t tr{};
-    tr.bits.index = tr_index;
-    tr.bits.rpl = 0;
-    tr.bits.table = x86::segments::table_type_t::gdt;
+    void* regs;
+    CHECK(allocate(regs, sizeof(x86::segments::gdtr_t) + sizeof(x86::segments::tr_t), x86::paging::page_size, memory_type_t::data));
 
-    x86::write(gdtr);
-    x86::write(tr);
+    auto* gdtr = static_cast<x86::segments::gdtr_t*>(regs);
+    gdtr->base_address = reinterpret_cast<uint64_t>(new_gdt);
+    gdtr->limit = wanted_size - 1;
+    auto* tr = reinterpret_cast<x86::segments::tr_t*>(reinterpret_cast<uint64_t>(regs) + sizeof(x86::segments::gdtr_t));
+    tr->bits.index = tr_index;
+    tr->bits.rpl = 0;
+    tr->bits.table = x86::segments::table_type_t::gdt;
+
+    x86::write(*gdtr);
+    x86::write(*tr);
 
     return {};
 }
@@ -207,7 +210,7 @@ status_t load_page_table(page_table_t& page_table) {
 
 status_t allocate(void*& out, size_t size, size_t alignment, memory_type_t memory_type) {
     void* memory;
-    size_t pages = (size + sizeof(allocation_header_t) + alignment - 1) / x86::paging::page_size;
+    const size_t pages = (size + sizeof(allocation_header_t) + alignment - 1) / x86::paging::page_size;
     // todo: allocate/free pages will not be available after exitbootservices, need to replace it if wanted by our own heap
     CHECK(environment::allocate_pages(memory, pages, memory_type));
 
@@ -219,7 +222,7 @@ status_t allocate(void*& out, size_t size, size_t alignment, memory_type_t memor
         aligned_mem = reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(memory) + sizeof(allocation_header_t));
     }
 
-    auto header = reinterpret_cast<allocation_header_t*>(reinterpret_cast<uintptr_t>(aligned_mem) - sizeof(allocation_header_t));
+    const auto header = reinterpret_cast<allocation_header_t*>(reinterpret_cast<uintptr_t>(aligned_mem) - sizeof(allocation_header_t));
     header->ptr = reinterpret_cast<uintptr_t>(memory);
     header->pages = pages;
 
@@ -228,7 +231,7 @@ status_t allocate(void*& out, size_t size, size_t alignment, memory_type_t memor
 }
 
 void free(void* ptr) {
-    auto header = reinterpret_cast<allocation_header_t*>(reinterpret_cast<uintptr_t>(ptr) - sizeof(allocation_header_t));
+    const auto header = reinterpret_cast<allocation_header_t*>(reinterpret_cast<uintptr_t>(ptr) - sizeof(allocation_header_t));
     environment::free_pages(reinterpret_cast<void*>(header->ptr), header->pages);
 }
 

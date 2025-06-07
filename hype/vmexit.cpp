@@ -33,7 +33,7 @@ status_t handle_vmexit(cpu_registers_t& registers) {
     CHECK_VMX(x86::vmx::vmread(x86::vmx::field_t::exit_reason, exit_reason_raw));
 
     const auto exit_reason = static_cast<x86::vmx::exit_reason_t>(exit_reason_raw & 0xffff);
-    TRACE_DEBUG("EXIT %d", exit_reason);
+    TRACE_DEBUG("Exit %d From 0x%llx", exit_reason, registers.rip);
 
     {
         // todo: limits are fucked post exit, maybe a result of restoration

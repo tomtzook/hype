@@ -91,15 +91,9 @@ static status_t start_on_vcpu(void*) {
     // if operation is on, then we were returned here from the registers being restored,
     // meaning we launched.
     if (cpu.is_in_vmx_operation) {
-        // TODO UnicodeVSPrint has NOP which causes KVM to giveup
-        //TRACE_DEBUG("FROM GUEST HELLO");
         x86::cpuid(22, 1);
-        //hype::hlt_cpu();
-        //__asm__ volatile ("cli; hlt");
         return {};
     }
-    TRACE_DEBUG("SAVED RIP=0x%llx, RSP=0x%llx", cpu.context_registers.rip, cpu.context_registers.rsp);
-    TRACE_DEBUG("SAVED REGS=0x%llx, OSTACK=0x%llx", &cpu.context_registers, cpu.host_stack + vcpu_t::stack_size);
 
     TRACE_DEBUG("Entering VMX");
     CHECK(vmxon_for_vcpu(cpu));
@@ -142,7 +136,6 @@ status_t initialize() {
 
     TRACE_DEBUG("Setting up new GDT");
     CHECK(memory::setup_initial_guest_gdt());
-    memory::trace_gdt(x86::read<x86::segments::gdtr_t>());
 
     auto mtrr_cache = x86::mtrr::initialize_cache();
 

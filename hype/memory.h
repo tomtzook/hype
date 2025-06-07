@@ -14,6 +14,8 @@ enum class memory_type_t {
     data
 };
 
+#pragma pack(push, 1)
+
 struct gdt_t {
     static constexpr size_t code_descriptor_index = 1;
     static constexpr size_t data_descriptor_index = 2;
@@ -36,6 +38,8 @@ struct ept_t {
     page_aligned x86::vmx::pdpte_t m_pdpt[x86::vmx::pdptes_in_pdpt];
     page_aligned x86::vmx::pde_t m_pd[x86::vmx::pdptes_in_pdpt][x86::vmx::pdes_in_directory];
 };
+
+#pragma pack(pop)
 
 void trace_gdt(const x86::segments::gdtr_t& gdtr);
 

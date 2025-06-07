@@ -40,12 +40,17 @@ status_t setup_idt(x86::interrupts::idtr_t& idtr, idt_t& idt) {
     idtr.base_address = environment::to_physical(&idt);
     idtr.limit = sizeof(idt) - 1;
 
+    x86::segments::selector_t selector{};
+    selector.bits.table = x86::segments::table_type_t::gdt;
+    selector.bits.rpl = 0;
+    selector.bits.index = memory::gdt_t::code_descriptor_index;
+
     for (int i = 0; i < idt_t::descriptor_count; ++i) {
         auto& descriptor = idt.descriptors[i];
         descriptor.low.bits.dpl = 0;
         descriptor.low.bits.present = 1;
         descriptor.low.bits.ist = 0;
-        descriptor.low.bits.segment_selector = memory::gdt_t::code_descriptor_index;
+        descriptor.low.bits.segment_selector = selector.value;
         descriptor.low.bits.type = x86::interrupts::gate_type_t::interrupt_32;
         descriptor.address(reinterpret_cast<uint64_t>(isr_stub_table[i]));
     }

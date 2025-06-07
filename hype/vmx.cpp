@@ -32,7 +32,7 @@ static uintn_t get_cr4_host_mask() {
     return cr4.raw;
 }
 
-static x86::segments::selector_t host_selector(uint16_t index) {
+static x86::segments::selector_t host_selector(const uint16_t index) {
     x86::segments::selector_t selector{};
     selector.bits.table = x86::segments::table_type_t::gdt;
     selector.bits.rpl = 0;
@@ -127,18 +127,27 @@ static status_t setup_segments_vmcs(context_t& context) {
     const auto host_tr_selector = host_selector(memory::gdt_t::tss_descriptor_index);
 
     // load host selectors
-    CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::host_ds_selector, host_data_selector.value));
+    /*CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::host_ds_selector, host_data_selector.value));
     CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::host_ss_selector, host_data_selector.value));
     CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::host_es_selector, host_data_selector.value));
     CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::host_gs_selector, host_data_selector.value));
     CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::host_fs_selector, host_data_selector.value));
     CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::host_cs_selector, host_code_selector.value));
-    CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::host_tr_selector, host_tr_selector.value));
+    CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::host_tr_selector, host_tr_selector.value));*/
+    CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::host_ds_selector, x86::read<x86::segments::ds_t>().value));
+    CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::host_ss_selector, x86::read<x86::segments::ss_t>().value));
+    CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::host_es_selector, x86::read<x86::segments::es_t>().value));
+    CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::host_gs_selector, x86::read<x86::segments::gs_t>().value));
+    CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::host_fs_selector, x86::read<x86::segments::fs_t>().value));
+    CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::host_cs_selector, x86::read<x86::segments::cs_t>().value));
+    CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::host_tr_selector, x86::read<x86::segments::tr_t>().value));
 
-    CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::host_tr_base, context.gdt.tr.base_address()));
+    //CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::host_tr_base, context.gdt.tr.base_address()));
+    CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::host_tr_base, gdt_table[x86::read<x86::segments::tr_t>()].base_address()));
     CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::host_fs_base, x86::read<x86::msr::ia32_fs_base_t>().raw));
     CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::host_gs_base, x86::read<x86::msr::ia32_gs_base_t>().raw));
-    CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::host_gdtr_base, context.gdtr.base_address));
+    //CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::host_gdtr_base, context.gdtr.base_address));
+    CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::host_gdtr_base, gdtr.base_address));
 
     CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::guest_gdtr_base, gdtr.base_address));
     CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::guest_gdtr_limit, gdtr.limit));
@@ -146,7 +155,9 @@ static status_t setup_segments_vmcs(context_t& context) {
     auto idtr = x86::read<x86::interrupts::idtr_t>();
     CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::guest_idtr_base, idtr.base_address));
     CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::guest_idtr_limit, idtr.limit));
-    CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::host_idtr_base, context.idtr.base_address));
+    // TODO: MY IDT BROKEN???, test directly
+    //CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::host_idtr_base, context.idtr.base_address));
+    CHECK_VMX(x86::vmx::vmwrite(x86::vmx::field_t::host_idtr_base, idtr.base_address));
 
     return {};
 }

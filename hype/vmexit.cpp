@@ -33,8 +33,14 @@ status_t handle_vmexit(cpu_registers_t& registers) {
     CHECK_VMX(x86::vmx::vmread(x86::vmx::field_t::exit_reason, exit_reason_raw));
 
     const auto exit_reason = static_cast<x86::vmx::exit_reason_t>(exit_reason_raw & 0xffff);
-
     TRACE_DEBUG("EXIT %d", exit_reason);
+
+    {
+        // todo: limits are fucked post exit, maybe a result of restoration
+        //  via iretq
+        x86::vmx::vmwrite(x86::vmx::field_t::guest_cs_limit, 0xfffff);
+        x86::vmx::vmwrite(x86::vmx::field_t::guest_ss_limit, 0xfffff);
+    }
 
     switch (exit_reason) {
         case x86::vmx::exit_reason_t::cpuid:
@@ -53,7 +59,7 @@ status_t handle_vmexit(cpu_registers_t& registers) {
 
     TRACE_DEBUG("Resume guest");
     CHECK(do_vm_entry_checks());
-    //CHECK_VMX(x86::vmx::vmresume());
+    CHECK_VMX(x86::vmx::vmresume());
 
     return {};
 }

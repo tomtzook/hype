@@ -1,6 +1,5 @@
 
-list(APPEND CXX_COMPILE_FLAGS "-fno-stack-protector" "-fshort-wchar" "-mno-red-zone" "-Wall" "-DEFI_FUNCTION_WRAPPER")
-set(LINK_FLAGS -target x86_64-unknown-windows -nostdlib -Wl,-entry:EfiMain -Wl,-subsystem:efi_application -fuse-ld=lld-link)
+set(LINK_FLAGS -target x86_64-pc-windows-msvc -nostdlib -Wl,-entry:EfiMain -Wl,-subsystem:efi_application -fuse-ld=lld-link)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
@@ -34,10 +33,16 @@ add_executable(hype
         vmexit.h
         vmentry.h
         vmentry.asm
-        vmentry_checks.cpp)
+        vmentry_checks.cpp
+        framework/buffer.h
+        framework/buffer.cpp
+        framework/result.h
+        framework/result.cpp
+        framework/ptr.h
+        framework/ptr.cpp)
 
 target_compile_definitions(hype PUBLIC _DEBUG)
-target_compile_options(hype PRIVATE $<$<COMPILE_LANGUAGE:CXX>:${CXX_COMPILE_FLAGS}>)
 target_link_options(hype PRIVATE ${LINK_FLAGS})
 target_link_libraries(hype PRIVATE edk2 arch)
+target_include_directories(hype PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 set_target_properties(hype PROPERTIES SUFFIX ".efi")

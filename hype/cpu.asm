@@ -73,11 +73,4 @@ asm_cpu_load_registers:
     mov rax, rcx
     mov rcx, [rax+10h]
 
-    ; rflags
-    ; todo: kvm crashes because stack is unaligned, but unable to align manually (also crashes)
-    ; sub rsp, 8h ; realign rsp, no need to restore
-    ; mov rax, [rcx+70h]
-    ; push rax
-    ; popfq
-
     iretq

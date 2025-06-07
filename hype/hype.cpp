@@ -87,16 +87,15 @@ static status_t start_on_vcpu(void*) {
     auto& cpu = get_current_vcpu();
     cpu.is_in_vmx_operation = false;
 
-    //read_registers(&cpu.context_registers);
     asm_cpu_store_registers(&cpu.context_registers);
     // if operation is on, then we were returned here from the registers being restored,
     // meaning we launched.
     if (cpu.is_in_vmx_operation) {
-        // TODO
+        // TODO UnicodeVSPrint has NOP which causes KVM to giveup
         //TRACE_DEBUG("FROM GUEST HELLO");
-        x86::cpuid(1, 1);
+        x86::cpuid(22, 1);
         //hype::hlt_cpu();
-        __asm__ volatile ("cli; hlt");
+        //__asm__ volatile ("cli; hlt");
         return {};
     }
     TRACE_DEBUG("SAVED RIP=0x%llx, RSP=0x%llx", cpu.context_registers.rip, cpu.context_registers.rsp);
@@ -116,7 +115,6 @@ static status_t start_on_vcpu(void*) {
     CHECK(do_vm_entry_checks());
 
     TRACE_DEBUG("Doing vmlaunch");
-    //hype::debug::deadloop();
     CHECK_VMX(x86::vmx::vmlaunch());
 
     return {};
@@ -145,7 +143,6 @@ status_t initialize() {
     TRACE_DEBUG("Setting up new GDT");
     CHECK(memory::setup_initial_guest_gdt());
     memory::trace_gdt(x86::read<x86::segments::gdtr_t>());
-    //interrupts::trace_idt(x86::read<x86::interrupts::idtr_t>());
 
     auto mtrr_cache = x86::mtrr::initialize_cache();
 
@@ -181,6 +178,7 @@ cleanup:
 status_t start() {
     TRACE_DEBUG("Starting Hype on all cores");
     CHECK(environment::run_on_all_vcpu(start_on_vcpu, nullptr));
+
     return {};
 }
 

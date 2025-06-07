@@ -129,7 +129,7 @@ status_t setup_gdt(x86::segments::gdtr_t& gdtr, gdt_t& gdt, x86::segments::tss64
 }
 
 status_t setup_identity_paging(page_table_t& page_table) {
-    /*{
+    {
         auto& pml4e = page_table.m_pml4[0];
         pml4e.raw = 0;
         pml4e.bits.present = true;
@@ -150,25 +150,9 @@ status_t setup_identity_paging(page_table_t& page_table) {
             pde.large.present = true;
             pde.large.rw = true;
             pde.large.ps = true;
-            pde.large.pfn = (i * 512) + j;
+            const auto address = (i * 512 + j) * x86::paging::page_size_2m;
+            pde.address(address);
         }
-    }*/
-
-    {
-        auto& pml4e = page_table.m_pml4[0];
-        pml4e.raw = 0;
-        pml4e.bits.present = true;
-        pml4e.bits.rw = true;
-        pml4e.address(environment::to_physical(page_table.m_pdpt));
-    }
-
-    for(size_t i = 0; i < x86::paging::ia32e::pdptes_in_pdpt; i++) {
-        auto& pdpte = page_table.m_pdpt[i];
-        pdpte.raw = 0;
-        pdpte.huge.present = true;
-        pdpte.huge.rw = true;
-        pdpte.huge.ps = true;
-        pdpte.address(i * x86::paging::page_size_1g);
     }
 
     return {};
@@ -224,6 +208,7 @@ status_t load_page_table(page_table_t& page_table) {
 status_t allocate(void*& out, size_t size, size_t alignment, memory_type_t memory_type) {
     void* memory;
     size_t pages = (size + sizeof(allocation_header_t) + alignment - 1) / x86::paging::page_size;
+    // todo: allocate/free pages will not be available after exitbootservices, need to replace it if wanted by our own heap
     CHECK(environment::allocate_pages(memory, pages, memory_type));
 
     void* aligned_mem;

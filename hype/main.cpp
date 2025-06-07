@@ -23,6 +23,9 @@ UefiMain(
     CHECK_AND_JUMP(cleanup, status, hype::initialize());
     CHECK_AND_JUMP(cleanup, status, hype::start());
 
+    TRACE_DEBUG("Hypervisor Launched");
+    __asm__ volatile ("cli; hlt");
+
 cleanup:
     hype::free();
 

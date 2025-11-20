@@ -1,13 +1,10 @@
 
-#include "base.h"
+#include <debug.h>
 #include "efi_base.h"
-#include "debug.h"
 
-#ifdef _DEBUG
+namespace framework::debug {
 
-namespace hype::debug {
-
-void trace(const wchar_t* fmt, ...) {
+void trace_impl(const wchar_t* fmt, ...) {
     wchar_t _print_buffer[255];
 
     VA_LIST args;
@@ -24,16 +21,14 @@ void trace(const wchar_t* fmt, ...) {
 }
 
 void deadloop() {
-    //TRACE_DEBUG("Entering Deadloop");
+    trace_debug("Entering Deadloop");
 
     static volatile int wait = 1;
     while (wait) {
         __asm__ __volatile__("pause");
     }
 
-    //TRACE_DEBUG("Leaving Deadloop");
+    trace_debug("Leaving Deadloop");
 }
 
 }
-
-#endif

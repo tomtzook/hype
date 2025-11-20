@@ -1,5 +1,6 @@
 #pragma once
 
+#include "crt.h"
 #include "common.h"
 
 namespace framework {

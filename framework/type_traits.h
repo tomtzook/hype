@@ -62,6 +62,9 @@ struct remove_reference<_t&&> {
     using type = _t;
 };
 
+template <typename t_, typename u_>
+inline constexpr bool is_same_v = __is_same(t_, u_);
+
 template<typename _t, typename _t2>
 constexpr bool is_any_of(_t first, _t2 second) {
     return first == second;

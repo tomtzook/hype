@@ -6,6 +6,7 @@
 #include <x86/segments.h>
 #include <x86/mtrr.h>
 #include <x86/cpuid.h>
+#include <ptr.h>
 
 #include "base.h"
 #include "cpu.h"
@@ -35,40 +36,40 @@ static wanted_vm_controls_t get_wanted_vm_controls() {
     return controls;
 }
 
-static status_t check_wanted_vm_controls() {
+static framework::result<> check_wanted_vm_controls() {
     auto controls = get_wanted_vm_controls();
 
-    CHECK_ASSERT(x86::vmx::are_vm_controls_supported(controls.pinbased),
+    assert(x86::vmx::are_vm_controls_supported(controls.pinbased),
                  "wanted pin based controls not supported");
-    CHECK_ASSERT(x86::vmx::are_vm_controls_supported(controls.procbased),
+    assert(x86::vmx::are_vm_controls_supported(controls.procbased),
                  "wanted processor based controls not supported");
-    CHECK_ASSERT(x86::vmx::are_vm_controls_supported(controls.secondary_procbased),
+    assert(x86::vmx::are_vm_controls_supported(controls.secondary_procbased),
                  "wanted secondary processor based controls not supported");
-    CHECK_ASSERT(x86::vmx::are_vm_controls_supported(controls.vmexit),
+    assert(x86::vmx::are_vm_controls_supported(controls.vmexit),
                  "wanted vmexit controls not supported");
-    CHECK_ASSERT(x86::vmx::are_vm_controls_supported(controls.vmentry),
+    assert(x86::vmx::are_vm_controls_supported(controls.vmentry),
                  "wanted vmentry controls not supported");
 
     return {};
 }
 
-static status_t check_environment_support() {
+static framework::result<> check_environment_support() {
     // todo: check intel
 
-    CHECK_ASSERT(x86::vmx::is_supported(), "vmx not supported");
+    assert(x86::vmx::is_supported(), "vmx not supported");
 
     auto vmx_basic = x86::read<x86::msr::ia32_vmx_basic_t>();
-    CHECK_ASSERT(vmx_basic.bits.vm_ctrls_fixed == 1,
+    assert(vmx_basic.bits.vm_ctrls_fixed == 1,
                  "VMX True MSR Controls not supported");
 
     auto ept_cap = x86::read<x86::msr::ia32_vmx_ept_vpid_cap_t>();
-    CHECK_ASSERT(ept_cap.bits.ept_large_pages && ept_cap.bits.invept && ept_cap.bits.memory_type_write_back,
+    assert(ept_cap.bits.ept_large_pages && ept_cap.bits.invept && ept_cap.bits.memory_type_write_back,
                  "Wanted EPT/VPID features not supported");
 
-    CHECK_ASSERT(check_wanted_vm_controls(),
+    assert(check_wanted_vm_controls(),
                  "Wanted VM Controls not supported");
 
-    CHECK_ASSERT(x86::paging::mode_t::ia32e == x86::paging::current_mode() &&
+    assert(x86::paging::mode_t::ia32e == x86::paging::current_mode() &&
                  x86::paging::ia32e::are_huge_tables_supported(),
                  "required paging not supported");
 
@@ -77,12 +78,28 @@ static status_t check_environment_support() {
     return {};
 }
 
+static framework::result<> init_context(context_t* context, const x86::mtrr::mtrr_cache_t& mtrr_cache) {
+    context->wanted_vm_controls = get_wanted_vm_controls();
+    context->cpu_init_index = 0;
+    context->cpu_count = verify(framework::environment::get_active_cpu_count());
 
-static status_t start_on_vcpu(void*) {
+    trace_debug("Initializing GDT");
+    verify(memory::setup_gdt(context->gdtr, context->gdt, context->tss));
+    trace_debug("Initializing IDT");
+    verify(interrupts::setup_idt(context->idtr, context->idt));
+    trace_debug("Initializing Page Table");
+    verify(memory::setup_identity_paging(context->page_table));
+    trace_debug("Initializing EPT");
+    verify(memory::setup_identity_ept(context->ept, mtrr_cache));
+
+    return {};
+}
+
+static framework::result<> start_on_vcpu(void*) {
     auto cpu_id = x86::atomic::fetchadd8(&g_context->cpu_init_index, 1);
-    environment::set_current_vcpu_id(cpu_id);
+    framework::environment::set_current_vcpu_id(cpu_id);
 
-    TRACE_DEBUG("Starting on core id=0x%x", cpu_id);
+    trace_debug("Starting on core id=0x%x", cpu_id);
 
     auto& cpu = get_current_vcpu();
     cpu.is_in_vmx_operation = false;
@@ -95,32 +112,32 @@ static status_t start_on_vcpu(void*) {
         return {};
     }
 
-    TRACE_DEBUG("Entering VMX");
-    CHECK(vmxon_for_vcpu(cpu));
+    trace_debug("Entering VMX");
+    verify(vmxon_for_vcpu(cpu));
     cpu.is_in_vmx_operation = true;
 
-    TRACE_DEBUG("Initializing vmcs");
-    auto vmcs_physical = environment::to_physical(&cpu.vmcs);
-    CHECK_VMX(x86::vmx::vmclear(vmcs_physical));
-    CHECK_ASSERT(x86::vmx::initialize_vmstruct(cpu.vmcs), "initialize_vmstruct failed");
-    CHECK_VMX(x86::vmx::vmptrld(vmcs_physical));
-    CHECK(setup_vmcs(*g_context, cpu));
+    trace_debug("Initializing vmcs");
+    auto vmcs_physical = framework::environment::to_physical(&cpu.vmcs);
+    verify_vmx(x86::vmx::vmclear(vmcs_physical));
+    assert(x86::vmx::initialize_vmstruct(cpu.vmcs), "initialize_vmstruct failed");
+    verify_vmx(x86::vmx::vmptrld(vmcs_physical));
+    verify(setup_vmcs(*g_context, cpu));
 
-    CHECK(do_vm_entry_checks());
+    verify(do_vm_entry_checks());
 
-    TRACE_DEBUG("Doing vmlaunch");
-    CHECK_VMX(x86::vmx::vmlaunch());
+    trace_debug("Doing vmlaunch");
+    verify_vmx(x86::vmx::vmlaunch());
 
     return {};
 }
 
-static status_t stop_on_vcpu(void*) {
+static framework::result<> stop_on_vcpu(void*) {
     auto& cpu = get_current_vcpu();
 
-    TRACE_DEBUG("Running stop on core");
+    trace_debug("Running stop on core");
 
     if (cpu.is_in_vmx_operation) {
-        TRACE_DEBUG("Doing vmxoff on core");
+        trace_debug("Doing vmxoff on core");
         x86::vmx::vmxoff();
         cpu.is_in_vmx_operation = false;
     }
@@ -128,60 +145,46 @@ static status_t stop_on_vcpu(void*) {
     return {};
 }
 
-status_t initialize() {
-    CHECK_ASSERT(g_context == nullptr, "context not null");
+framework::result<> initialize() {
+    assert(g_context == nullptr, "context not null");
 
-    TRACE_DEBUG("Checking environment support");
-    CHECK(check_environment_support());
+    trace_debug("Checking environment support");
+    verify(check_environment_support());
 
-    TRACE_DEBUG("Setting up new GDT");
-    CHECK(memory::setup_initial_guest_gdt());
+    trace_debug("Setting up new GDT");
+    verify(memory::setup_initial_guest_gdt());
 
     auto mtrr_cache = x86::mtrr::initialize_cache();
 
-    TRACE_DEBUG("Initializing context");
-    g_context = new (x86::paging::page_size) context_t;
-    CHECK_ALLOCATION(g_context, "context initialization failed");
+    trace_debug("Initializing context");
+    auto context = verify(framework::unique_ptr<context_t>::create<x86::paging::page_size>());
+    verify_alloc(context);
 
-    g_context->wanted_vm_controls = get_wanted_vm_controls();
-    g_context->cpu_init_index = 0;
-
-    status_t status{};
-    CHECK_AND_JUMP(cleanup, status, environment::get_active_cpu_count(g_context->cpu_count));
-
-    TRACE_DEBUG("Initializing GDT");
-    CHECK_AND_JUMP(cleanup, status, memory::setup_gdt(g_context->gdtr, g_context->gdt, g_context->tss));
-    TRACE_DEBUG("Initializing IDT");
-    CHECK_AND_JUMP(cleanup, status, interrupts::setup_idt(g_context->idtr, g_context->idt));
-    TRACE_DEBUG("Initializing Page Table");
-    CHECK_AND_JUMP(cleanup, status, memory::setup_identity_paging(g_context->page_table));
-    TRACE_DEBUG("Initializing EPT");
-    CHECK_AND_JUMP(cleanup, status, memory::setup_identity_ept(g_context->ept, mtrr_cache));
-
-cleanup:
-    // todo: create some raii wrappers
-    if (!status && g_context != nullptr) {
-        delete g_context;
-        g_context = nullptr;
+    context->wanted_vm_controls = get_wanted_vm_controls();
+    context->cpu_init_index = 0;
+    context->cpu_count = verify(framework::environment::get_active_cpu_count());
+    const auto context_result = init_context(context.get(), mtrr_cache);
+    if (context_result) {
+        g_context = context.release();
     }
 
-    return status;
+    return {};
 }
 
-status_t start() {
-    TRACE_DEBUG("Starting Hype on all cores");
-    CHECK(environment::run_on_all_vcpu(start_on_vcpu, nullptr));
+framework::result<> start() {
+    trace_debug("Starting Hype on all cores");
+    verify(framework::environment::run_on_all_vcpu(start_on_vcpu, nullptr));
 
     return {};
 }
 
 void free() {
-    TRACE_DEBUG("Doing free on all cores");
+    trace_debug("Doing free on all cores");
 
-    DEBUG_ONLY(hype::debug::deadloop());
+    framework::debug::deadloop();
 
     // todo: only stop on cpus that ran
-    environment::run_on_all_vcpu(stop_on_vcpu, nullptr);
+    framework::environment::run_on_all_vcpu(stop_on_vcpu, nullptr);
 
     if (g_context != nullptr) {
         delete g_context;

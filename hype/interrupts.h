@@ -17,6 +17,6 @@ struct idt_t {
 
 void trace_idt(const x86::interrupts::idtr_t& idtr);
 
-status_t setup_idt(x86::interrupts::idtr_t& idtr, idt_t& idt);
+framework::result<> setup_idt(x86::interrupts::idtr_t& idtr, idt_t& idt);
 
 }

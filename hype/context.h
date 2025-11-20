@@ -42,6 +42,8 @@ struct vcpu_t {
 };
 
 struct context_t {
+    static constexpr size_t max_vcpu_supported = 16;
+
     page_aligned memory::gdt_t gdt;
     page_aligned interrupts::idt_t idt;
     page_aligned memory::page_table_t page_table;
@@ -51,7 +53,7 @@ struct context_t {
     x86::segments::gdtr_t gdtr;
     x86::interrupts::idtr_t idtr;
 
-    vcpu_t cpus[environment::max_vcpu_supported];
+    vcpu_t cpus[max_vcpu_supported];
     size_t cpu_count;
     wanted_vm_controls_t wanted_vm_controls;
 
@@ -60,8 +62,8 @@ struct context_t {
 
 extern context_t* g_context;
 
-static inline vcpu_t& get_current_vcpu() {
-    const auto id = environment::get_current_vcpu_id();
+inline vcpu_t& get_current_vcpu() {
+    const auto id = framework::environment::get_current_vcpu_id();
     return g_context->cpus[id];
 }
 

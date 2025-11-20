@@ -9,7 +9,7 @@ extern "C" void* isr_stub_table[];
 
 
 extern "C" void idt_handler(const uint64_t vector, const uint64_t error_code, const uint64_t rip) {
-    TRACE_ERROR("IDT Called for vector=0x%llx, error_code=0x%llx, rip=0x%llx", vector, error_code, rip);
+    trace_error("IDT Called for vector=0x%llx, error_code=0x%llx, rip=0x%llx", vector, error_code, rip);
     hype::hlt_cpu();
 }
 
@@ -19,7 +19,7 @@ void trace_idt(const x86::interrupts::idtr_t& idtr) {
     auto table = x86::interrupts::table64_t(idtr);
     for (int i = 0; i < table.count(); i++) {
         auto& descriptor = table[i];
-        TRACE_DEBUG("DESCRIPTOR: i=0x%x, address=0x%llx, selector=0x%x, dpl=0x%x, present=0x%x, ist=0x%x, type=0x%x, low=0x%llx, high=0x%llx",
+        trace_debug("DESCRIPTOR: i=0x%x, address=0x%llx, selector=0x%x, dpl=0x%x, present=0x%x, ist=0x%x, type=0x%x, low=0x%llx, high=0x%llx",
                     i,
                     descriptor.address(),
                     descriptor.low.bits.segment_selector,
@@ -32,10 +32,10 @@ void trace_idt(const x86::interrupts::idtr_t& idtr) {
     }
 }
 
-status_t setup_idt(x86::interrupts::idtr_t& idtr, idt_t& idt) {
+framework::result<> setup_idt(x86::interrupts::idtr_t& idtr, idt_t& idt) {
     memset(&idt, 0, sizeof(idt));
 
-    idtr.base_address = environment::to_physical(&idt);
+    idtr.base_address = framework::environment::to_physical(&idt);
     idtr.limit = sizeof(idt) - 1;
 
     x86::segments::selector_t selector{};

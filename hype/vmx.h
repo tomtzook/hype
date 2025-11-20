@@ -9,8 +9,8 @@
 
 namespace hype {
 
-status_t vmxon_for_vcpu(vcpu_t& cpu);
+framework::result<> vmxon_for_vcpu(vcpu_t& cpu);
 
-status_t setup_vmcs(context_t& context, vcpu_t& cpu);
+framework::result<> setup_vmcs(context_t& context, vcpu_t& cpu);
 
 }

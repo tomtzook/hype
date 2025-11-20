@@ -9,11 +9,6 @@
 
 namespace hype::memory {
 
-enum class memory_type_t {
-    code,
-    data
-};
-
 #pragma pack(push, 1)
 
 struct gdt_t {
@@ -44,15 +39,12 @@ struct ept_t {
 void trace_gdt(const x86::segments::gdtr_t& gdtr);
 
 // also loads the gdt
-status_t setup_initial_guest_gdt();
+framework::result<> setup_initial_guest_gdt();
 
-status_t setup_gdt(x86::segments::gdtr_t& gdtr, gdt_t& gdt, x86::segments::tss64_t& tss);
-status_t setup_identity_paging(page_table_t& page_table);
-status_t setup_identity_ept(ept_t& ept, const x86::mtrr::mtrr_cache_t& mtrr_cache);
+framework::result<> setup_gdt(x86::segments::gdtr_t& gdtr, gdt_t& gdt, x86::segments::tss64_t& tss);
+framework::result<> setup_identity_paging(page_table_t& page_table);
+framework::result<> setup_identity_ept(ept_t& ept, const x86::mtrr::mtrr_cache_t& mtrr_cache);
 
-status_t load_page_table(page_table_t& page_table);
-
-status_t allocate(void*& out, size_t size, size_t alignment, memory_type_t memory_type);
-void free(void* ptr);
+framework::result<> load_page_table(page_table_t& page_table);
 
 }

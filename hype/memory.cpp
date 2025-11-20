@@ -3,26 +3,15 @@
 #include <x86/paging/ia32e.h>
 
 #include "base.h"
-#include "environment.h"
 #include "memory.h"
 
-
 namespace hype::memory {
-
-#pragma pack(push, 1)
-
-struct allocation_header_t {
-    uintptr_t ptr;
-    size_t pages;
-};
-
-#pragma pack(pop)
 
 void trace_gdt(const x86::segments::gdtr_t& gdtr) {
     auto gdtr_w = x86::segments::table_t(gdtr);
     for (int i = 0; i < gdtr_w.count(); ++i) {
         auto segment = gdtr_w[i];
-        TRACE_DEBUG("SEGMENT: i=0x%x, base=0x%llx, limit=0x%llx, s=0x%x, type=0x%x, avail=0x%x, present=0x%x, db=0x%x, dpl=0x%x, long=0x%x, gran=0x%x, raw=0x%llx",
+        trace_debug("SEGMENT: i=0x%x, base=0x%llx, limit=0x%llx, s=0x%x, type=0x%x, avail=0x%x, present=0x%x, db=0x%x, dpl=0x%x, long=0x%x, gran=0x%x, raw=0x%llx",
                     i,
                     segment.base_address(), segment.limit(),
                     segment.bits.s,
@@ -37,14 +26,16 @@ void trace_gdt(const x86::segments::gdtr_t& gdtr) {
     }
 }
 
-status_t setup_initial_guest_gdt() {
+framework::result<> setup_initial_guest_gdt() {
     const auto current_gdtr = x86::read<x86::segments::gdtr_t>();
 
     // make a copy of the current gdt + a tss
     const auto gdt_size = current_gdtr.limit + 1;
     const auto wanted_size = gdt_size + sizeof(x86::segments::descriptor64_t);
-    void* new_gdt;
-    CHECK(allocate(new_gdt, wanted_size, x86::paging::page_size, memory_type_t::data));
+    void* new_gdt = verify(framework::allocate(
+        wanted_size,
+        framework::memory_type_t::data,
+        x86::paging::page_size));
 
     memset(new_gdt, 0, wanted_size);
     memcpy(new_gdt, reinterpret_cast<const void*>(current_gdtr.base_address), gdt_size);
@@ -52,13 +43,15 @@ status_t setup_initial_guest_gdt() {
     // todo: free new_gdt on failure. best be done with raii stuff
     constexpr auto tss_size = sizeof(x86::segments::tss64_t);
     const auto tr_index = gdt_size / sizeof(x86::segments::descriptor_t);
-    void* tss;
-    CHECK(allocate(tss, tss_size, x86::paging::page_size, memory_type_t::data));
+    void* tss = verify(framework::allocate(
+        tss_size,
+        framework::memory_type_t::data,
+        x86::paging::page_size));
 
     memset(tss, 0, tss_size);
 
-    auto tss_descriptor = reinterpret_cast<x86::segments::descriptor64_t*>(static_cast<uint8_t*>(new_gdt) + gdt_size);
-    tss_descriptor->base_address(environment::to_physical(tss));
+    const auto tss_descriptor = reinterpret_cast<x86::segments::descriptor64_t*>(static_cast<uint8_t*>(new_gdt) + gdt_size);
+    tss_descriptor->base_address(framework::environment::to_physical(tss));
     tss_descriptor->limit(tss_size);
     tss_descriptor->base.bits.type = x86::segments::type_t::system_bits32_tss_available;
     tss_descriptor->base.bits.s = x86::segments::descriptor_type_t::system;
@@ -69,8 +62,10 @@ status_t setup_initial_guest_gdt() {
     tss_descriptor->base.bits.default_db = 0;
     tss_descriptor->base.bits.granularity = x86::segments::granularity_t::byte;
 
-    void* regs;
-    CHECK(allocate(regs, sizeof(x86::segments::gdtr_t) + sizeof(x86::segments::tr_t), x86::paging::page_size, memory_type_t::data));
+    void* regs = verify(framework::allocate(
+        sizeof(x86::segments::gdtr_t) + sizeof(x86::segments::tr_t),
+        framework::memory_type_t::data,
+        x86::paging::page_size));
 
     auto* gdtr = static_cast<x86::segments::gdtr_t*>(regs);
     gdtr->base_address = reinterpret_cast<uint64_t>(new_gdt);
@@ -86,11 +81,11 @@ status_t setup_initial_guest_gdt() {
     return {};
 }
 
-status_t setup_gdt(x86::segments::gdtr_t& gdtr, gdt_t& gdt, x86::segments::tss64_t& tss) {
+framework::result<> setup_gdt(x86::segments::gdtr_t& gdtr, gdt_t& gdt, x86::segments::tss64_t& tss) {
     memset(&gdt, 0, sizeof(gdt));
     memset(&tss, 0, sizeof(tss));
 
-    gdtr.base_address = environment::to_physical(&gdt);
+    gdtr.base_address = framework::environment::to_physical(&gdt);
     gdtr.limit = sizeof(gdt) - 1;
 
     gdt.null.raw = 0;
@@ -117,7 +112,7 @@ status_t setup_gdt(x86::segments::gdtr_t& gdtr, gdt_t& gdt, x86::segments::tss64
     gdt.data.bits.default_db = 1;
     gdt.data.bits.granularity = x86::segments::granularity_t::page;
 
-    gdt.tr.base_address(environment::to_physical(&tss));
+    gdt.tr.base_address(framework::environment::to_physical(&tss));
     gdt.tr.limit(sizeof(tss));
     gdt.tr.base.bits.type = x86::segments::type_t::system_bits32_tss_available;
     gdt.tr.base.bits.s = x86::segments::descriptor_type_t::system;
@@ -131,13 +126,13 @@ status_t setup_gdt(x86::segments::gdtr_t& gdtr, gdt_t& gdt, x86::segments::tss64
     return {};
 }
 
-status_t setup_identity_paging(page_table_t& page_table) {
+framework::result<> setup_identity_paging(page_table_t& page_table) {
     {
         auto& pml4e = page_table.m_pml4[0];
         pml4e.raw = 0;
         pml4e.bits.present = true;
         pml4e.bits.rw = true;
-        pml4e.address(environment::to_physical(page_table.m_pdpt));
+        pml4e.address(framework::environment::to_physical(page_table.m_pdpt));
     }
 
     for(size_t i = 0; i < x86::paging::ia32e::pdptes_in_pdpt; i++) {
@@ -145,7 +140,7 @@ status_t setup_identity_paging(page_table_t& page_table) {
         pdpte.raw = 0;
         pdpte.small.present = true;
         pdpte.small.rw = true;
-        pdpte.address(environment::to_physical(page_table.m_pd[i]));
+        pdpte.address(framework::environment::to_physical(page_table.m_pd[i]));
 
         for(size_t j = 0; j < x86::paging::ia32e::pdes_in_directory; j++) {
             auto& pde = page_table.m_pd[i][j];
@@ -161,14 +156,14 @@ status_t setup_identity_paging(page_table_t& page_table) {
     return {};
 }
 
-status_t setup_identity_ept(ept_t& ept, const x86::mtrr::mtrr_cache_t& mtrr_cache) {
+framework::result<> setup_identity_ept(ept_t& ept, const x86::mtrr::mtrr_cache_t& mtrr_cache) {
     {
         auto& pml4e = ept.m_pml4[0];
         pml4e.raw = 0;
         pml4e.bits.read = true;
         pml4e.bits.write = true;
         pml4e.bits.execute = true;
-        pml4e.address(environment::to_physical(ept.m_pdpt));
+        pml4e.address(framework::environment::to_physical(ept.m_pdpt));
     }
 
     for (int i = 0; i < x86::vmx::pdptes_in_pdpt; i++) {
@@ -177,7 +172,7 @@ status_t setup_identity_ept(ept_t& ept, const x86::mtrr::mtrr_cache_t& mtrr_cach
         pdpte.small.read = true;
         pdpte.small.write = true;
         pdpte.small.execute = true;
-        pdpte.address(environment::to_physical(ept.m_pd[i]));
+        pdpte.address(framework::environment::to_physical(ept.m_pd[i]));
 
         for (int j = 0; j < x86::vmx::pdes_in_directory; j++) {
             auto& pde = ept.m_pd[i][j];
@@ -189,8 +184,7 @@ status_t setup_identity_ept(ept_t& ept, const x86::mtrr::mtrr_cache_t& mtrr_cach
 
             const auto address = (i * 512 + j) * x86::paging::page_size_2m;
             auto type = mtrr_cache.type_for_2m(address);
-            CHECK_ASSERT(x86::mtrr::memory_type_invalid != type,
-                         "mtrr for range is invalid");
+            assert(x86::mtrr::memory_type_invalid != type, "mtrr for range is invalid");
 
             pde.large.mem_type = static_cast<uint64_t>(type);
             pde.address(address);
@@ -200,39 +194,12 @@ status_t setup_identity_ept(ept_t& ept, const x86::mtrr::mtrr_cache_t& mtrr_cach
     return {};
 }
 
-status_t load_page_table(page_table_t& page_table) {
+framework::result<> load_page_table(page_table_t& page_table) {
     x86::cr3_t cr3(0);
-    cr3.ia32e.address = environment::to_physical(page_table.m_pml4) >> x86::paging::page_bits_4k;
+    cr3.ia32e.address = framework::environment::to_physical(page_table.m_pml4) >> x86::paging::page_bits_4k;
     x86::write(cr3);
 
     return {};
-}
-
-status_t allocate(void*& out, size_t size, size_t alignment, memory_type_t memory_type) {
-    void* memory;
-    const size_t pages = (size + sizeof(allocation_header_t) + alignment - 1) / x86::paging::page_size;
-    // todo: allocate/free pages will not be available after exitbootservices, need to replace it if wanted by our own heap
-    CHECK(environment::allocate_pages(memory, pages, memory_type));
-
-    void* aligned_mem;
-    if (0 != alignment) {
-        aligned_mem = reinterpret_cast<void*>((reinterpret_cast<uintptr_t>(memory) +
-                sizeof(allocation_header_t)  + alignment - 1) & ~(uintptr_t)(alignment - 1));
-    } else {
-        aligned_mem = reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(memory) + sizeof(allocation_header_t));
-    }
-
-    const auto header = reinterpret_cast<allocation_header_t*>(reinterpret_cast<uintptr_t>(aligned_mem) - sizeof(allocation_header_t));
-    header->ptr = reinterpret_cast<uintptr_t>(memory);
-    header->pages = pages;
-
-    out = aligned_mem;
-    return {};
-}
-
-void free(void* ptr) {
-    const auto header = reinterpret_cast<allocation_header_t*>(reinterpret_cast<uintptr_t>(ptr) - sizeof(allocation_header_t));
-    environment::free_pages(reinterpret_cast<void*>(header->ptr), header->pages);
 }
 
 }

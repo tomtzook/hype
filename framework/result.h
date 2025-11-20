@@ -2,6 +2,8 @@
 
 #include "type_traits.h"
 #include "optional.h"
+#include "debug.h"
+#include "check.h"
 #include "status.h"
 
 namespace framework {
@@ -58,6 +60,18 @@ private:
     t_ m_value;
 };
 
+template<>
+class err<framework_status_codes> {
+public:
+    // ReSharper disable once CppNonExplicitConvertingConstructor
+    constexpr err(framework_status_codes value); // NOLINT(*-explicit-constructor)
+
+    status&& value();
+
+private:
+    status m_value;
+};
+
 template<typename value_t_, typename err_t_>
 class result_base {
 public:
@@ -69,8 +83,14 @@ public:
     constexpr result_base(ok_type&& value); // NOLINT(*-explicit-constructor)
     // ReSharper disable once CppNonExplicitConvertingConstructor
     constexpr result_base(err_type&& value); // NOLINT(*-explicit-constructor)
+    template<typename err_t2_>
+    // ReSharper disable once CppNonExplicitConvertingConstructor
+    constexpr result_base(err<err_t2_>&& value); // NOLINT(*-explicit-constructor)
 
     explicit operator bool() const;
+
+    constexpr const value_t_& value() const;
+    constexpr const err_t_& error() const;
 
     constexpr value_t_&& release_value();
     constexpr err_t_&& release_error();
@@ -93,9 +113,15 @@ public:
     constexpr result_base(ok_type&& type); // NOLINT(*-explicit-constructor)
     // ReSharper disable once CppNonExplicitConvertingConstructor
     constexpr result_base(err_type&& value); // NOLINT(*-explicit-constructor)
+    template<typename err_t2_>
+    // ReSharper disable once CppNonExplicitConvertingConstructor
+    constexpr result_base(err<err_t2_>&& value); // NOLINT(*-explicit-constructor)
 
     explicit operator bool() const;
 
+    constexpr const err_t_& error() const;
+
+    constexpr void release_value();
     constexpr err_t_&& release_error();
 
 private:
@@ -142,14 +168,25 @@ t_&& err<t_>::value() {
     return framework::move(m_value);
 }
 
+constexpr err<framework_status_codes>::err(const framework_status_codes value) : m_value(status_category_framework, value) {}
+
+inline status&& err<framework_status_codes>::value() { return framework::move(m_value); }
+
 template<typename value_t_, typename err_t_>
-constexpr result_base<value_t_, err_t_>::result_base(ok_type&& value) // NOLINT(*-explicit-constructor)
+constexpr result_base<value_t_, err_t_>::result_base(ok_type&& value)
     : m_value(framework::move(value.value()))
     , m_err()
 {}
 
 template<typename value_t_, typename err_t_>
-constexpr result_base<value_t_, err_t_>::result_base(err_type&& value) // NOLINT(*-explicit-constructor)
+constexpr result_base<value_t_, err_t_>::result_base(err_type&& value)
+    : m_value()
+    , m_err(framework::move(value.value()))
+{}
+
+template<typename value_t_, typename err_t_>
+template<typename err_t2_>
+constexpr result_base<value_t_, err_t_>::result_base(err<err_t2_>&& value)
     : m_value()
     , m_err(framework::move(value.value()))
 {}
@@ -158,12 +195,26 @@ template<typename value_t_, typename err_t_>
 result_base<value_t_, err_t_>::operator bool() const { return m_value.has_value(); }
 
 template<typename value_t_, typename err_t_>
+constexpr const value_t_& result_base<value_t_, err_t_>::value() const {
+    if (!m_value) { abort(); }
+    return m_value.value();
+}
+
+template<typename value_t_, typename err_t_>
+constexpr const err_t_& result_base<value_t_, err_t_>::error() const {
+    if (!m_err) { abort(); }
+    return m_err.value();
+}
+
+template<typename value_t_, typename err_t_>
 constexpr value_t_&& result_base<value_t_, err_t_>::release_value() {
+    if (!m_value) { abort(); }
     return framework::move(*m_value);
 }
 
 template<typename value_t_, typename err_t_>
 constexpr err_t_&& result_base<value_t_, err_t_>::release_error() {
+    if (!m_err) { abort(); }
     return framework::move(*m_err);
 }
 
@@ -179,7 +230,13 @@ constexpr result_base<void, err_t_>::result_base(ok_type&& type)
 
 template<typename err_t_>
 constexpr result_base<void, err_t_>::result_base(err_type&& value)
-    : m_err(framework::move(value))
+    : m_err(framework::move(value.value()))
+{}
+
+template<typename err_t_>
+template<typename err_t2_>
+constexpr result_base<void, err_t_>::result_base(err<err_t2_>&& value)
+    : m_err(framework::move(value.value()))
 {}
 
 template<typename err_t_>
@@ -188,7 +245,19 @@ result_base<void, err_t_>::operator bool() const {
 }
 
 template<typename err_t_>
+constexpr const err_t_& result_base<void, err_t_>::error() const {
+    if (!m_err) { abort(); }
+    return m_err.value();
+}
+
+template<typename err_t_>
+constexpr void result_base<void, err_t_>::release_value() {
+    if (m_err) { abort(); }
+}
+
+template<typename err_t_>
 constexpr err_t_&& result_base<void, err_t_>::release_error() {
+    if (!m_err) { abort(); }
     return framework::move(*m_err);
 }
 

@@ -6,8 +6,8 @@
 
 namespace hype {
 
-status_t initialize();
-status_t start();
+framework::result<> initialize();
+framework::result<> start();
 void free();
 
 }

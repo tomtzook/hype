@@ -1,8 +1,10 @@
 #pragma once
 
+#include <x86/intrinsics.h>
+
+#include "debug.h"
 #include "check.h"
 #include "heap.h"
-#include "x86/intrinsics.h"
 
 namespace framework {
 
@@ -35,6 +37,15 @@ public:
     static result<buffer_base> copy(const buffer_base&);
 
 private:
+    [[nodiscard]] const uint8_t* _get() const {
+        if (m_base == nullptr) { abort(); }
+        return m_base;
+    }
+    [[nodiscard]] uint8_t* _get() {
+        if (m_base == nullptr) { abort(); }
+        return m_base;
+    }
+
     uint8_t* m_base;
     size_t m_size;
 };
@@ -79,24 +90,26 @@ void buffer_base<mem>::reset() {
 }
 
 template<memory_type_t mem>
-const void* buffer_base<mem>::base() const { return m_base; }
+const void* buffer_base<mem>::base() const { return _get(); }
 
 template<memory_type_t mem>
-void* buffer_base<mem>::base() { return m_base; }
+void* buffer_base<mem>::base() { return _get(); }
 
 template<memory_type_t mem>
-size_t buffer_base<mem>::size() const { return m_size; }
+size_t buffer_base<mem>::size() const { return _get(); }
 
 template<memory_type_t mem>
 template<typename t_>
 const t_* buffer_base<mem>::data(const size_t offset) const {
-    return reinterpret_cast<const t_*>(reinterpret_cast<uint64_t>(m_base) + offset);
+    if (offset >= m_size) { abort(); }
+    return reinterpret_cast<const t_*>(reinterpret_cast<uint64_t>(_get()) + offset);
 }
 
 template<memory_type_t mem>
 template<typename t_>
 t_* buffer_base<mem>::data(const size_t offset) {
-    return reinterpret_cast<t_*>(reinterpret_cast<uint64_t>(m_base) + offset);
+    if (offset >= m_size) { abort(); }
+    return reinterpret_cast<t_*>(reinterpret_cast<uint64_t>(_get()) + offset);
 }
 
 template<memory_type_t mem>

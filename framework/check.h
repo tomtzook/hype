@@ -5,7 +5,7 @@
     ({                                  \
         auto __result = (__VA_ARGS__);  \
         if (!__result) {                \
-            return __result;            \
+            return framework::err(__result.release_error()); \
         }                               \
                                         \
         __result.release_value();       \
@@ -17,12 +17,40 @@
         if (!__status) {                \
             return __status;            \
         }                               \
-    } while (false);
+    } while (false)
+
+
+#define trace_status(__status) trace_error("Status{cat=0x%x, code=0x%x}", __status.category(), __status.code())
+
+#define trace_result(...)               \
+    do {                                \
+        auto __status = framework::status(__VA_ARGS__);    \
+        if (!__status) {                \
+            trace_status(__status)      \
+        }                               \
+    } while (false)
 
 
 #define verify_alloc(_ptr) \
     do {                                \
         if (!_ptr) {                    \
-            return framework::status(framework::status_category_framework, framework::status_bad_alloc);            \
+            return framework::err(framework::status(framework::status_category_framework, framework::status_bad_alloc)); \
         }                               \
+    } while (false)
+
+
+#define assert(_cond, _msg) \
+    do {                                \
+        const auto _res = (_cond);      \
+        if (!_res) {                    \
+            trace_error("Assert failed: " _msg); \
+            return framework::err(framework::status(framework::status_category_framework, framework::status_assert_failed)); \
+        }                               \
+    } while (false)
+
+
+#define abort() \
+    do {        \
+        trace_error("abort"); \
+        framework::do_abort();     \
     } while (false);

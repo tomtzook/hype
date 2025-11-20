@@ -11,7 +11,10 @@ static constexpr status_category_t status_category_framework = 1;
 static constexpr status_code_t status_success = 0;
 
 enum framework_status_codes : status_code_t {
-    status_bad_alloc = 1
+    status_bad_alloc = 1,
+    status_bad_arg,
+    status_assert_failed,
+    status_unsupported
 };
 
 class status {

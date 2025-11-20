@@ -1,5 +1,7 @@
 #pragma once
 
+#include "debug.h"
+#include "check.h"
 #include "heap.h"
 
 namespace framework {
@@ -31,16 +33,29 @@ public:
     constexpr const t_& operator*() const &;
     constexpr t_&& operator*() &&;
     constexpr const t_&& operator*() const &&;
-    constexpr t_& operator->() &;
-    constexpr const t_& operator->() const &;
+    constexpr t_* operator->();
+    constexpr const t_* operator->() const;
 
+    const t_* get() const;
+    t_* get();
     void reset();
     t_* release();
 
     template<typename... args_>
     static result<unique_ptr> create(args_... args);
+    template<size_t align_, typename... args_>
+    static result<unique_ptr> create(args_... args);
 
 private:
+    const t_* _get() const {
+        if (m_ptr == nullptr) { abort(); }
+        return m_ptr;
+    }
+    t_* _get() {
+        if (m_ptr == nullptr) { abort(); }
+        return m_ptr;
+    }
+
     t_* m_ptr;
 };
 
@@ -72,22 +87,28 @@ template<typename t_, typename deleter_>
 constexpr unique_ptr<t_, deleter_>::operator bool() const { return m_ptr != nullptr; }
 
 template<typename t_, typename deleter_>
-constexpr t_& unique_ptr<t_, deleter_>::operator*() & { return *m_ptr; }
+constexpr t_& unique_ptr<t_, deleter_>::operator*() & { return *_get(); }
 
 template<typename t_, typename deleter_>
-constexpr const t_& unique_ptr<t_, deleter_>::operator*() const & { return *m_ptr; }
+constexpr const t_& unique_ptr<t_, deleter_>::operator*() const & { return *_get(); }
 
 template<typename t_, typename deleter_>
-constexpr t_&& unique_ptr<t_, deleter_>::operator*() && { return framework::move(m_ptr); }
+constexpr t_&& unique_ptr<t_, deleter_>::operator*() && { return framework::move(_get()); }
 
 template<typename t_, typename deleter_>
-constexpr const t_&& unique_ptr<t_, deleter_>::operator*() const && { return framework::move(m_ptr); }
+constexpr const t_&& unique_ptr<t_, deleter_>::operator*() const && { return framework::move(_get()); }
 
 template<typename t_, typename deleter_>
-constexpr t_& unique_ptr<t_, deleter_>::operator->() & { return m_ptr; }
+constexpr t_* unique_ptr<t_, deleter_>::operator->() { return _get(); }
 
 template<typename t_, typename deleter_>
-constexpr const t_& unique_ptr<t_, deleter_>::operator->() const & { return m_ptr; }
+constexpr const t_* unique_ptr<t_, deleter_>::operator->() const { return _get(); }
+
+template<typename t_, typename deleter_>
+const t_* unique_ptr<t_, deleter_>::get() const { return _get(); }
+
+template<typename t_, typename deleter_>
+t_* unique_ptr<t_, deleter_>::get() { return _get(); }
 
 template<typename t_, typename deleter_>
 void unique_ptr<t_, deleter_>::reset() {
@@ -99,7 +120,7 @@ void unique_ptr<t_, deleter_>::reset() {
 
 template<typename t_, typename deleter_>
 t_* unique_ptr<t_, deleter_>::release() {
-    auto ptr = m_ptr;
+    auto ptr = _get();
     m_ptr = nullptr;
     return ptr;
 }
@@ -108,7 +129,14 @@ template<typename t_, typename deleter_>
 template<typename... args_>
 result<unique_ptr<t_, deleter_>> unique_ptr<t_, deleter_>::create(args_... args) {
     auto ptr = new t_(args...);
-    return unique_ptr(ptr);
+    return framework::ok(unique_ptr(ptr));
+}
+
+template<typename t_, typename deleter_>
+template<size_t align_, typename... args_>
+result<unique_ptr<t_, deleter_>> unique_ptr<t_, deleter_>::create(args_... args) {
+    auto ptr = new (align_) t_(args...);
+    return framework::ok(unique_ptr(ptr));
 }
 
 }

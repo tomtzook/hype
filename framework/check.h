@@ -20,7 +20,7 @@
     } while (false)
 
 
-#define trace_status(__status) trace_error("Status{cat=0x%x, code=0x%x}", __status.category(), __status.code())
+#define trace_status(__status, _msg) trace_error("Status{cat=0x%x, code=0x%x}: " _msg, __status.category(), __status.code())
 
 #define trace_result(...)               \
     do {                                \
@@ -49,8 +49,8 @@
     } while (false)
 
 
-#define abort() \
+#define abort(_msg) \
     do {        \
-        trace_error("abort"); \
+        trace_error("abort: " _msg); \
         framework::do_abort();     \
     } while (false);

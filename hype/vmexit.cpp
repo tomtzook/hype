@@ -24,7 +24,24 @@ static framework::result<> handle_cpuid(cpu_registers_t& registers) {
     return {};
 }
 
+static framework::result<> resume() {
+    verify(do_vm_entry_checks());
+
+    trace_debug("Doing vmresume");
+    verify_vmx(x86::vmx::vmresume());
+
+    trace_error("vmresume returned without error code");
+    return framework::err(framework::status_unsupported);
+}
+
+[[noreturn]] static void resume_or_fail() {
+    const auto status = resume();
+    trace_status(status.error(), "Error from resume!");
+    abort("failed to resume");
+}
+
 framework::result<> handle_vmexit(cpu_registers_t& registers) {
+    // load real registers for these because they are overriden by our exit routine
     verify_vmx(x86::vmx::vmread(x86::vmx::field_t::guest_rip, registers.rip));
     verify_vmx(x86::vmx::vmread(x86::vmx::field_t::guest_rsp, registers.rsp));
     verify_vmx(x86::vmx::vmread(x86::vmx::field_t::guest_rflags, registers.rflags));
@@ -33,7 +50,7 @@ framework::result<> handle_vmexit(cpu_registers_t& registers) {
     verify_vmx(x86::vmx::vmread(x86::vmx::field_t::exit_reason, exit_reason_raw));
 
     const auto exit_reason = static_cast<x86::vmx::exit_reason_t>(exit_reason_raw & 0xffff);
-    trace_debug("Exit %d From 0x%llx", exit_reason, registers.rip);
+    trace_debug("Exit %u From 0x%llx", static_cast<uint16_t>(exit_reason), registers.rip);
 
     {
         // todo: limits are fucked post exit, maybe a result of restoration
@@ -57,20 +74,15 @@ framework::result<> handle_vmexit(cpu_registers_t& registers) {
     registers.rip += instruction_len;
     verify_vmx(x86::vmx::vmwrite(x86::vmx::field_t::guest_rip, registers.rip));
 
-    trace_debug("Resume guest");
-    verify(do_vm_entry_checks());
-    verify_vmx(x86::vmx::vmresume());
-
-    return {};
+    trace_debug("Resume guest into rip=0x%x", registers.rip);
+    registers.rip = reinterpret_cast<uint64_t>(resume_or_fail);
+    asm_cpu_load_registers(&registers);
 }
 
 }
 
 extern "C" [[noreturn]] void vm_exit_handler(hype::cpu_registers_t& registers) {
     const auto status = handle_vmexit(registers);
-    trace_error("Error from VMEXIT handler!");
-    trace_status(status.error());
-
-    //hype::debug::deadloop(); // TODO: this causes vm to pause (fault?)
-    hype::hlt_cpu();
+    trace_status(status.error(), "Error from VMEXIT handler!");
+    abort("failed to handle vmexit");
 }

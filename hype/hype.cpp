@@ -37,7 +37,7 @@ static wanted_vm_controls_t get_wanted_vm_controls() {
 }
 
 static framework::result<> check_wanted_vm_controls() {
-    auto controls = get_wanted_vm_controls();
+    const auto controls = get_wanted_vm_controls();
 
     assert(x86::vmx::are_vm_controls_supported(controls.pinbased),
                  "wanted pin based controls not supported");
@@ -58,11 +58,11 @@ static framework::result<> check_environment_support() {
 
     assert(x86::vmx::is_supported(), "vmx not supported");
 
-    auto vmx_basic = x86::read<x86::msr::ia32_vmx_basic_t>();
+    const auto vmx_basic = x86::read<x86::msr::ia32_vmx_basic_t>();
     assert(vmx_basic.bits.vm_ctrls_fixed == 1,
                  "VMX True MSR Controls not supported");
 
-    auto ept_cap = x86::read<x86::msr::ia32_vmx_ept_vpid_cap_t>();
+    const auto ept_cap = x86::read<x86::msr::ia32_vmx_ept_vpid_cap_t>();
     assert(ept_cap.bits.ept_large_pages && ept_cap.bits.invept && ept_cap.bits.memory_type_write_back,
                  "Wanted EPT/VPID features not supported");
 
@@ -96,7 +96,7 @@ static framework::result<> init_context(context_t* context, const x86::mtrr::mtr
 }
 
 static framework::result<> start_on_vcpu(void*) {
-    auto cpu_id = x86::atomic::fetchadd8(&g_context->cpu_init_index, 1);
+    const auto cpu_id = x86::atomic::fetchadd8(&g_context->cpu_init_index, 1);
     framework::environment::set_current_vcpu_id(cpu_id);
 
     trace_debug("Starting on core id=0x%x", cpu_id);
@@ -117,7 +117,7 @@ static framework::result<> start_on_vcpu(void*) {
     cpu.is_in_vmx_operation = true;
 
     trace_debug("Initializing vmcs");
-    auto vmcs_physical = framework::environment::to_physical(&cpu.vmcs);
+    const auto vmcs_physical = framework::environment::to_physical(&cpu.vmcs);
     verify_vmx(x86::vmx::vmclear(vmcs_physical));
     assert(x86::vmx::initialize_vmstruct(cpu.vmcs), "initialize_vmstruct failed");
     verify_vmx(x86::vmx::vmptrld(vmcs_physical));

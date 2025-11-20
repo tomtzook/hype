@@ -1,6 +1,7 @@
 #include "efi/efi_base.h"
 
 #include "base.h"
+#include "cpu.h"
 #include "hype.h"
 
 
@@ -35,13 +36,13 @@ UefiMain(
     const auto result = start();
     if (result) {
         trace_debug("Hypervisor Launched");
-        __asm__ volatile ("cli; hlt");
+        trace_debug("yooooo");
     } else {
-        trace_error("start failed");
-        trace_status(result.error());
+        trace_status(result.error(), "start failed");
     }
 
-    framework::debug::deadloop();
+    hype::hlt_cpu();
+    //framework::debug::deadloop();
 
     return EFI_SUCCESS;
 }

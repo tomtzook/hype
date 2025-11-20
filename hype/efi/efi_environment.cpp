@@ -2,6 +2,7 @@
 #include <x86/msr.h>
 #include <environment.h>
 
+#include "cpu.h"
 #include "efi_base.h"
 
 namespace framework::environment {
@@ -13,12 +14,11 @@ struct mp_procedure_context_t {
 
 static void mp_procedure(void* param) {
     // TODO MAKE ATOMIC STUFF
-    // TODO HOW TO MARK FAILURE HERE?
+    // TODO TO MARK FAILURE HERE?
     const auto context = static_cast<mp_procedure_context_t*>(param);
     const auto status = context->procedure(context->param);
     if (!status) {
-        trace_error("Failed to run procedure on core");
-        trace_status(status.error());
+        trace_status(status.error(), "Failed to run procedure on core");
     }
 }
 
@@ -106,6 +106,7 @@ result<> sleep(const size_t microseconds) {
 
 void do_abort() {
     // todo: implement
+    hype::hlt_cpu();
 }
 
 }

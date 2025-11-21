@@ -12,7 +12,7 @@
 
 namespace hype {
 
-static framework::result<> handle_cpuid(cpu_registers_t& registers) {
+static framework::result<> handle_cpuid(cpu_registers_t& registers, bool&) {
     const auto cpuid = x86::cpuid(registers.rax, registers.rcx);
 
     trace_debug("CPUID[rax=0x%lx, rcx=0x%lx]: eax=0x%lx, ebx=0x%lx, ecx=0x%lx, edx=0x%lx",
@@ -27,7 +27,12 @@ static framework::result<> handle_cpuid(cpu_registers_t& registers) {
 }
 
 framework::result<> handle_vmexit(cpu_registers_t& registers) {
+    const auto old_rsp = registers.rsp;
+    const auto old_rflags = registers.rflags;
+
     verify_vmx(x86::vmx::vmread(x86::vmx::field_t::guest_rip, registers.rip));
+    verify_vmx(x86::vmx::vmread(x86::vmx::field_t::guest_rsp, registers.rsp));
+    verify_vmx(x86::vmx::vmread(x86::vmx::field_t::guest_rflags, registers.rflags));
 
     uint64_t exit_reason_raw;
     verify_vmx(x86::vmx::vmread(x86::vmx::field_t::exit_reason, exit_reason_raw));
@@ -42,25 +47,35 @@ framework::result<> handle_vmexit(cpu_registers_t& registers) {
         x86::vmx::vmwrite(x86::vmx::field_t::guest_ss_limit, 0xfffff);
     }
 
+    bool should_move_to_next_instruction = true;
+
     switch (exit_reason) {
         case x86::vmx::exit_reason_t::cpuid:
-            verify(handle_cpuid(registers));
+            verify(handle_cpuid(registers, should_move_to_next_instruction));
             break;
         default:
             return framework::err(framework::status_unsupported);
     }
 
-    // move guest to next instruction
-    // todo: sometimes we don't want to do this, let handlers choose
-    uint64_t instruction_len;
-    verify_vmx(x86::vmx::vmread(x86::vmx::field_t::vmexit_instruction_length, instruction_len));
-    registers.rip += instruction_len;
+    // ReSharper disable once CppDFAConstantConditions
+    if (should_move_to_next_instruction) {
+        // move guest to next instruction
+        uint64_t instruction_len;
+        verify_vmx(x86::vmx::vmread(x86::vmx::field_t::vmexit_instruction_length, instruction_len));
+        registers.rip += instruction_len;
+    }
+
     verify_vmx(x86::vmx::vmwrite(x86::vmx::field_t::guest_rip, registers.rip));
+    verify_vmx(x86::vmx::vmwrite(x86::vmx::field_t::guest_rsp, registers.rsp));
+    verify_vmx(x86::vmx::vmwrite(x86::vmx::field_t::guest_rflags, registers.rflags));
+
+    registers.rsp = old_rsp;
+    registers.rflags = old_rflags;
 
     verify(do_vm_entry_checks());
-    registers.rip = reinterpret_cast<uint64_t>(x86::vmx::vmresume);
 
     trace_debug("Resume guest into rip=0x%x", registers.rip);
+    registers.rip = reinterpret_cast<uint64_t>(x86::vmx::vmresume);
     asm_cpu_load_registers(&registers);
 }
 

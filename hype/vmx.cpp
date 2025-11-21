@@ -27,7 +27,7 @@ static uintn_t get_cr4_read_shadow(const uintn_t cr4_raw) {
 }
 
 static uintn_t get_cr4_host_mask() {
-    x86::cr4_t cr4(0);
+    const x86::cr4_t cr4(0);
 
     return cr4.raw;
 }
@@ -170,7 +170,7 @@ framework::result<> vmxon_for_vcpu(vcpu_t& cpu) {
     assert(x86::vmx::initialize_vmstruct(cpu.vmxon_region), "initialize_vmstruct failed");
 
     trace_debug("Doing vmxon");
-    auto vmxon_region = framework::environment::to_physical(&cpu.vmxon_region);
+    const auto vmxon_region = framework::environment::to_physical(&cpu.vmxon_region);
     verify_vmx(x86::vmx::vmxon(vmxon_region));
 
     return {};

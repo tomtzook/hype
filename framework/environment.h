@@ -23,8 +23,8 @@ void set_current_vcpu_id(size_t id);
 
 result<size_t> get_active_cpu_count();
 
-using vcpu_procedure_t = framework::result<>(void* param);
-framework::result<> run_on_all_vcpu(vcpu_procedure_t procedure, void* param);
+using vcpu_procedure_t = result<>(void* param);
+result<> run_on_all_vcpu(vcpu_procedure_t procedure, void* param);
 
 result<> sleep(size_t microseconds);
 

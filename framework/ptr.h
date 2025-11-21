@@ -13,7 +13,7 @@ struct default_deleter {
     }
 };
 
-template<typename t_, typename deleter_ = default_deleter<t_>>
+template<typename t_, typename = default_deleter<t_>>
 class unique_ptr {
 public:
     using type = t_;
@@ -36,10 +36,10 @@ public:
     constexpr t_* operator->();
     constexpr const t_* operator->() const;
 
-    const t_* get() const;
-    t_* get();
+    [[nodiscard]] const t_* get() const;
+    [[nodiscard]] t_* get();
     void reset();
-    t_* release();
+    [[nodiscard]] t_* release();
 
     template<typename... args_>
     static result<unique_ptr> create(args_... args);
@@ -47,11 +47,11 @@ public:
     static result<unique_ptr> create(args_... args);
 
 private:
-    const t_* _get() const {
+    [[nodiscard]] const t_* _get() const {
         if (m_ptr == nullptr) { abort(); }
         return m_ptr;
     }
-    t_* _get() {
+    [[nodiscard]] t_* _get() {
         if (m_ptr == nullptr) { abort(); }
         return m_ptr;
     }

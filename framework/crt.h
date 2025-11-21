@@ -3,8 +3,8 @@
 #include "types.h"
 
 
-namespace std { // NOLINT(cert-dcl58-cpp)
-enum align_val_t: size_t {};
+namespace std {
+enum align_val_t: size_t {}; // NOLINT(*-dcl58-cpp)
 }
 
 namespace framework {

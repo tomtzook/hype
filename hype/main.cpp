@@ -36,12 +36,11 @@ UefiMain(
     const auto result = start();
     if (result) {
         trace_debug("Hypervisor Launched");
+        __asm__ volatile ("cli; hlt");
     } else {
         trace_status(result.error(), "start failed");
+        __asm__ volatile ("cli; hlt");
     }
-
-    hype::hlt_cpu();
-    //framework::debug::deadloop();
 
     return EFI_SUCCESS;
 }

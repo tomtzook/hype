@@ -2,9 +2,9 @@
 
 #include "type_traits.h"
 #include "optional.h"
+#include "status.h"
 #include "debug.h"
 #include "check.h"
-#include "status.h"
 
 namespace framework {
 
@@ -89,11 +89,11 @@ public:
 
     explicit operator bool() const;
 
-    constexpr const value_t_& value() const;
-    constexpr const err_t_& error() const;
+    [[nodiscard]] constexpr const value_t_& value() const;
+    [[nodiscard]] constexpr const err_t_& error() const;
 
-    constexpr value_t_&& release_value();
-    constexpr err_t_&& release_error();
+    [[nodiscard]] constexpr value_t_&& release_value();
+    [[nodiscard]] constexpr err_t_&& release_error();
 
 private:
     optional<value_t_> m_value;
@@ -224,7 +224,7 @@ constexpr result_base<void, err_t_>::result_base()
 {}
 
 template<typename err_t_>
-constexpr result_base<void, err_t_>::result_base(ok_type&& type)
+constexpr result_base<void, err_t_>::result_base(ok_type&&)
     : m_err()
 {}
 

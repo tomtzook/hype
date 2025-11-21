@@ -6,7 +6,7 @@ template<class _t, _t _v>
 struct integral_constant {
     using value_type = _t;
     using type = integral_constant;
-    static inline constexpr const _t value = _v;
+    static constexpr _t value = _v;
 
     // ReSharper disable once CppNonExplicitConversionOperator
     constexpr operator value_type() const { return value; } // NOLINT(*-explicit-constructor)
@@ -35,7 +35,7 @@ struct is_trivially_destructible : integral_constant<bool, __is_trivially_destru
 template<class _t>
 inline constexpr bool is_trivially_destructible_v = __is_trivially_destructible(_t);
 
-template<bool, typename _t = void>
+template<bool, typename = void>
 struct enable_if {
 };
 
@@ -45,7 +45,7 @@ struct enable_if<true, _t> {
 };
 
 template<bool _cond, typename _t = void>
-using enable_if_t = typename enable_if<_cond, _t>::type;
+using enable_if_t = enable_if<_cond, _t>::type;
 
 template<class _t>
 struct remove_reference {
@@ -76,8 +76,8 @@ constexpr bool is_any_of(_t first, _t2 second, _args... args) {
 }
 
 template<typename _t>
-constexpr typename remove_reference<_t>::type&& move(_t&& arg) {
-    return static_cast<typename remove_reference<_t>::type&&>(arg);
+constexpr remove_reference<_t>::type&& move(_t&& arg) {
+    return static_cast<remove_reference<_t>::type&&>(arg);
 }
 
 

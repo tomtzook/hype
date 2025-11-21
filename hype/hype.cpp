@@ -154,7 +154,7 @@ framework::result<> initialize() {
     trace_debug("Setting up new GDT");
     verify(memory::setup_initial_guest_gdt());
 
-    auto mtrr_cache = x86::mtrr::initialize_cache();
+    const auto mtrr_cache = x86::mtrr::initialize_cache();
 
     trace_debug("Initializing context");
     auto context = verify(framework::unique_ptr<context_t>::create<x86::paging::page_size>());

@@ -8,7 +8,7 @@
 
 namespace framework {
 
-template<memory_type_t mem>
+template<memory_type_t>
 class buffer_base {
 public:
     buffer_base();
@@ -119,7 +119,7 @@ result<buffer_base<mem>> buffer_base<mem>::create(const size_t size) {
     verify_alloc(ptr);
 
     // ReSharper disable once CppDFAMemoryLeak
-    return buffer_base<mem>(ptr, size);
+    return buffer_base(ptr, size);
 }
 
 template<memory_type_t mem>

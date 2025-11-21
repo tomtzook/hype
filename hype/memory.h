@@ -45,6 +45,6 @@ framework::result<> setup_gdt(x86::segments::gdtr_t& gdtr, gdt_t& gdt, x86::segm
 framework::result<> setup_identity_paging(page_table_t& page_table);
 framework::result<> setup_identity_ept(ept_t& ept, const x86::mtrr::mtrr_cache_t& mtrr_cache);
 
-framework::result<> load_page_table(page_table_t& page_table);
+framework::result<> load_page_table(const page_table_t& page_table);
 
 }

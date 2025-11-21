@@ -194,7 +194,7 @@ framework::result<> setup_identity_ept(ept_t& ept, const x86::mtrr::mtrr_cache_t
     return {};
 }
 
-framework::result<> load_page_table(page_table_t& page_table) {
+framework::result<> load_page_table(const page_table_t& page_table) {
     x86::cr3_t cr3(0);
     cr3.ia32e.address = framework::environment::to_physical(page_table.m_pml4) >> x86::paging::page_bits_4k;
     x86::write(cr3);

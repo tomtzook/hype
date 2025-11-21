@@ -20,7 +20,7 @@
     } while (false)
 
 
-#define trace_status(__status, _msg) trace_error("Status{cat=0x%x, code=0x%x}: " _msg, __status.category(), __status.code())
+#define trace_status(__status, _msg) trace_error("Status{cat=0x%x, code=0x%x}: " _msg, (__status).category(), (__status).code())
 
 #define trace_result(...)               \
     do {                                \
@@ -33,7 +33,7 @@
 
 #define verify_alloc(_ptr) \
     do {                                \
-        if (!_ptr) {                    \
+        if (!(_ptr)) {                    \
             return framework::err(framework::status(framework::status_category_framework, framework::status_bad_alloc)); \
         }                               \
     } while (false)

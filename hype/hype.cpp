@@ -18,7 +18,7 @@
 
 namespace hype {
 
-context_t* g_context = nullptr;
+context_t g_context;
 
 static wanted_vm_controls_t get_wanted_vm_controls() {
     wanted_vm_controls_t controls{};
@@ -76,25 +76,25 @@ static framework::result<> check_environment_support() {
     return {};
 }
 
-static framework::result<> init_context(context_t* context, const x86::mtrr::mtrr_cache_t& mtrr_cache) {
-    context->wanted_vm_controls = get_wanted_vm_controls();
-    context->cpu_init_index = 0;
-    context->cpu_count = verify(environment::get_active_cpu_count());
+static framework::result<> init_context(context_t& context, const x86::mtrr::mtrr_cache_t& mtrr_cache) {
+    context.wanted_vm_controls = get_wanted_vm_controls();
+    context.cpu_init_index = 0;
+    context.cpu_count = verify(environment::get_active_cpu_count());
 
     trace_debug("Initializing GDT");
-    verify(memory::setup_gdt(context->gdtr, context->gdt, context->tss));
+    verify(memory::setup_gdt(context.gdtr, context.gdt, context.tss));
     trace_debug("Initializing IDT");
-    verify(interrupts::setup_idt(context->idtr, context->idt));
+    verify(interrupts::setup_idt(context.idtr, context.idt));
     trace_debug("Initializing Page Table");
-    verify(memory::setup_identity_paging(context->page_table));
+    verify(memory::setup_identity_paging(context.page_table));
     trace_debug("Initializing EPT");
-    verify(memory::setup_identity_ept(context->ept, mtrr_cache));
+    verify(memory::setup_identity_ept(context.ept, mtrr_cache));
 
     return {};
 }
 
 static framework::result<> start_on_vcpu(void*) {
-    const auto cpu_id = x86::atomic::fetchadd8(&g_context->cpu_init_index, 1);
+    const auto cpu_id = x86::atomic::fetchadd8(&g_context.cpu_init_index, 1);
     environment::set_current_vcpu_id(cpu_id);
 
     trace_debug("Starting on core id=0x%x", cpu_id);
@@ -119,7 +119,7 @@ static framework::result<> start_on_vcpu(void*) {
     verify_vmx(x86::vmx::vmclear(vmcs_physical));
     assert(x86::vmx::initialize_vmstruct(cpu.vmcs), "initialize_vmstruct failed");
     verify_vmx(x86::vmx::vmptrld(vmcs_physical));
-    verify(setup_vmcs(*g_context, cpu));
+    verify(setup_vmcs(g_context, cpu));
 
     verify(do_vm_entry_checks());
 
@@ -144,8 +144,6 @@ static framework::result<> stop_on_vcpu(void*) {
 }
 
 framework::result<> initialize() {
-    assert(g_context == nullptr, "context not null");
-
     trace_debug("Checking environment support");
     verify(check_environment_support());
 
@@ -155,16 +153,10 @@ framework::result<> initialize() {
     const auto mtrr_cache = x86::mtrr::initialize_cache();
 
     trace_debug("Initializing context");
-    auto context = verify(framework::unique_ptr<context_t>::create<x86::paging::page_size>());
-    verify_alloc(context);
-
-    context->wanted_vm_controls = get_wanted_vm_controls();
-    context->cpu_init_index = 0;
-    context->cpu_count = verify(environment::get_active_cpu_count());
-    const auto context_result = init_context(context.get(), mtrr_cache);
-    if (context_result) {
-        g_context = context.release();
-    }
+    g_context.wanted_vm_controls = get_wanted_vm_controls();
+    g_context.cpu_init_index = 0;
+    g_context.cpu_count = verify(environment::get_active_cpu_count());
+    verify(init_context(g_context, mtrr_cache));
 
     return {};
 }
@@ -183,11 +175,6 @@ void free() {
 
     // todo: only stop on cpus that ran
     environment::run_on_all_vcpu(stop_on_vcpu, nullptr);
-
-    if (g_context != nullptr) {
-        delete g_context;
-        g_context = nullptr;
-    }
 }
 
 }

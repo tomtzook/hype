@@ -60,11 +60,11 @@ struct context_t {
     volatile uint8_t cpu_init_index;
 };
 
-extern context_t* g_context;
+extern context_t g_context;
 
 inline vcpu_t& get_current_vcpu() {
     const auto id = environment::get_current_vcpu_id();
-    return g_context->cpus[id];
+    return g_context.cpus[id];
 }
 
 }

@@ -10,6 +10,12 @@ extern "C" void* isr_stub_table[];
 
 extern "C" void idt_handler(const uint64_t vector, const uint64_t error_code, const uint64_t rip) {
     trace_error("IDT Called for vector=0x%llx, error_code=0x%llx, rip=0x%llx", vector, error_code, rip);
+
+    if (static_cast<x86::interrupts::interrupt_t>(vector)
+        == x86::interrupts::interrupt_t::page_fault) {
+        trace_error("Page fault. cr2=0x%x", x86::read<x86::cr2_t>().raw);
+    }
+
     hype::hlt_cpu();
 }
 

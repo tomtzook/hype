@@ -5,7 +5,9 @@
 #include <x86/cpuid.h>
 
 #include "base.h"
+#include "context.h"
 #include "cpu.h"
+#include "memory.h"
 #include "vmentry.h"
 
 namespace hype {
@@ -24,27 +26,8 @@ static framework::result<> handle_cpuid(cpu_registers_t& registers) {
     return {};
 }
 
-static framework::result<> resume() {
-    verify(do_vm_entry_checks());
-
-    trace_debug("Doing vmresume");
-    verify_vmx(x86::vmx::vmresume());
-
-    trace_error("vmresume returned without error code");
-    return framework::err(framework::status_unsupported);
-}
-
-[[noreturn]] static void resume_or_fail() {
-    const auto status = resume();
-    trace_status(status.error(), "Error from resume!");
-    abort("failed to resume");
-}
-
 framework::result<> handle_vmexit(cpu_registers_t& registers) {
-    // load real registers for these because they are overriden by our exit routine
     verify_vmx(x86::vmx::vmread(x86::vmx::field_t::guest_rip, registers.rip));
-    verify_vmx(x86::vmx::vmread(x86::vmx::field_t::guest_rsp, registers.rsp));
-    verify_vmx(x86::vmx::vmread(x86::vmx::field_t::guest_rflags, registers.rflags));
 
     uint64_t exit_reason_raw;
     verify_vmx(x86::vmx::vmread(x86::vmx::field_t::exit_reason, exit_reason_raw));
@@ -74,8 +57,10 @@ framework::result<> handle_vmexit(cpu_registers_t& registers) {
     registers.rip += instruction_len;
     verify_vmx(x86::vmx::vmwrite(x86::vmx::field_t::guest_rip, registers.rip));
 
+    verify(do_vm_entry_checks());
+    registers.rip = reinterpret_cast<uint64_t>(x86::vmx::vmresume);
+
     trace_debug("Resume guest into rip=0x%x", registers.rip);
-    registers.rip = reinterpret_cast<uint64_t>(resume_or_fail);
     asm_cpu_load_registers(&registers);
 }
 

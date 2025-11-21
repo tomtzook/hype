@@ -36,7 +36,6 @@ UefiMain(
     const auto result = start();
     if (result) {
         trace_debug("Hypervisor Launched");
-        trace_debug("yooooo");
     } else {
         trace_status(result.error(), "start failed");
     }

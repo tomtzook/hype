@@ -5,7 +5,7 @@
 namespace framework::debug {
 
 void trace_impl(const wchar_t* fmt, ...) {
-    wchar_t _print_buffer[255];
+    wchar_t _print_buffer[512];
 
     VA_LIST args;
     VA_START(args, fmt);
@@ -21,14 +21,14 @@ void trace_impl(const wchar_t* fmt, ...) {
 }
 
 void deadloop() {
-    trace_debug("Entering Deadloop");
+    //trace_debug("Entering Deadloop");
 
     static volatile int wait = 1;
     while (wait) {
         __asm__ __volatile__("pause");
     }
 
-    trace_debug("Leaving Deadloop");
+    //trace_debug("Leaving Deadloop");
 }
 
 }

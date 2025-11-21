@@ -63,7 +63,7 @@ struct context_t {
 extern context_t* g_context;
 
 inline vcpu_t& get_current_vcpu() {
-    const auto id = framework::environment::get_current_vcpu_id();
+    const auto id = environment::get_current_vcpu_id();
     return g_context->cpus[id];
 }
 

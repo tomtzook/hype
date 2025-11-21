@@ -3,10 +3,8 @@
 #include <x86/vmx/vmx.h>
 #include <x86/msr.h>
 #include <x86/vmx/controls.h>
-#include <x86/segments.h>
 #include <x86/mtrr.h>
 #include <x86/cpuid.h>
-#include <ptr.h>
 
 #include "base.h"
 #include "cpu.h"
@@ -81,7 +79,7 @@ static framework::result<> check_environment_support() {
 static framework::result<> init_context(context_t* context, const x86::mtrr::mtrr_cache_t& mtrr_cache) {
     context->wanted_vm_controls = get_wanted_vm_controls();
     context->cpu_init_index = 0;
-    context->cpu_count = verify(framework::environment::get_active_cpu_count());
+    context->cpu_count = verify(environment::get_active_cpu_count());
 
     trace_debug("Initializing GDT");
     verify(memory::setup_gdt(context->gdtr, context->gdt, context->tss));
@@ -97,7 +95,7 @@ static framework::result<> init_context(context_t* context, const x86::mtrr::mtr
 
 static framework::result<> start_on_vcpu(void*) {
     const auto cpu_id = x86::atomic::fetchadd8(&g_context->cpu_init_index, 1);
-    framework::environment::set_current_vcpu_id(cpu_id);
+    environment::set_current_vcpu_id(cpu_id);
 
     trace_debug("Starting on core id=0x%x", cpu_id);
 
@@ -117,7 +115,7 @@ static framework::result<> start_on_vcpu(void*) {
     cpu.is_in_vmx_operation = true;
 
     trace_debug("Initializing vmcs");
-    const auto vmcs_physical = framework::environment::to_physical(&cpu.vmcs);
+    const auto vmcs_physical = environment::to_physical(&cpu.vmcs);
     verify_vmx(x86::vmx::vmclear(vmcs_physical));
     assert(x86::vmx::initialize_vmstruct(cpu.vmcs), "initialize_vmstruct failed");
     verify_vmx(x86::vmx::vmptrld(vmcs_physical));
@@ -162,7 +160,7 @@ framework::result<> initialize() {
 
     context->wanted_vm_controls = get_wanted_vm_controls();
     context->cpu_init_index = 0;
-    context->cpu_count = verify(framework::environment::get_active_cpu_count());
+    context->cpu_count = verify(environment::get_active_cpu_count());
     const auto context_result = init_context(context.get(), mtrr_cache);
     if (context_result) {
         g_context = context.release();
@@ -173,7 +171,7 @@ framework::result<> initialize() {
 
 framework::result<> start() {
     trace_debug("Starting Hype on all cores");
-    verify(framework::environment::run_on_all_vcpu(start_on_vcpu, nullptr));
+    verify(environment::run_on_all_vcpu(start_on_vcpu, nullptr));
 
     return {};
 }
@@ -184,7 +182,7 @@ void free() {
     framework::debug::deadloop();
 
     // todo: only stop on cpus that ran
-    framework::environment::run_on_all_vcpu(stop_on_vcpu, nullptr);
+    environment::run_on_all_vcpu(stop_on_vcpu, nullptr);
 
     if (g_context != nullptr) {
         delete g_context;

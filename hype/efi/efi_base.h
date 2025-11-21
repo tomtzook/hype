@@ -1,5 +1,6 @@
 #pragma once
 
+#include <x86/types.h>
 #include <status.h>
 
 extern "C" {

@@ -2,16 +2,18 @@
 
 
 // from arch
-#include "x86/types.h"
-#include "x86/macros.h"
+#include <x86/types.h>
+#include <x86/macros.h>
 
 // framework
-#include <common.h>
 #include <status.h>
 #include <result.h>
 #include <debug.h>
-#include <check.h>
+#include <verify.h>
 #include <heap.h>
+#include "../framework/include/memory.h"
+#include <unique_ptr.h>
+#include <buffer.h>
 
 #include "x86/atomic.h"
 #include "x86/vmx/vmx.h"

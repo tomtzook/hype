@@ -41,7 +41,7 @@ void trace_idt(const x86::interrupts::idtr_t& idtr) {
 framework::result<> setup_idt(x86::interrupts::idtr_t& idtr, idt_t& idt) {
     memset(&idt, 0, sizeof(idt));
 
-    idtr.base_address = framework::environment::to_physical(&idt);
+    idtr.base_address = environment::to_physical(&idt);
     idtr.limit = sizeof(idt) - 1;
 
     x86::segments::selector_t selector{};

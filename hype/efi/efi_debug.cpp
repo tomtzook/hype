@@ -1,5 +1,5 @@
 
-#include <debug.h>
+#include "base.h"
 #include "efi_base.h"
 
 namespace framework::debug {

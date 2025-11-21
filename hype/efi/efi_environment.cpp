@@ -1,11 +1,21 @@
 
 #include <x86/msr.h>
-#include <environment.h>
 
 #include "cpu.h"
 #include "efi_base.h"
+#include "environment.h"
 
-namespace framework::environment {
+
+namespace framework {
+
+void terminate() {
+    // todo: implement
+    hype::hlt_cpu();
+}
+
+}
+
+namespace environment {
 
 struct mp_procedure_context_t {
     vcpu_procedure_t* procedure;
@@ -18,17 +28,33 @@ static void mp_procedure(void* param) {
     const auto context = static_cast<mp_procedure_context_t*>(param);
     const auto status = context->procedure(context->param);
     if (!status) {
-        trace_status(status.error(), "Failed to run procedure on core");
+        trace_status("Failed to run procedure on core", status.error());
     }
 }
 
-result<void*> allocate_pages(const size_t pages, const memory_type_t type) {
+static framework::result<> init_heap(const size_t pages, const framework::memory_type type) {
+    auto& heap = framework::heap::get_heap(type);
+
+    const auto mem = verify(allocate_pages(pages, type));
+    verify_status(heap.init(mem, pages * x86::paging::page_size));
+
+    return {};
+}
+
+framework::result<> initialize() {
+    verify(init_heap(5000, framework::memory_type::code));
+    verify(init_heap(5000, framework::memory_type::data));
+
+    return {};
+}
+
+framework::result<void*> allocate_pages(const size_t pages, const framework::memory_type type) {
     EFI_MEMORY_TYPE efi_memory_type;
     switch (type) {
-        case memory_type_t::code:
+        case framework::memory_type::code:
             efi_memory_type = EfiRuntimeServicesCode;
             break;
-        case memory_type_t::data:
+        case framework::memory_type::data:
             efi_memory_type = EfiRuntimeServicesData;
             break;
         default:
@@ -41,7 +67,7 @@ result<void*> allocate_pages(const size_t pages, const memory_type_t type) {
     return framework::ok(to_virtual(address));
 }
 
-void free_pages(void* ptr, const size_t pages, const memory_type_t) {
+void free_pages(void* ptr, const size_t pages, const framework::memory_type) {
     const auto address = to_physical(ptr);
     gBS->FreePages(address, pages);
 }
@@ -67,7 +93,7 @@ void set_current_vcpu_id(const size_t id) {
     x86::write<x86::msr::ia32_fs_base_t>(fs_base);
 }
 
-result<size_t> get_active_cpu_count() {
+framework::result<size_t> get_active_cpu_count() {
     EFI_MP_SERVICES_PROTOCOL* mp_services;
     verify_efi(gBS->LocateProtocol(&gEfiMpServiceProtocolGuid, nullptr, reinterpret_cast<void**>(&mp_services)));
 
@@ -99,14 +125,9 @@ framework::result<> run_on_all_vcpu(vcpu_procedure_t procedure, void* param) {
     return {};
 }
 
-result<> sleep(const size_t microseconds) {
+framework::result<> sleep(const size_t microseconds) {
     verify_efi(gBS->Stall(microseconds));
     return {};
-}
-
-void do_abort() {
-    // todo: implement
-    hype::hlt_cpu();
 }
 
 }

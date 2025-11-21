@@ -2,8 +2,14 @@
 
 #include "base.h"
 #include "cpu.h"
+#include "environment.h"
 #include "hype.h"
 
+
+static framework::result<> init() {
+    verify(environment::initialize());
+    return {};
+}
 
 static framework::result<> start() {
     verify(hype::initialize());
@@ -33,13 +39,23 @@ UefiMain(
 
     trace_debug("Main Start: base=0x%llx, size=0x%llx", loaded_image->ImageBase, loaded_image->ImageSize);
 
-    const auto result = start();
-    if (result) {
-        trace_debug("Hypervisor Launched");
-        __asm__ volatile ("cli; hlt");
-    } else {
-        trace_status(result.error(), "start failed");
-        __asm__ volatile ("cli; hlt");
+    {
+        const auto result = init();
+        if (!result) {
+            trace_status("initialization failed", result.error());
+            return EFI_LOAD_ERROR;
+        }
+    }
+
+    {
+        const auto result = start();
+        if (result) {
+            trace_debug("Hypervisor Launched");
+            __asm__ volatile ("cli; hlt");
+        } else {
+            trace_status("start failed", result.error());
+            __asm__ volatile ("cli; hlt");
+        }
     }
 
     return EFI_SUCCESS;

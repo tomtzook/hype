@@ -93,7 +93,7 @@ static framework::result<> setup_cr_dr_vmcs(context_t& context) {
     auto cr3 = x86::read<x86::cr3_t>();
     verify_vmx(x86::vmx::vmwrite(x86::vmx::field_t::guest_cr3, cr3.raw));
     cr3.raw = 0;
-    cr3.ia32e.address = framework::environment::to_physical(context.page_table.m_pml4) >> x86::paging::page_bits_4k;
+    cr3.ia32e.address = environment::to_physical(context.page_table.m_pml4) >> x86::paging::page_bits_4k;
     verify_vmx(x86::vmx::vmwrite(x86::vmx::field_t::host_cr3, cr3.raw));
 
     auto efer = x86::read<x86::msr::ia32_efer_t>();
@@ -170,7 +170,7 @@ framework::result<> vmxon_for_vcpu(vcpu_t& cpu) {
     assert(x86::vmx::initialize_vmstruct(cpu.vmxon_region), "initialize_vmstruct failed");
 
     trace_debug("Doing vmxon");
-    const auto vmxon_region = framework::environment::to_physical(&cpu.vmxon_region);
+    const auto vmxon_region = environment::to_physical(&cpu.vmxon_region);
     verify_vmx(x86::vmx::vmxon(vmxon_region));
 
     return {};
@@ -186,7 +186,7 @@ framework::result<> setup_vmcs(context_t& context, vcpu_t& cpu) {
         x86::vmx::ept_pointer_t eptp{};
         eptp.bits.mem_type = x86::mtrr::memory_type_t::writeback;
         eptp.bits.walk_length = 3;
-        eptp.address(framework::environment::to_physical(&context.ept.m_pml4));
+        eptp.address(environment::to_physical(&context.ept.m_pml4));
 
         verify_vmx(
             x86::vmx::vmwrite(x86::vmx::field_t::ctrl_ept_pointer, eptp.raw));
@@ -196,7 +196,7 @@ framework::result<> setup_vmcs(context_t& context, vcpu_t& cpu) {
 
     verify_vmx(x86::vmx::vmwrite(
         x86::vmx::field_t::ctrl_msr_bitmap_address,
-        framework::environment::to_physical(cpu.msr_bitmap)));
+        environment::to_physical(cpu.msr_bitmap)));
 
     verify(setup_vm_controls(context.wanted_vm_controls.pinbased));
     verify(setup_vm_controls(context.wanted_vm_controls.procbased));

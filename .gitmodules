@@ -1,3 +1,6 @@
 [submodule "arch"]
 	path = arch
 	url = https://github.com/tomtzook/ia32-arch.git
+[submodule "framework"]
+	path = framework
+	url = git@github.com:tomtzook/ministl.git

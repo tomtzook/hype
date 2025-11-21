@@ -83,6 +83,6 @@ framework::result<> handle_vmexit(cpu_registers_t& registers) {
 
 extern "C" [[noreturn]] void vm_exit_handler(hype::cpu_registers_t& registers) {
     const auto status = handle_vmexit(registers);
-    trace_status(status.error(), "Error from VMEXIT handler!");
+    trace_status("Error from VMEXIT handler!", status.error());
     abort("failed to handle vmexit");
 }

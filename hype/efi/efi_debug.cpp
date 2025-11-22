@@ -20,15 +20,4 @@ void trace_impl(const wchar_t* fmt, ...) {
     Print(reinterpret_cast<UINT16*>(_print_buffer));
 }
 
-void deadloop() {
-    //trace_debug("Entering Deadloop");
-
-    static volatile int wait = 1;
-    while (wait) {
-        __asm__ __volatile__("pause");
-    }
-
-    //trace_debug("Leaving Deadloop");
-}
-
 }

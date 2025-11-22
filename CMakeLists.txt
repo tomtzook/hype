@@ -25,6 +25,8 @@ set(CMAKE_CXX_LINK_FLAGS "-target x86_64-pc-windows-msvc -nostdlib -Wl,-entry:Ef
 include(${CMAKE_SOURCE_DIR}/scripts/macros.cmake)
 enable_asm()
 
+set(no_std 1)
+
 add_subdirectory(arch)
 add_subdirectory(edk)
 add_subdirectory(framework)

@@ -171,7 +171,7 @@ framework::result<> start() {
 void free() {
     trace_debug("Doing free on all cores");
 
-    framework::debug::deadloop();
+    hype::deadloop();
 
     // todo: only stop on cpus that ran
     environment::run_on_all_vcpu(stop_on_vcpu, nullptr);

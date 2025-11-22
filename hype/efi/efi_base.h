@@ -2,6 +2,7 @@
 
 #include <x86/types.h>
 #include <status.h>
+#include <memory.h>
 
 extern "C" {
 
@@ -22,6 +23,8 @@ extern "C" {
 namespace efi {
 
 static constexpr framework::status_category_t status_category_efi = 2;
+
+[[nodiscard]] framework::status init_heap(framework::memory_type type, void* mem, size_t size);
 
 }
 

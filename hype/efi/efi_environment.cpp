@@ -33,10 +33,8 @@ static void mp_procedure(void* param) {
 }
 
 static framework::result<> init_heap(const size_t pages, const framework::memory_type type) {
-    auto& heap = framework::heap::get_heap(type);
-
     const auto mem = verify(allocate_pages(pages, type));
-    verify_status(heap.init(mem, pages * x86::paging::page_size));
+    verify_status(efi::init_heap(type, mem, pages * x86::paging::page_size));
 
     return {};
 }

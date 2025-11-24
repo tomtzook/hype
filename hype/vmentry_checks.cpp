@@ -11,7 +11,7 @@
 #include <x86/segments.h>
 #include <x86/vmx/segments.h>
 
-#include "base.h"
+#include <base.h>
 #include "status.h"
 
 namespace hype {

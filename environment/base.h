@@ -14,6 +14,7 @@
 #include "../framework/include/memory.h"
 #include <unique_ptr.h>
 #include <buffer.h>
+#include <array.h>
 
 #include "x86/atomic.h"
 #include "x86/vmx/vmx.h"

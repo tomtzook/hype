@@ -3,7 +3,6 @@
 #include <x86/paging/paging.h>
 #include <x86/vmx/vmx.h>
 #include <x86/vmx/controls.h>
-#include <x86/atomic.h>
 
 #include "cpu.h"
 #include "memory.h"
@@ -53,7 +52,7 @@ struct context_t {
     x86::segments::gdtr_t gdtr;
     x86::interrupts::idtr_t idtr;
 
-    vcpu_t cpus[max_vcpu_supported];
+    framework::array<vcpu_t, max_vcpu_supported> cpus;
     size_t cpu_count;
     wanted_vm_controls_t wanted_vm_controls;
 

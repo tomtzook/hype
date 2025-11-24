@@ -13,7 +13,7 @@ static heap& get_heap(const memory_type type) {
         case memory_type::data:
             return g_data_heap;
         default:
-            abort("unknown heap type");
+            __builtin_unreachable();
     }
 }
 
@@ -27,9 +27,9 @@ status realloc(const memory_type type, void* ptr, const size_t new_size, void*& 
     return heap.realloc(ptr, new_size, out_ptr);
 }
 
-status calloc(const memory_type type, const size_t size, void*& out_ptr) {
+status calloc(const memory_type type, const uint8_t memb, const size_t size, void*& out_ptr) {
     auto& heap = get_heap(type);
-    return heap.calloc(size, out_ptr);
+    return heap.calloc(memb, size, out_ptr);
 }
 
 status free(const memory_type type, const void* ptr) {

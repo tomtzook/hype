@@ -5,7 +5,7 @@
 #include <x86/vmx/ept.h>
 #include <x86/segments.h>
 
-#include "base.h"
+#include <base.h>
 
 namespace hype::memory {
 

@@ -6,7 +6,7 @@
 #include <x86/mtrr.h>
 #include <x86/cpuid.h>
 
-#include "base.h"
+#include <base.h>
 #include "cpu.h"
 #include "memory.h"
 #include "context.h"

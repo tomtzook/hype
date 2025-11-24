@@ -4,7 +4,6 @@ add_executable(hype
         main.cpp
         hype.cpp
         hype.h
-        base.h
         memory.h
         memory.cpp
         context.h
@@ -21,12 +20,8 @@ add_executable(hype
         vmexit.h
         vmentry.h
         vmentry.asm
-        vmentry_checks.cpp
-        efi/efi_environment.cpp
-        efi/efi_debug.cpp
-        efi/efi_heap.cpp
-        environment.h)
+        vmentry_checks.cpp)
 
-target_link_libraries(hype PRIVATE edk2 arch ministl)
+target_link_libraries(hype PRIVATE edk2 arch ministl environment)
 target_include_directories(hype PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 set_target_properties(hype PROPERTIES SUFFIX ".efi")

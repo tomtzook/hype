@@ -1,6 +1,6 @@
 #include "efi/efi_base.h"
 
-#include "base.h"
+#include <base.h>
 #include "cpu.h"
 #include "environment.h"
 #include "hype.h"

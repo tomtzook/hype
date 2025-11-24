@@ -2,7 +2,7 @@
 #include <x86/paging/paging.h>
 #include <x86/paging/ia32e.h>
 
-#include "base.h"
+#include <base.h>
 #include "environment.h"
 #include "memory.h"
 

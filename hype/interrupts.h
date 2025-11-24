@@ -2,7 +2,7 @@
 
 #include <x86/interrupts.h>
 
-#include "base.h"
+#include <base.h>
 
 namespace hype::interrupts {
 

@@ -4,7 +4,7 @@
 #include <x86/vmx/vmx.h>
 #include <x86/cpuid.h>
 
-#include "base.h"
+#include <base.h>
 #include "context.h"
 #include "cpu.h"
 #include "memory.h"
@@ -84,5 +84,5 @@ framework::result<> handle_vmexit(cpu_registers_t& registers) {
 extern "C" [[noreturn]] void vm_exit_handler(hype::cpu_registers_t& registers) {
     const auto status = handle_vmexit(registers);
     trace_status("Error from VMEXIT handler!", status.error());
-    abort("failed to handle vmexit");
+    catastrophic_error("failed to handle vmexit");
 }

@@ -1,7 +1,6 @@
 
 #include <x86/msr.h>
 
-#include "cpu.h"
 #include "efi_base.h"
 #include "environment.h"
 
@@ -10,7 +9,7 @@ namespace framework {
 
 void terminate() {
     // todo: implement
-    hype::hlt_cpu();
+    __asm__ volatile ("cli; hlt");
 }
 
 }

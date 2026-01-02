@@ -102,11 +102,11 @@ static framework::result<> start_on_vcpu(void*) {
     auto& cpu = get_current_vcpu();
     cpu.is_in_vmx_operation = false;
 
-    asm_cpu_store_registers(&cpu.context_registers);
+    auto* initial_registers = reinterpret_cast<cpu_registers_t*>(reinterpret_cast<uint64_t>(cpu.guest_stack) + vcpu_t::stack_size - sizeof(cpu_registers_t));
+    asm_cpu_store_registers(initial_registers);
     // if operation is on, then we were returned here from the registers being restored,
     // meaning we launched.
     if (cpu.is_in_vmx_operation) {
-        x86::cpuid(22, 1);
         return {};
     }
 
@@ -123,7 +123,6 @@ static framework::result<> start_on_vcpu(void*) {
 
     verify(do_vm_entry_checks());
 
-    trace_debug("Doing vmlaunch");
     verify_vmx(x86::vmx::vmlaunch());
 
     return {};

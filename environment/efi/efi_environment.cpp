@@ -39,8 +39,8 @@ static framework::result<> init_heap(const size_t pages, const framework::memory
 }
 
 framework::result<> initialize() {
-    verify(init_heap(5000, framework::memory_type::code));
-    verify(init_heap(5000, framework::memory_type::data));
+    verify(init_heap(500, framework::memory_type::code));
+    verify(init_heap(500, framework::memory_type::data));
 
     return {};
 }

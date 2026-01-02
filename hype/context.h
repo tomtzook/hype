@@ -29,13 +29,8 @@ struct vcpu_t {
     page_aligned x86::vmx::vmstruct_t vmcs;
     page_aligned uint8_t msr_bitmap[x86::paging::page_size];
 
-    page_aligned union {
-        uint8_t host_stack[stack_size_full];
-        struct {
-            uint8_t s[stack_size];
-            cpu_registers_t context_registers;  // must be after stack, expected by other code
-        };
-    };
+    page_aligned uint8_t guest_stack[stack_size_full];
+    page_aligned uint8_t host_stack[stack_size_full];
 
     bool is_in_vmx_operation;
 };

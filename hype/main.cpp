@@ -54,7 +54,7 @@ UefiMain(
             __asm__ volatile ("cli; hlt");
         } else {
             trace_status("start failed", result.error());
-            __asm__ volatile ("cli; hlt");
+            catastrophic_error("failed to start hypervisor")
         }
     }
 

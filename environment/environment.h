@@ -22,6 +22,4 @@ framework::result<> run_on_all_vcpu(vcpu_procedure_t procedure, void* param);
 
 framework::result<> sleep(size_t microseconds);
 
-[[noreturn]] void do_abort();
-
 }

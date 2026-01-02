@@ -20,7 +20,7 @@ struct wanted_vm_controls_t {
 };
 
 struct vcpu_t {
-    static constexpr size_t stack_size_full = 0x8000;
+    static constexpr size_t stack_size_full = 10 * x86::paging::page_size;
     static_assert(stack_size_full % 16 == 0, "stack size must be aligned to 16");
     static constexpr size_t stack_size = stack_size_full - sizeof(cpu_registers_t);
     static_assert(stack_size % 16 == 0, "stack size must be aligned to 16");
@@ -32,22 +32,24 @@ struct vcpu_t {
     page_aligned uint8_t guest_stack[stack_size_full];
     page_aligned uint8_t host_stack[stack_size_full];
 
+    page_aligned memory::gdt_t gdt;
+    page_aligned interrupts::idt_t idt;
+    x86::segments::gdtr_t gdtr;
+    x86::interrupts::idtr_t idtr;
+    x86::segments::tss64_t tss;
+
     bool is_in_vmx_operation;
 };
 
 struct context_t {
     static constexpr size_t max_vcpu_supported = 16;
 
-    page_aligned memory::gdt_t gdt;
-    page_aligned interrupts::idt_t idt;
     page_aligned memory::page_table_t page_table;
     page_aligned memory::ept_t ept;
 
-    x86::segments::tss64_t tss;
-    x86::segments::gdtr_t gdtr;
-    x86::interrupts::idtr_t idtr;
-
-    framework::array<vcpu_t, max_vcpu_supported> cpus;
+    // todo: problem with initialization
+    //framework::array<vcpu_t, max_vcpu_supported> cpus;
+    vcpu_t cpus[max_vcpu_supported];
     size_t cpu_count;
     wanted_vm_controls_t wanted_vm_controls;
 

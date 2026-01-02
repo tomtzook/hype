@@ -11,7 +11,7 @@ namespace hype::memory {
 void trace_gdt(const x86::segments::gdtr_t& gdtr) {
     auto gdtr_w = x86::segments::table_t(gdtr);
     for (int i = 0; i < gdtr_w.count(); ++i) {
-        auto segment = gdtr_w[i];
+        const auto& segment = gdtr_w[i];
         trace_debug("SEGMENT: i=0x%x, base=0x%llx, limit=0x%llx, s=0x%x, type=0x%x, avail=0x%x, present=0x%x, db=0x%x, dpl=0x%x, long=0x%x, gran=0x%x, raw=0x%llx",
                     i,
                     segment.base_address(), segment.limit(),
@@ -51,10 +51,10 @@ framework::result<> setup_initial_guest_gdt() {
 
     memset(tss, 0, tss_size);
 
-    const auto tss_descriptor = reinterpret_cast<x86::segments::descriptor64_t*>(static_cast<uint8_t*>(new_gdt) + gdt_size);
-    tss_descriptor->base_address(environment::to_physical(tss));
-    tss_descriptor->limit(tss_size);
-    tss_descriptor->base.bits.type = x86::segments::type_t::system_bits32_tss_available;
+    auto* tss_descriptor = reinterpret_cast<x86::segments::descriptor64_t*>(static_cast<uint8_t*>(new_gdt) + gdt_size);
+    tss_descriptor->base_address(reinterpret_cast<linear_address_t>(tss));
+    tss_descriptor->limit(tss_size - 1);
+    tss_descriptor->base.bits.type = static_cast<x86::segments::type_t>(x86::segments::system64_type_t::system_bits64_tss_available);
     tss_descriptor->base.bits.s = x86::segments::descriptor_type_t::system;
     tss_descriptor->base.bits.dpl = 0;
     tss_descriptor->base.bits.present = 1;
@@ -69,7 +69,7 @@ framework::result<> setup_initial_guest_gdt() {
         x86::paging::page_size));
 
     auto* gdtr = static_cast<x86::segments::gdtr_t*>(regs);
-    gdtr->base_address = reinterpret_cast<uint64_t>(new_gdt);
+    gdtr->base_address = reinterpret_cast<linear_address_t>(new_gdt);
     gdtr->limit = wanted_size - 1;
     auto* tr = reinterpret_cast<x86::segments::tr_t*>(reinterpret_cast<uint64_t>(regs) + sizeof(x86::segments::gdtr_t));
     tr->bits.index = tr_index;
@@ -86,7 +86,7 @@ framework::result<> setup_gdt(x86::segments::gdtr_t& gdtr, gdt_t& gdt, x86::segm
     memset(&gdt, 0, sizeof(gdt));
     memset(&tss, 0, sizeof(tss));
 
-    gdtr.base_address = environment::to_physical(&gdt);
+    gdtr.base_address = reinterpret_cast<linear_address_t>(&gdt);
     gdtr.limit = sizeof(gdt) - 1;
 
     gdt.null.raw = 0;
@@ -109,13 +109,13 @@ framework::result<> setup_gdt(x86::segments::gdtr_t& gdtr, gdt_t& gdt, x86::segm
     gdt.data.bits.dpl = 0;
     gdt.data.bits.present = 1;
     gdt.data.bits.available = 0;
-    gdt.data.bits.long_mode = 0;
-    gdt.data.bits.default_db = 1;
+    gdt.data.bits.long_mode = 1;
+    gdt.data.bits.default_db = 0;
     gdt.data.bits.granularity = x86::segments::granularity_t::page;
 
-    gdt.tr.base_address(environment::to_physical(&tss));
-    gdt.tr.limit(sizeof(tss));
-    gdt.tr.base.bits.type = x86::segments::type_t::system_bits32_tss_available;
+    gdt.tr.base_address(reinterpret_cast<linear_address_t>(&tss));
+    gdt.tr.limit(sizeof(tss) - 1);
+    gdt.tr.base.bits.type = static_cast<x86::segments::type_t>(x86::segments::system64_type_t::system_bits64_tss_available);
     gdt.tr.base.bits.s = x86::segments::descriptor_type_t::system;
     gdt.tr.base.bits.dpl = 0;
     gdt.tr.base.bits.present = 1;
@@ -141,6 +141,7 @@ framework::result<> setup_identity_paging(page_table_t& page_table) {
         pdpte.raw = 0;
         pdpte.small.present = true;
         pdpte.small.rw = true;
+        pdpte.small.us = false;
         pdpte.address(environment::to_physical(page_table.m_pd[i]));
 
         for(size_t j = 0; j < x86::paging::ia32e::pdes_in_directory; j++) {
@@ -149,6 +150,7 @@ framework::result<> setup_identity_paging(page_table_t& page_table) {
             pde.large.present = true;
             pde.large.rw = true;
             pde.large.ps = true;
+            pde.large.us = false;
             const auto address = (i * 512 + j) * x86::paging::page_size_2m;
             pde.address(address);
         }

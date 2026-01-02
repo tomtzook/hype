@@ -24,7 +24,7 @@ static wanted_vm_controls_t get_wanted_vm_controls() {
     wanted_vm_controls_t controls{};
     controls.procbased.bits.activate_secondary_controls = true;
     //controls.procbased.bits.use_io_bitmaps = true;
-    //controls.procbased.bits.use_msr_bitmaps = true;
+    controls.procbased.bits.use_msr_bitmaps = true;
     controls.secondary_procbased.bits.enable_ept = true;
     controls.secondary_procbased.bits.enable_xsaves_xstors = true;
     controls.secondary_procbased.bits.unrestricted_guest = true;
@@ -77,14 +77,11 @@ static framework::result<> check_environment_support() {
 }
 
 static framework::result<> init_context(context_t& context, const x86::mtrr::mtrr_cache_t& mtrr_cache) {
+    memset(&context, 0, sizeof(context));
     context.wanted_vm_controls = get_wanted_vm_controls();
     context.cpu_init_index = 0;
     context.cpu_count = verify(environment::get_active_cpu_count());
 
-    trace_debug("Initializing GDT");
-    verify(memory::setup_gdt(context.gdtr, context.gdt, context.tss));
-    trace_debug("Initializing IDT");
-    verify(interrupts::setup_idt(context.idtr, context.idt));
     trace_debug("Initializing Page Table");
     verify(memory::setup_identity_paging(context.page_table));
     trace_debug("Initializing EPT");
@@ -102,11 +99,30 @@ static framework::result<> start_on_vcpu(void*) {
     auto& cpu = get_current_vcpu();
     cpu.is_in_vmx_operation = false;
 
-    auto* initial_registers = reinterpret_cast<cpu_registers_t*>(reinterpret_cast<uint64_t>(cpu.guest_stack) + vcpu_t::stack_size - sizeof(cpu_registers_t));
+    trace_debug("Setting up new GDT");
+    verify(memory::setup_initial_guest_gdt());
+
+    trace_debug("Initializing GDT");
+    verify(memory::setup_gdt(cpu.gdtr, cpu.gdt, cpu.tss));
+    trace_debug("Initializing IDT");
+    verify(interrupts::setup_idt(cpu.idtr, cpu.idt));
+
+    memset(cpu.msr_bitmap, 0, sizeof(cpu.msr_bitmap));
+
+    trace_debug("Guest stack: start=0x%p, end=0x%p ; Host stack: start=0x%p, end=0x%p",
+        reinterpret_cast<uint64_t>(cpu.guest_stack),
+        reinterpret_cast<uint64_t>(cpu.guest_stack) + vcpu_t::stack_size,
+        reinterpret_cast<uint64_t>(cpu.host_stack),
+        reinterpret_cast<uint64_t>(cpu.host_stack) + vcpu_t::stack_size);
+    trace_debug("Context: start=0x%p, end=0x%p",
+        &g_context, reinterpret_cast<uint64_t>(&g_context) + sizeof(g_context));
+
+    auto* initial_registers = reinterpret_cast<cpu_registers_t*>(reinterpret_cast<uint64_t>(cpu.guest_stack) + vcpu_t::stack_size);
     asm_cpu_store_registers(initial_registers);
     // if operation is on, then we were returned here from the registers being restored,
     // meaning we launched.
     if (cpu.is_in_vmx_operation) {
+        trace_debug("back from launch");
         return {};
     }
 
@@ -123,6 +139,7 @@ static framework::result<> start_on_vcpu(void*) {
 
     verify(do_vm_entry_checks());
 
+    trace_debug("Launching");
     verify_vmx(x86::vmx::vmlaunch());
 
     return {};
@@ -146,15 +163,9 @@ framework::result<> initialize() {
     trace_debug("Checking environment support");
     verify(check_environment_support());
 
-    trace_debug("Setting up new GDT");
-    verify(memory::setup_initial_guest_gdt());
-
     const auto mtrr_cache = x86::mtrr::initialize_cache();
 
     trace_debug("Initializing context");
-    g_context.wanted_vm_controls = get_wanted_vm_controls();
-    g_context.cpu_init_index = 0;
-    g_context.cpu_count = verify(environment::get_active_cpu_count());
     verify(init_context(g_context, mtrr_cache));
 
     return {};

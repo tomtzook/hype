@@ -109,7 +109,7 @@ static framework::result<> setup_cr_dr_vmcs(context_t& context) {
     return {};
 }
 
-static framework::result<> setup_segments_vmcs(context_t& context) {
+static framework::result<> setup_segments_vmcs(context_t& context, vcpu_t& cpu) {
     auto gdtr = x86::read<x86::segments::gdtr_t>();
     auto gdt_table = x86::segments::table_t(gdtr);
 
@@ -135,10 +135,10 @@ static framework::result<> setup_segments_vmcs(context_t& context) {
     verify_vmx(x86::vmx::vmwrite(x86::vmx::field_t::host_cs_selector, host_code_selector));
     verify_vmx(x86::vmx::vmwrite(x86::vmx::field_t::host_tr_selector, host_tr_selector));
 
-    verify_vmx(x86::vmx::vmwrite(x86::vmx::field_t::host_tr_base, context.gdt.tr.base_address()));
+    verify_vmx(x86::vmx::vmwrite(x86::vmx::field_t::host_tr_base, cpu.gdt.tr.base_address()));
     verify_vmx(x86::vmx::vmwrite(x86::vmx::field_t::host_fs_base, x86::read<x86::msr::ia32_fs_base_t>().raw));
     verify_vmx(x86::vmx::vmwrite(x86::vmx::field_t::host_gs_base, x86::read<x86::msr::ia32_gs_base_t>().raw));
-    verify_vmx(x86::vmx::vmwrite(x86::vmx::field_t::host_gdtr_base, context.gdtr.base_address));
+    verify_vmx(x86::vmx::vmwrite(x86::vmx::field_t::host_gdtr_base, cpu.gdtr.base_address));
 
     verify_vmx(x86::vmx::vmwrite(x86::vmx::field_t::guest_gdtr_base, gdtr.base_address));
     verify_vmx(x86::vmx::vmwrite(x86::vmx::field_t::guest_gdtr_limit, gdtr.limit));
@@ -146,15 +146,15 @@ static framework::result<> setup_segments_vmcs(context_t& context) {
     auto idtr = x86::read<x86::interrupts::idtr_t>();
     verify_vmx(x86::vmx::vmwrite(x86::vmx::field_t::guest_idtr_base, idtr.base_address));
     verify_vmx(x86::vmx::vmwrite(x86::vmx::field_t::guest_idtr_limit, idtr.limit));
-    verify_vmx(x86::vmx::vmwrite(x86::vmx::field_t::host_idtr_base, context.idtr.base_address));
+    verify_vmx(x86::vmx::vmwrite(x86::vmx::field_t::host_idtr_base, cpu.idtr.base_address));
 
     return {};
 }
 
 static framework::result<> setup_entry_exit(vcpu_t& cpu) {
-    const auto host_stack_start = reinterpret_cast<uint64_t>(cpu.host_stack) + vcpu_t::stack_size - sizeof(cpu_registers_t);
+    const auto host_stack_start = reinterpret_cast<uint64_t>(cpu.host_stack) + vcpu_t::stack_size;
     assert(host_stack_start % 16 == 0, "stack must be aligned to 16");
-    const auto guest_stack_start = reinterpret_cast<uint64_t>(cpu.guest_stack) + vcpu_t::stack_size - sizeof(cpu_registers_t);
+    const auto guest_stack_start = reinterpret_cast<uint64_t>(cpu.guest_stack) + vcpu_t::stack_size;
     assert(guest_stack_start % 16 == 0, "stack must be aligned to 16");
 
     verify_vmx(x86::vmx::vmwrite(x86::vmx::field_t::host_rsp, host_stack_start));
@@ -207,7 +207,7 @@ framework::result<> setup_vmcs(context_t& context, vcpu_t& cpu) {
     verify(setup_vm_controls(context.wanted_vm_controls.vmentry));
 
     verify(setup_cr_dr_vmcs(context));
-    verify(setup_segments_vmcs(context));
+    verify(setup_segments_vmcs(context, cpu));
     verify(setup_entry_exit(cpu));
 
     return {};

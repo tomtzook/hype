@@ -850,7 +850,7 @@ static framework::result<> verify_guest_segments() {
 }
 
 framework::result<> do_vm_entry_checks() {
-    trace_debug("Starting VMENTRY Checks");
+   // trace_debug("Starting VMENTRY Checks");
 
     verify(verify_vmentry_exec_control_fields());
     verify(verify_vmentry_exit_control_fields());
@@ -862,7 +862,7 @@ framework::result<> do_vm_entry_checks() {
     // todo: add guest state checks SDM 26.3.1 P1106
     //      need to add non-register state checks (26.3.1.5, P1110)
 
-    trace_debug("Done VMENTRY Checks");
+    //trace_debug("Done VMENTRY Checks");
 
     return {};
 }

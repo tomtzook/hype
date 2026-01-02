@@ -9,8 +9,8 @@ namespace hype::interrupts {
 #pragma pack(push, 1)
 
 struct idt_t {
-    static constexpr size_t descriptor_count = 32;
-    x86::interrupts::descriptor64_t descriptors[256];
+    static constexpr size_t descriptor_count = 256;
+    x86::interrupts::descriptor64_t descriptors[descriptor_count];
 };
 
 #pragma pack(pop)

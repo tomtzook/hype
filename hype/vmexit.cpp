@@ -12,7 +12,7 @@
 
 namespace hype {
 
-static framework::result<> handle_cpuid(cpu_registers_t& registers, bool&) {
+static framework::result<> handle_cpuid(cpu_registers_t& registers) {
     const auto cpuid = x86::cpuid(registers.rax, registers.rcx);
 
     trace_debug("CPUID[rax=0x%lx, rcx=0x%lx]: eax=0x%lx, ebx=0x%lx, ecx=0x%lx, edx=0x%lx",
@@ -22,6 +22,29 @@ static framework::result<> handle_cpuid(cpu_registers_t& registers, bool&) {
     registers.rbx = cpuid.ebx;
     registers.rcx = cpuid.ecx;
     registers.rdx = cpuid.edx;
+
+    return {};
+}
+
+static framework::result<> handle_rdmsr(cpu_registers_t& registers) {
+    const auto id = registers.rcx & 0xffffffff;
+    const auto value = x86::msr::read(id);
+
+    trace_debug("RDMSR[0x%lx]: value=0x%lx", id, value);
+
+    registers.rax = (value >> 32) & 0xffffffff;
+    registers.rdx = value & 0xffffffff;
+
+    return {};
+}
+
+static framework::result<> handle_wrmsr(const cpu_registers_t& registers) {
+    const auto id = registers.rcx & 0xffffffff;
+    const auto value = ((registers.rax & 0xffffffff) << 32) | (registers.rdx & 0xffffffff);
+
+    trace_debug("WRMSR[0x%lx]: value=0x%lx", id, value);
+
+    x86::msr::write(id, value);
 
     return {};
 }
@@ -51,7 +74,13 @@ framework::result<> handle_vmexit(cpu_registers_t& registers) {
 
     switch (exit_reason) {
         case x86::vmx::exit_reason_t::cpuid:
-            verify(handle_cpuid(registers, should_move_to_next_instruction));
+            verify(handle_cpuid(registers));
+            break;
+        case x86::vmx::exit_reason_t::rdmsr:
+            verify(handle_rdmsr(registers));
+            break;
+        case x86::vmx::exit_reason_t::wrmsr:
+            verify(handle_wrmsr(registers));
             break;
         default:
             return framework::err(framework::status_unsupported);

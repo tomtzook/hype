@@ -8,15 +8,108 @@
 extern "C" void* isr_stub_table[];
 
 
-extern "C" void idt_handler(const uint64_t vector, const uint64_t error_code, const uint64_t rip) {
-    trace_error("IDT Called for vector=0x%llx, error_code=0x%llx, rip=0x%llx", vector, error_code, rip);
+static const wchar_t* interrupt_name(const x86::interrupts::interrupt_t interrupt) {
+    switch (interrupt) {
+        case x86::interrupts::interrupt_t::divide_error: return L"#DE";
+        case x86::interrupts::interrupt_t::debug_exception: return L"#DB";
+        case x86::interrupts::interrupt_t::nmi: return L"NMI";
+        case x86::interrupts::interrupt_t::breakpoint: return L"#BP";
+        case x86::interrupts::interrupt_t::overflow: return L"#OF";
+        case x86::interrupts::interrupt_t::bound_range_exceeded: return L"#BR";
+        case x86::interrupts::interrupt_t::invalid_opcode: return L"#UD";
+        case x86::interrupts::interrupt_t::device_not_available: return L"#NM";
+        case x86::interrupts::interrupt_t::double_fault: return L"#DF";
+        case x86::interrupts::interrupt_t::coprocessor_segment_overrun: return L"CoprocessorSegmentOverrun";
+        case x86::interrupts::interrupt_t::invalid_tss: return L"#TS";
+        case x86::interrupts::interrupt_t::segment_not_present: return L"#NP";
+        case x86::interrupts::interrupt_t::stack_segment_fault: return L"#SS";
+        case x86::interrupts::interrupt_t::general_protection: return L"#GP";
+        case x86::interrupts::interrupt_t::page_fault: return L"#PF";
+        case x86::interrupts::interrupt_t::fpu_floating_point_error: return L"#MF";
+        case x86::interrupts::interrupt_t::alignment_check: return L"#AC";
+        case x86::interrupts::interrupt_t::machine_check: return L"#MC";
+        case x86::interrupts::interrupt_t::simd_floating_point_exception: return L"#XM";
+        case x86::interrupts::interrupt_t::virtualization_exception: return L"#VE";
+        default: return L"N/A";
+    }
+}
 
-    if (static_cast<x86::interrupts::interrupt_t>(vector)
-        == x86::interrupts::interrupt_t::page_fault) {
-        trace_error("Page fault. cr2=0x%x", x86::read<x86::cr2_t>().raw);
+static void handle_general_protection(const uint64_t error_code) {
+    if (error_code == 0) {
+        trace_debug("General Protection fault. Error code is 0");
+        return;
     }
 
-    hype::hlt_cpu();
+    x86::interrupts::selector_error_code_t selector{};
+    selector.raw = error_code;
+
+    switch (selector.bits.tbl) {
+        case x86::interrupts::selector_error_code_table_t::gdt: {
+            auto gdt = x86::segments::table_t(x86::read<x86::segments::gdtr_t>());
+            if (gdt.count() < selector.bits.index) {
+                const auto& segment = gdt[selector.bits.index];
+                trace_debug("General Protection fault. At: 0x%x GDT segment, base=0x%llx, limit=0x%llx, s=0x%x, type=0x%x, avail=0x%x, present=0x%x, db=0x%x, dpl=0x%x, long=0x%x, gran=0x%x, raw=0x%llx",
+                    selector.bits.index,
+                    segment.base_address(), segment.limit(),
+                    segment.bits.s,
+                    segment.bits.type,
+                    segment.bits.available,
+                    segment.bits.present,
+                    segment.bits.default_db,
+                    segment.bits.dpl,
+                    segment.bits.long_mode,
+                    segment.bits.granularity,
+                    segment.raw);
+            } else {
+                trace_debug("General Protection fault. At 0x%x GDT segment (not in gdt)", selector.bits.index);
+            }
+            break;
+        }
+        case x86::interrupts::selector_error_code_table_t::idt1:
+        case x86::interrupts::selector_error_code_table_t::idt2: {
+            auto idt = x86::interrupts::table64_t(x86::read<x86::interrupts::idtr_t>());
+            if (idt.count() < selector.bits.index) {
+                const auto& descriptor = idt[selector.bits.index];
+                trace_debug("General Protection fault. At: 0x%x IDT descriptor, address=0x%llx, selector=0x%x, dpl=0x%x, present=0x%x, ist=0x%x, type=0x%x, low=0x%llx, high=0x%llx",
+                      selector.bits.index,
+                      descriptor.address(),
+                      descriptor.low.bits.segment_selector,
+                      descriptor.low.bits.dpl,
+                      descriptor.low.bits.present,
+                      descriptor.low.bits.ist,
+                      static_cast<uint16_t>(descriptor.low.bits.type),
+                      descriptor.low.raw,
+                      descriptor.high.raw);
+            } else {
+                trace_debug("General Protection fault. At 0x%x IDT descriptor (not in idt)", selector.bits.index);
+            }
+            break;
+        }
+        case x86::interrupts::selector_error_code_table_t::ldt:
+            trace_debug("General Protection fault. At 0x%x LDT segment", selector.bits.index);
+            break;
+    }
+}
+
+extern "C" void idt_handler(const uint64_t vector, const uint64_t error_code, const uint64_t rip, const uint16_t cs) {
+    const auto interrupt = static_cast<x86::interrupts::interrupt_t>(vector);
+    trace_debug("IDT Called from 0x%p for [0x%x] %S(0x%x) cs=0x%x", rip, vector, interrupt_name(interrupt), error_code, cs);
+
+    switch (interrupt) {
+        case x86::interrupts::interrupt_t::general_protection:
+            handle_general_protection(error_code);
+            break;
+        case x86::interrupts::interrupt_t::page_fault:
+            trace_debug("Page fault. cr2=0x%x", x86::read<x86::cr2_t>().raw);
+            break;
+        default:
+            break;
+    }
+
+    if (vector < 32) {
+        // this are problem interrupts, halt
+        hype::hlt_cpu();
+    }
 }
 
 namespace hype::interrupts {

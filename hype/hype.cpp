@@ -15,6 +15,8 @@
 
 #include "hype.h"
 
+#include "x86/apic.h"
+
 
 namespace hype {
 
@@ -54,22 +56,21 @@ static framework::result<> check_wanted_vm_controls() {
 static framework::result<> check_environment_support() {
     // todo: check intel
 
+    assert(x86::apic::is_x2apic_supported(), "x2apic not supported");
+    assert(x86::paging::mode_t::ia32e == x86::paging::current_mode() &&
+                     x86::paging::ia32e::are_huge_tables_supported(),
+                     "required paging not supported");
+
     assert(x86::vmx::is_supported(), "vmx not supported");
 
     const auto vmx_basic = x86::read<x86::msr::ia32_vmx_basic_t>();
-    assert(vmx_basic.bits.vm_ctrls_fixed == 1,
-                 "VMX True MSR Controls not supported");
+    assert(vmx_basic.bits.vm_ctrls_fixed == 1, "VMX True MSR Controls not supported");
 
     const auto ept_cap = x86::read<x86::msr::ia32_vmx_ept_vpid_cap_t>();
     assert(ept_cap.bits.ept_large_pages && ept_cap.bits.invept && ept_cap.bits.memory_type_write_back,
                  "Wanted EPT/VPID features not supported");
 
-    assert(check_wanted_vm_controls(),
-                 "Wanted VM Controls not supported");
-
-    assert(x86::paging::mode_t::ia32e == x86::paging::current_mode() &&
-                 x86::paging::ia32e::are_huge_tables_supported(),
-                 "required paging not supported");
+    assert(check_wanted_vm_controls(), "Wanted VM Controls not supported");
 
     // todo: check mtrr supported
 
@@ -96,7 +97,7 @@ static framework::result<> start_on_vcpu(void*) {
     const auto cpu_id = x86::atomic::fetchadd8(&g_context.cpu_init_index, 1);
     environment::set_current_vcpu_id(cpu_id);
 
-    trace_debug("Starting on core id=0x%x", cpu_id);
+    trace_debug("Starting on core id=0x%x (apic_id=0x%x)", cpu_id, x86::apic::get_local_apic_id());
 
     auto& cpu = get_current_vcpu();
     cpu.is_in_vmx_operation = false;
@@ -159,6 +160,8 @@ static framework::result<> stop_on_vcpu(void*) {
 framework::result<> initialize() {
     trace_debug("Checking environment support");
     verify(check_environment_support());
+
+    assert(x86::apic::set_mode(x86::apic::mode_t::x2apic), "failed to enable x2apic");
 
     const auto mtrr_cache = x86::mtrr::initialize_cache();
 

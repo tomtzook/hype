@@ -96,9 +96,22 @@ static void handle_general_protection(const uint64_t error_code) {
 static void handle_page_fault(const uint64_t error_code, const uint64_t rip, const uint64_t address) {
     trace_debug("Page fault at 0x%p accessing 0x%p", rip, address);
 
+    const x86::interrupts::page_fault_error_code_t code{.raw = static_cast<uint32_t>(error_code)};
+    if (code.bits.p) {
+        if (code.bits.w) {
+            trace_debug("Page is not writable");
+        } else if (code.bits.i) {
+            trace_debug("Page is not executable");
+        } else {
+            trace_debug("Page is not readable");
+        }
+    } else {
+        trace_debug("Page is not present");
+    }
+
     const x86::paging::ia32e::linear_address_t fault_address{address};
     if (fault_address.small.pml4e == hype::memory::page_table_t::stack_guard_pml4e) {
-        trace_debug("Fault occurred withing stack guard, likely stack overflow");
+        trace_debug("Fault occurred within stack guard, likely stack overflow");
     }
 }
 

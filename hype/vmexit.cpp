@@ -15,8 +15,8 @@ namespace hype {
 static framework::result<> handle_cpuid(cpu_registers_t& registers) {
     const auto cpuid = x86::cpuid(registers.rax, registers.rcx);
 
-    trace_debug("CPUID[rax=0x%lx, rcx=0x%lx]: eax=0x%lx, ebx=0x%lx, ecx=0x%lx, edx=0x%lx",
-        registers.rax, registers.rcx, cpuid.eax, cpuid.ebx, cpuid.ecx, cpuid.edx);
+    //trace_debug("CPUID[rax=0x%lx, rcx=0x%lx]: eax=0x%lx, ebx=0x%lx, ecx=0x%lx, edx=0x%lx",
+    //    registers.rax, registers.rcx, cpuid.eax, cpuid.ebx, cpuid.ecx, cpuid.edx);
 
     registers.rax = cpuid.eax;
     registers.rbx = cpuid.ebx;
@@ -61,7 +61,7 @@ framework::result<> handle_vmexit(cpu_registers_t& registers) {
     verify_vmx(x86::vmx::vmread(x86::vmx::field_t::exit_reason, exit_reason_raw));
 
     const auto exit_reason = static_cast<x86::vmx::exit_reason_t>(exit_reason_raw & 0xffff);
-    trace_debug("Exit %u From 0x%p", static_cast<uint16_t>(exit_reason), registers.rip);
+    //trace_debug("Exit %u From 0x%p", static_cast<uint16_t>(exit_reason), registers.rip);
 
     {
         // todo: limits are fucked post exit, maybe a result of restoration
@@ -83,6 +83,7 @@ framework::result<> handle_vmexit(cpu_registers_t& registers) {
             verify(handle_wrmsr(registers));
             break;
         default:
+            trace_error("Unsupported exit %d", exit_reason);
             return framework::err(framework::status_unsupported);
     }
 

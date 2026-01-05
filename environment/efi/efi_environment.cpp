@@ -1,5 +1,6 @@
 
 #include <x86/msr.h>
+#include <x86/apic.h>
 
 #include "efi_base.h"
 #include "environment.h"
@@ -29,6 +30,8 @@ static void mp_procedure(void* param) {
     if (!status) {
         trace_status("Failed to run procedure on core", status.error());
     }
+
+    trace_debug("Cpu procedure done");
 }
 
 static framework::result<> init_heap(const size_t pages, const framework::memory_type type) {

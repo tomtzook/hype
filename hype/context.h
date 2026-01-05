@@ -50,9 +50,7 @@ struct context_t {
     page_aligned memory::ept_t ept{};
     memory::stack_guard stack_guard{};
 
-    // todo: problem with initialization
-    //framework::array<vcpu_t, max_vcpu_supported> cpus;
-    vcpu_t cpus[max_vcpu_supported]{};
+    framework::array<vcpu_t, max_vcpu_supported> cpus;
     size_t cpu_count{};
     wanted_vm_controls_t wanted_vm_controls{};
 

@@ -4,6 +4,8 @@
 #include "memory.h"
 #include "interrupts.h"
 
+#include "context.h"
+
 
 extern "C" void* isr_stub_table[];
 
@@ -91,6 +93,15 @@ static void handle_general_protection(const uint64_t error_code) {
     }
 }
 
+static void handle_page_fault(const uint64_t error_code, const uint64_t rip, const uint64_t address) {
+    trace_debug("Page fault at 0x%p accessing 0x%p", rip, address);
+
+    const x86::paging::ia32e::linear_address_t fault_address{address};
+    if (fault_address.small.pml4e == hype::memory::page_table_t::stack_guard_pml4e) {
+        trace_debug("Fault occurred withing stack guard, likely stack overflow");
+    }
+}
+
 extern "C" void idt_handler(const uint64_t vector, const uint64_t error_code, const uint64_t rip, const uint16_t cs) {
     const auto interrupt = static_cast<x86::interrupts::interrupt_t>(vector);
     trace_debug("IDT Called from 0x%p for [0x%x] %S(0x%x) cs=0x%x", rip, vector, interrupt_name(interrupt), error_code, cs);
@@ -100,14 +111,14 @@ extern "C" void idt_handler(const uint64_t vector, const uint64_t error_code, co
             handle_general_protection(error_code);
             break;
         case x86::interrupts::interrupt_t::page_fault:
-            trace_debug("Page fault. cr2=0x%x", x86::read<x86::cr2_t>().raw);
+            handle_page_fault(error_code, rip, x86::read<x86::cr2_t>().raw);
             break;
         default:
             break;
     }
 
     if (vector < 32) {
-        // this are problem interrupts, halt
+        // these are problem interrupts, halt
         hype::hlt_cpu();
     }
 }
@@ -146,7 +157,7 @@ framework::result<> setup_idt(x86::interrupts::idtr_t& idtr, idt_t& idt) {
         auto& descriptor = idt.descriptors[i];
         descriptor.low.bits.dpl = 0;
         descriptor.low.bits.present = 1;
-        descriptor.low.bits.ist = 0;
+        descriptor.low.bits.ist = idt_t::ist_index;
         descriptor.low.bits.segment_selector = selector.value;
         descriptor.low.bits.type = x86::interrupts::gate_type_t::interrupt_32;
         descriptor.address(reinterpret_cast<uint64_t>(isr_stub_table[i]));

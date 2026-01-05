@@ -106,13 +106,15 @@ static framework::result<> start_on_vcpu(void*) {
 
     trace_debug("Initializing GDT");
     verify(memory::setup_gdt(cpu.gdtr, cpu.gdt, cpu.tss));
+    cpu.tss.ist[interrupts::idt_t::ist_index - 1] = reinterpret_cast<uint64_t>(cpu.interrupt_stack.end());
+
     trace_debug("Initializing IDT");
     verify(interrupts::setup_idt(cpu.idtr, cpu.idt));
 
     g_context.stack_guard.create_guard(cpu.host_stack);
     memset(cpu.msr_bitmap, 0, sizeof(cpu.msr_bitmap));
 
-    auto* initial_registers = reinterpret_cast<cpu_registers_t*>(reinterpret_cast<uint64_t>(cpu.guest_stack) + vcpu_t::stack_size);
+    auto* initial_registers = reinterpret_cast<cpu_registers_t*>(reinterpret_cast<uint64_t>(cpu.guest_stack.end()) - vcpu_t::stack_shadow_space);
     asm_cpu_store_registers(initial_registers);
     // if operation is on, then we were returned here from the registers being restored,
     // meaning we launched.

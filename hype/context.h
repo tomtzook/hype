@@ -22,15 +22,17 @@ struct wanted_vm_controls_t {
 struct vcpu_t {
     static constexpr size_t stack_size_full = 10 * x86::paging::page_size;
     static_assert(stack_size_full % 16 == 0, "stack size must be aligned to 16");
-    static constexpr size_t stack_size = stack_size_full - sizeof(cpu_registers_t);
+    static constexpr size_t stack_shadow_space = sizeof(cpu_registers_t);
+    static constexpr size_t stack_size = stack_size_full - stack_shadow_space;
     static_assert(stack_size % 16 == 0, "stack size must be aligned to 16");
 
     page_aligned x86::vmx::vmstruct_t vmxon_region;
     page_aligned x86::vmx::vmstruct_t vmcs;
     page_aligned uint8_t msr_bitmap[x86::paging::page_size];
 
-    page_aligned uint8_t guest_stack[stack_size_full];
+    memory::stack<stack_size_full> guest_stack;
     memory::stack<stack_size_full> host_stack;
+    memory::stack<stack_size_full> interrupt_stack;
 
     page_aligned memory::gdt_t gdt;
     page_aligned interrupts::idt_t idt;

@@ -10,6 +10,8 @@ namespace hype::interrupts {
 
 struct idt_t {
     static constexpr size_t descriptor_count = 256;
+    static constexpr size_t ist_index = 1;
+
     x86::interrupts::descriptor64_t descriptors[descriptor_count];
 };
 

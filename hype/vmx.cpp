@@ -152,7 +152,7 @@ static framework::result<> setup_segments_vmcs(context_t& context, vcpu_t& cpu) 
 }
 
 static framework::result<> setup_entry_exit(vcpu_t& cpu) {
-    const auto host_stack_start = reinterpret_cast<uint64_t>(cpu.host_stack) + vcpu_t::stack_size;
+    const auto host_stack_start = reinterpret_cast<uint64_t>(cpu.host_stack.start()) + vcpu_t::stack_size;
     assert(host_stack_start % 16 == 0, "stack must be aligned to 16");
     const auto guest_stack_start = reinterpret_cast<uint64_t>(cpu.guest_stack) + vcpu_t::stack_size;
     assert(guest_stack_start % 16 == 0, "stack must be aligned to 16");

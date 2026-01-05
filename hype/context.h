@@ -30,7 +30,7 @@ struct vcpu_t {
     page_aligned uint8_t msr_bitmap[x86::paging::page_size];
 
     page_aligned uint8_t guest_stack[stack_size_full];
-    page_aligned uint8_t host_stack[stack_size_full];
+    memory::stack<stack_size_full> host_stack;
 
     page_aligned memory::gdt_t gdt;
     page_aligned interrupts::idt_t idt;
@@ -44,16 +44,17 @@ struct vcpu_t {
 struct context_t {
     static constexpr size_t max_vcpu_supported = 16;
 
-    page_aligned memory::page_table_t page_table;
-    page_aligned memory::ept_t ept;
+    page_aligned memory::page_table_t page_table{};
+    page_aligned memory::ept_t ept{};
+    memory::stack_guard stack_guard{};
 
     // todo: problem with initialization
     //framework::array<vcpu_t, max_vcpu_supported> cpus;
-    vcpu_t cpus[max_vcpu_supported];
-    size_t cpu_count;
-    wanted_vm_controls_t wanted_vm_controls;
+    vcpu_t cpus[max_vcpu_supported]{};
+    size_t cpu_count{};
+    wanted_vm_controls_t wanted_vm_controls{};
 
-    volatile uint8_t cpu_init_index;
+    volatile uint8_t cpu_init_index{};
 };
 
 extern context_t g_context;

@@ -77,7 +77,7 @@ static framework::result<> check_environment_support() {
 }
 
 static framework::result<> init_context(context_t& context, const x86::mtrr::mtrr_cache_t& mtrr_cache) {
-    memset(&context, 0, sizeof(context));
+    new (&g_context) context_t;
     context.wanted_vm_controls = get_wanted_vm_controls();
     context.cpu_init_index = 0;
     context.cpu_count = verify(environment::get_active_cpu_count());
@@ -86,6 +86,8 @@ static framework::result<> init_context(context_t& context, const x86::mtrr::mtr
     verify(memory::setup_identity_paging(context.page_table));
     trace_debug("Initializing EPT");
     verify(memory::setup_identity_ept(context.ept, mtrr_cache));
+
+    context.stack_guard.map_into_pml4e(context.page_table, memory::page_table_t::stack_guard_pml4e);
 
     return {};
 }
@@ -107,15 +109,8 @@ static framework::result<> start_on_vcpu(void*) {
     trace_debug("Initializing IDT");
     verify(interrupts::setup_idt(cpu.idtr, cpu.idt));
 
+    g_context.stack_guard.create_guard(cpu.host_stack);
     memset(cpu.msr_bitmap, 0, sizeof(cpu.msr_bitmap));
-
-    trace_debug("Guest stack: start=0x%p, end=0x%p ; Host stack: start=0x%p, end=0x%p",
-        reinterpret_cast<uint64_t>(cpu.guest_stack),
-        reinterpret_cast<uint64_t>(cpu.guest_stack) + vcpu_t::stack_size,
-        reinterpret_cast<uint64_t>(cpu.host_stack),
-        reinterpret_cast<uint64_t>(cpu.host_stack) + vcpu_t::stack_size);
-    trace_debug("Context: start=0x%p, end=0x%p",
-        &g_context, reinterpret_cast<uint64_t>(&g_context) + sizeof(g_context));
 
     auto* initial_registers = reinterpret_cast<cpu_registers_t*>(reinterpret_cast<uint64_t>(cpu.guest_stack) + vcpu_t::stack_size);
     asm_cpu_store_registers(initial_registers);

@@ -22,4 +22,8 @@ framework::result<> run_on_all_vcpu(vcpu_procedure_t procedure, void* param);
 
 framework::result<> sleep(size_t microseconds);
 
+framework::result<> serial_initialize();
+framework::result<char> serial_read();
+framework::result<> serial_write(char ch);
+
 }

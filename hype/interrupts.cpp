@@ -5,6 +5,8 @@
 #include "interrupts.h"
 
 #include "context.h"
+#include "gdbstub.h"
+#include "hype_gdbstub.h"
 
 
 extern "C" void* isr_stub_table[];
@@ -117,6 +119,10 @@ static void handle_page_fault(const uint64_t error_code, const uint64_t rip, con
 
 extern "C" void idt_handler(const uint64_t vector, const uint64_t error_code, const uint64_t rip, const uint16_t cs) {
     const auto interrupt = static_cast<x86::interrupts::interrupt_t>(vector);
+
+    auto& cpu = hype::get_current_vcpu();
+    auto* registers = reinterpret_cast<hype::cpu_registers_t*>(reinterpret_cast<uint64_t>(cpu.interrupt_stack.end()) - hype::vcpu_t::stack_shadow_space);
+
     trace_debug("IDT Called from 0x%p for [0x%x] %S(0x%x) cs=0x%x", rip, vector, interrupt_name(interrupt), error_code, cs);
 
     switch (interrupt) {
@@ -129,6 +135,8 @@ extern "C" void idt_handler(const uint64_t vector, const uint64_t error_code, co
         default:
             break;
     }
+
+    gdbstub::handle(interrupt, *registers);
 
     if (vector < 32) {
         // these are problem interrupts, halt
@@ -158,8 +166,8 @@ void trace_idt(const x86::interrupts::idtr_t& idtr) {
 framework::result<> setup_idt(x86::interrupts::idtr_t& idtr, idt_t& idt) {
     memset(&idt, 0, sizeof(idt));
 
-    idtr.base_address = environment::to_physical(&idt);
-    idtr.limit = sizeof(idt) - 1;
+    idtr.base_address = environment::to_physical(idt.descriptors);
+    idtr.limit = sizeof(idt.descriptors) - 1;
 
     x86::segments::selector_t selector{};
     selector.bits.table = x86::segments::table_type_t::gdt;
@@ -168,6 +176,8 @@ framework::result<> setup_idt(x86::interrupts::idtr_t& idtr, idt_t& idt) {
 
     for (int i = 0; i < idt_t::descriptor_count; ++i) {
         auto& descriptor = idt.descriptors[i];
+        descriptor.low.raw = 0;
+        descriptor.high.raw = 0;
         descriptor.low.bits.dpl = 0;
         descriptor.low.bits.present = 1;
         descriptor.low.bits.ist = idt_t::ist_index;

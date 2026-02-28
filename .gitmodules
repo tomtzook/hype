@@ -4,3 +4,6 @@
 [submodule "framework"]
 	path = framework
 	url = git@github.com:tomtzook/ministl.git
+[submodule "gdbstub"]
+	path = gdbstub
+	url = git@github.com:tomtzook/gdbstub.git

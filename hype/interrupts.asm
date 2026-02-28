@@ -5,54 +5,91 @@ extern idt_handler
 
 %macro isr_err_stub 1
 isr_stub_%+%1:
-    push rax
-    push rcx
-    push rdx
-    push r8
-    push r9
-    push r10
-    push r11
+    ; stack state
+    ; +48 : registers struct
+    ; +40 : ss
+    ; +32 : rsp
+    ; +24 : rflags
+    ; +16 : cs
+    ; +08 : rip
+    ; +00 : error code
 
-    mov rcx, %1                 ; int
-    mov rdx, [rsp+38h]          ; errorcode
-    mov r8, [rsp+40h]           ; rip
-    movzx r9, word [rsp+48h]    ; cs
+    push rcx              ; because we are overriding rcx to load the struct, save it here to be returned to stack later
+    lea rcx, [rsp+38h]    ; context registers are at the top of the stack
+    sub rsp, 20h
+    call asm_cpu_store_registers
+    add rsp, 20h
+
+    ; return real rcx
+    pop rax
+    mov [rcx+10h], rax
+    mov rax, rcx
+
+    mov rcx, %1                ; int
+    mov rdx, [rsp]             ; errorcode
+    mov r8, [rsp+8h]           ; rip
+    movzx r9, word [rsp+10h]   ; cs
+    mov r10, [rsp+18h]         ; rflags
+    mov r11, [rsp+20h]         ; rsp
+    movzx r12, word [rsp+28h]  ; ss
+
+    ; fix some registers
+    mov [rax+88h], r8   ; rip
+    mov [rax+90h], r9w  ; cs
+    mov [rax+70h], r10  ; rflags
+    mov [rax+80h], r11  ; rsp
+    mov [rax+9ah], r12w ; ss
 
     sub rsp, 20h
     call idt_handler
     add rsp, 20h
 
-    pop r11
-    pop r10
-    pop r9
-    pop r8
-    pop rdx
-    pop rcx
-    pop rax
-
-    add rsp, 8 ; discard error code
-    iretq
+    lea rcx, [rsp+30h]    ; context registers are at the top of the stack
+    jmp asm_cpu_load_registers ; this will return from the interrupt
 %endmacro
 %macro isr_no_err_stub 1
 isr_stub_%+%1:
-    mov rcx, %1                 ; int
-    mov rdx, 0                  ; errorcode
-    mov r8, [rsp+38h]           ; rip
-    movzx r9, word [rsp+40h]    ; cs
+    ; stack state
+    ; +40 : registers struct
+    ; +32 : ss
+    ; +24 : rsp
+    ; +16 : rflags
+    ; +08 : cs
+    ; +00 : rip
+
+    push rcx              ; because we are overriding rcx to load the struct, save it here to be returned to stack later
+    lea rcx, [rsp+30h]    ; context registers are at the top of the stack
+    sub rsp, 20h
+    call asm_cpu_store_registers
+    add rsp, 20h
+
+    ; return real rcx
+    pop rax
+    mov [rcx+10h], rax
+    mov rax, rcx
+
+    mov rcx, %1                ; int
+    mov rdx, 0                 ; errorcode
+    mov r8, [rsp]              ; rip
+    movzx r9, word [rsp+8h]    ; cs
+    mov r10, [rsp+10h]         ; rflags
+    mov r11, [rsp+18h]         ; rsp
+    movzx r12, word [rsp+20h]  ; ss
+
+    ; fix some registers
+    mov [rax+88h], r8   ; rip
+    mov [rax+90h], r9w  ; cs
+    mov [rax+70h], r10  ; rflags
+    mov [rax+80h], r11  ; rsp
+    mov [rax+9ah], r12w ; ss
 
     sub rsp, 20h
     call idt_handler
     add rsp, 20h
 
-    pop r11
-    pop r10
-    pop r9
-    pop r8
-    pop rdx
-    pop rcx
-    pop rax
-
-    iretq
+    lea rcx, [rsp+30h]    ; context registers are at the top of the stack
+    sub rsp, 30h
+    jmp asm_cpu_load_registers ; this will return from the interrupt
 %endmacro
 
 isr_no_err_stub 0

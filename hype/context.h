@@ -35,9 +35,7 @@ struct vcpu_t {
     memory::stack<stack_size_full> interrupt_stack;
 
     page_aligned memory::gdt_t gdt;
-    page_aligned interrupts::idt_t idt;
     x86::segments::gdtr_t gdtr;
-    x86::interrupts::idtr_t idtr;
     x86::segments::tss64_t tss;
 
     bool is_in_vmx_operation;
@@ -46,8 +44,11 @@ struct vcpu_t {
 struct context_t {
     static constexpr size_t max_vcpu_supported = 16;
 
+    interrupts::idt_t idt;
+    x86::interrupts::idtr_t idtr;
     page_aligned memory::page_table_t page_table{};
     page_aligned memory::ept_t ept{};
+
     memory::stack_guard stack_guard{};
 
     framework::array<vcpu_t, max_vcpu_supported> cpus;

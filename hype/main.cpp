@@ -5,6 +5,7 @@
 #include "cpu.h"
 #include "environment.h"
 #include "hype.h"
+#include "hype_gdbstub.h"
 #include "x86/io.h"
 
 
@@ -43,6 +44,7 @@ UefiMain(
         IN EFI_SYSTEM_TABLE* SystemTable
 ) {
     disable_qemu_timers();
+    gdbstub::initialize();
 
     EFI_LOADED_IMAGE_PROTOCOL* loaded_image{};
     const auto _efiStatus = SystemTable->BootServices->HandleProtocol(ImageHandle, &gEfiLoadedImageProtocolGuid, reinterpret_cast<void**>(&loaded_image));

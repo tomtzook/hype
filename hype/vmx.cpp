@@ -146,7 +146,7 @@ static framework::result<> setup_segments_vmcs(context_t& context, vcpu_t& cpu) 
     auto idtr = x86::read<x86::interrupts::idtr_t>();
     verify_vmx(x86::vmx::vmwrite(x86::vmx::field_t::guest_idtr_base, idtr.base_address));
     verify_vmx(x86::vmx::vmwrite(x86::vmx::field_t::guest_idtr_limit, idtr.limit));
-    verify_vmx(x86::vmx::vmwrite(x86::vmx::field_t::host_idtr_base, cpu.idtr.base_address));
+    verify_vmx(x86::vmx::vmwrite(x86::vmx::field_t::host_idtr_base, g_context.idtr.base_address));
 
     return {};
 }

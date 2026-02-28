@@ -83,6 +83,8 @@ static framework::result<> init_context(context_t& context, const x86::mtrr::mtr
     context.cpu_init_index = 0;
     context.cpu_count = verify(environment::get_active_cpu_count());
 
+    trace_debug("Initializing IDT");
+    verify(interrupts::setup_idt(context.idtr, context.idt));
     trace_debug("Initializing Page Table");
     verify(memory::setup_identity_paging(context.page_table));
     trace_debug("Initializing EPT");
@@ -107,10 +109,7 @@ static framework::result<> start_on_vcpu(void*) {
 
     trace_debug("Initializing GDT");
     verify(memory::setup_gdt(cpu.gdtr, cpu.gdt, cpu.tss));
-    cpu.tss.ist[interrupts::idt_t::ist_index - 1] = reinterpret_cast<uint64_t>(cpu.interrupt_stack.end());
-
-    trace_debug("Initializing IDT");
-    verify(interrupts::setup_idt(cpu.idtr, cpu.idt));
+    cpu.tss.ist[interrupts::idt_t::ist_index - 1] = reinterpret_cast<uint64_t>(cpu.interrupt_stack.end()) - vcpu_t::stack_shadow_space;
 
     g_context.stack_guard.create_guard(cpu.host_stack);
     memset(cpu.msr_bitmap, 0, sizeof(cpu.msr_bitmap));

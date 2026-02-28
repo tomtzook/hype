@@ -10,10 +10,6 @@ endif()
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/scripts/modules/")
 
-set(CMAKE_C_COMPILER /usr/lib/llvm-18/bin/clang)
-set(CMAKE_CXX_COMPILER /usr/lib/llvm-18/bin/clang++)
-set(CMAKE_CXX_LINK_EXECUTABLE "/usr/lib/llvm-18/bin/clang++ <CMAKE_CXX_LINK_FLAGS> <OBJECTS> -o <TARGET> <LINK_LIBRARIES>")
-
 set(CMAKE_BUILD_TYPE Debug)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 20)
@@ -34,4 +30,5 @@ add_subdirectory(arch)
 add_subdirectory(edk)
 add_subdirectory(framework)
 add_subdirectory(environment)
+add_subdirectory(gdbstub)
 add_subdirectory(hype)

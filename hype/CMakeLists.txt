@@ -20,8 +20,10 @@ add_executable(hype
         vmexit.h
         vmentry.h
         vmentry.asm
-        vmentry_checks.cpp)
+        vmentry_checks.cpp
+        hype_gdbstub.cpp
+        hype_gdbstub.h)
 
-target_link_libraries(hype PRIVATE edk2 arch ministl environment)
+target_link_libraries(hype PRIVATE edk2 arch ministl environment gdbstub)
 target_include_directories(hype PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 set_target_properties(hype PROPERTIES SUFFIX ".efi")

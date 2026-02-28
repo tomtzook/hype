@@ -17,6 +17,7 @@ extern "C" {
 #include <Protocol/LoadedImage.h>
 #include <Pi/PiMultiPhase.h>
 #include <Protocol/MpService.h>
+#include <Library/SerialPortLib.h>
 
 }
 

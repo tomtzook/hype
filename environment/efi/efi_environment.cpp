@@ -130,4 +130,25 @@ framework::result<> sleep(const size_t microseconds) {
     return {};
 }
 
+framework::result<> serial_initialize() {
+    verify_efi(SerialPortInitialize());
+    return {};
+}
+
+framework::result<char> serial_read() {
+    char ch;
+    const auto read = SerialPortRead(reinterpret_cast<UINT8*>(&ch), 1);
+    if (read == 0) {
+        verify_efi(EFI_NOT_FOUND);
+    }
+
+    return framework::ok(ch);
+}
+
+framework::result<> serial_write(char ch) {
+    const auto written = SerialPortWrite(reinterpret_cast<UINT8*>(&ch), 1);
+    assert(written == 1, "write failed for unknown reason");
+    return {};
+}
+
 }

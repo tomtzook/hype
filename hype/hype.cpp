@@ -4,7 +4,7 @@
 #include <x86/msr.h>
 #include <x86/vmx/controls.h>
 #include <x86/mtrr.h>
-#include <x86/cpuid.h>
+#include <x86/stack.h>
 
 #include <base.h>
 #include "cpu.h"
@@ -77,6 +77,7 @@ static framework::result<> check_environment_support() {
     return {};
 }
 
+static volatile int a = 1;
 static framework::result<> init_context(context_t& context, const x86::mtrr::mtrr_cache_t& mtrr_cache) {
     new (&g_context) context_t;
     context.wanted_vm_controls = get_wanted_vm_controls();
@@ -91,6 +92,16 @@ static framework::result<> init_context(context_t& context, const x86::mtrr::mtr
     verify(memory::setup_identity_ept(context.ept, mtrr_cache));
 
     context.stack_guard.map_into_pml4e(context.page_table, memory::page_table_t::stack_guard_pml4e);
+
+    {
+        uint64_t rbp = x86::read_rbp();
+        uint64_t* ripPtr = reinterpret_cast<uint64_t*>(rbp + 8);
+        uint64_t rip = ripPtr[0];
+        //x86::stack_unwind_next64(0x1000, rbp, rip);
+        trace_debug("stack unwind: rbp=0x%lx, rip=0x%lx, ripPtr=0x%lx", rbp, rip, ripPtr);
+
+        while (a) {}
+    }
 
     return {};
 }

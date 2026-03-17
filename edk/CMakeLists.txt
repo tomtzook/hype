@@ -26,4 +26,4 @@ add_custom_command(
 add_library(edk2 STATIC empty.c ${EDK_AUTO_GEN})
 target_include_directories(edk2 PUBLIC ${EDK2_HEADERS})
 target_compile_options(edk2 PRIVATE ${COMPILE_FLAGS})
-target_link_libraries(edk2 ${EDK2_LIBS})
+target_link_libraries(edk2 PUBLIC ${EDK2_LIBS})

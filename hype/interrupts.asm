@@ -2,6 +2,8 @@ bits 64
 section .text
 
 extern idt_handler
+extern asm_cpu_store_registers
+extern asm_cpu_load_registers
 
 %macro isr_err_stub 1
 isr_stub_%+%1:

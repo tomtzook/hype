@@ -5,7 +5,6 @@
 #include "interrupts.h"
 
 #include "context.h"
-#include "gdbstub.h"
 #include "hype_gdbstub.h"
 
 
@@ -136,6 +135,10 @@ extern "C" void idt_handler(const uint64_t vector, const uint64_t error_code, co
             break;
     }
 
+    // todo: multiprocessing, state per processor for gdb
+    // todo: lock other processors???
+    // todo: single step
+    // todo: breakpoints
     gdbstub::handle(interrupt, *registers);
 
     if (vector < 32) {

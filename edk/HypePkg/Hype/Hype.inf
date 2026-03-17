@@ -11,11 +11,13 @@
 
 [Packages]
   MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
 
 [LibraryClasses]
   BaseLib
   UefiLib
   UefiApplicationEntryPoint
+  SerialPortLib
 
 [Protocols]
   gEfiLoadedImageProtocolGuid

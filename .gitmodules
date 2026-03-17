@@ -7,3 +7,6 @@
 [submodule "gdbstub"]
 	path = gdbstub
 	url = git@github.com:tomtzook/gdbstub.git
+[submodule "pe"]
+	path = pe
+	url = git@github.com:tomtzook/pe.git

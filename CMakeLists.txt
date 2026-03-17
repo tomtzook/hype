@@ -14,9 +14,11 @@ set(CMAKE_BUILD_TYPE Debug)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 20)
 
-set(CMAKE_C_FLAGS "-fno-stack-protector -fshort-wchar -mno-red-zone -Wall -target x86_64-pc-windows-msvc -D__x86_64__ -fno-exceptions -mstack-alignment=16 -g -gcodeview")
-set(CMAKE_CXX_FLAGS "-fno-stack-protector -fshort-wchar -mno-red-zone -Wall -target x86_64-pc-windows-msvc -D__x86_64__ -fno-exceptions -mstack-alignment=16 -g -gcodeview")
-set(CMAKE_CXX_LINK_FLAGS "-target x86_64-pc-windows-msvc -nostdlib -Wl,-entry:EfiMain -Wl,-subsystem:efi_application -fuse-ld=lld-link-18 -g")
+# /Oy-
+# -target x86_64-pc-windows-msvc
+set(CMAKE_C_FLAGS "-mno-omit-leaf-frame-pointer -fno-threadsafe-statics -fno-omit-frame-pointer -fno-stack-protector -fshort-wchar -mno-red-zone -Wall -target x86_64-pc-windows-msvc -D__x86_64__ -fno-exceptions -mstack-alignment=16 -g")
+set(CMAKE_CXX_FLAGS "-mno-omit-leaf-frame-pointer -fno-threadsafe-statics -fno-omit-frame-pointer -fno-stack-protector -fshort-wchar -mno-red-zone -Wall -target x86_64-pc-windows-msvc -D__x86_64__ -fno-exceptions -mstack-alignment=16 -g")
+set(CMAKE_CXX_LINK_FLAGS "-target x86_64-pc-windows-msvc -nostdlib -Wl,-entry:EfiMain -Wl,-subsystem:efi_application -fuse-ld=lld-link-19 -g")
 
 include(${CMAKE_SOURCE_DIR}/scripts/macros.cmake)
 enable_asm()
@@ -25,10 +27,12 @@ set(MINISTL_DEFINE_TYPES 1)
 set(MINISTL_SIZET_SIZE 2)
 set(MINISTL_DEFINE_CRT 1)
 set(MINISTL_DEFINE_INTRINSIC 1)
+set(PE_NO_STD 1)
 
 add_subdirectory(arch)
 add_subdirectory(edk)
 add_subdirectory(framework)
 add_subdirectory(environment)
 add_subdirectory(gdbstub)
+add_subdirectory(pe)
 add_subdirectory(hype)

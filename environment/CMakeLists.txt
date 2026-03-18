@@ -4,6 +4,7 @@ add_library(environment STATIC
     efi/efi_debug.cpp
     efi/efi_environment.cpp
     efi/efi_heap.cpp
+        efi/efi_environment.h
 )
 
 target_include_directories(environment PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})

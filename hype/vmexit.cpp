@@ -3,10 +3,9 @@
 #include <x86/vmx/vmexit.h>
 #include <x86/vmx/vmx.h>
 #include <x86/cpuid.h>
-#include <x86/stack.h>
 
 #include <base.h>
-#include "context.h"
+
 #include "cpu.h"
 #include "memory.h"
 #include "vmentry.h"

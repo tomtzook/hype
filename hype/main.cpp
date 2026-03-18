@@ -1,12 +1,12 @@
-#include "efi/efi_base.h"
-#include "x86/cpuid.h"
+#include <x86/cpuid.h>
+#include <x86/io.h>
 
+#include <efi/efi_base.h>
 #include <base.h>
-#include "cpu.h"
-#include "environment.h"
+#include <efi/efi_environment.h>
+
 #include "hype.h"
 #include "hype_gdbstub.h"
-#include "x86/io.h"
 
 
 static void disable_qemu_timers() {
@@ -19,8 +19,8 @@ static void disable_qemu_timers() {
     x86::outb(0x21, x86::inb(0x21) | 0x01);
 }
 
-static framework::result<> init() {
-    verify(environment::initialize());
+static framework::result<> init(EFI_HANDLE image_handle) {
+    verify(environment::initialize_efi(image_handle));
     return {};
 }
 
@@ -46,22 +46,23 @@ UefiMain(
     disable_qemu_timers();
     gdbstub::initialize();
 
-    EFI_LOADED_IMAGE_PROTOCOL* loaded_image{};
-    const auto _efiStatus = SystemTable->BootServices->HandleProtocol(ImageHandle, &gEfiLoadedImageProtocolGuid, reinterpret_cast<void**>(&loaded_image));
-    if (_efiStatus != EFI_SUCCESS) {
-        trace_error("Failed locating loaded image: 0x%lx", _efiStatus);
-        return _efiStatus;
-    }
-
-    trace_debug("Main Start: base=0x%llx, end=0x%llx, size=0x%llx",
-        loaded_image->ImageBase, reinterpret_cast<uint64_t>(loaded_image->ImageBase) + loaded_image->ImageSize, loaded_image->ImageSize);
-
     {
-        const auto result = init();
+        const auto result = init(ImageHandle);
         if (!result) {
             trace_status("initialization failed", result.error());
             return EFI_LOAD_ERROR;
         }
+    }
+
+    {
+        const auto result = environment::get_our_image_info();
+        if (!result) {
+            trace_status("Failed to get our image information", result.error());
+            return EFI_LOAD_ERROR;
+        }
+
+        const auto& info = result.value();
+        trace_debug("Main Start: base=0x%llx, end=0x%llx, size=0x%llx", info.base, reinterpret_cast<uint64_t>(info.base) + info.size, info.size);
     }
 
     {

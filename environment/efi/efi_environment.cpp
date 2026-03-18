@@ -1,6 +1,5 @@
 
 #include <x86/msr.h>
-#include <x86/apic.h>
 
 #include "efi_base.h"
 #include "environment.h"
@@ -16,6 +15,10 @@ void terminate() {
 }
 
 namespace environment {
+
+struct {
+    EFI_HANDLE image_handle;
+} g_environment_data{};
 
 struct mp_procedure_context_t {
     vcpu_procedure_t* procedure;
@@ -41,11 +44,30 @@ static framework::result<> init_heap(const size_t pages, const framework::memory
     return {};
 }
 
+framework::result<> initialize_efi(EFI_HANDLE image_handle) {
+    g_environment_data.image_handle = image_handle;
+    verify(initialize());
+    return {};
+}
+
 framework::result<> initialize() {
     verify(init_heap(500, framework::memory_type::code));
     verify(init_heap(500, framework::memory_type::data));
 
     return {};
+}
+
+framework::result<image_info> get_our_image_info() {
+    EFI_LOADED_IMAGE_PROTOCOL* loaded_image{};
+    const auto _efiStatus = gBS->HandleProtocol(
+        g_environment_data.image_handle,
+        &gEfiLoadedImageProtocolGuid,
+        reinterpret_cast<void**>(&loaded_image));
+    if (_efiStatus != EFI_SUCCESS) {
+        verify_efi(_efiStatus);
+    }
+
+    return framework::ok(image_info{loaded_image->ImageBase, loaded_image->ImageSize});
 }
 
 framework::result<void*> allocate_pages(const size_t pages, const framework::memory_type type) {

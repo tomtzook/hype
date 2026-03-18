@@ -4,7 +4,14 @@
 
 namespace environment {
 
+struct image_info {
+    void* base;
+    size_t size;
+};
+
 framework::result<> initialize();
+
+framework::result<image_info> get_our_image_info();
 
 [[nodiscard]] framework::result<void*> allocate_pages(size_t pages, framework::memory_type type);
 void free_pages(void* ptr, size_t pages, framework::memory_type type);

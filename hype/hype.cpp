@@ -91,7 +91,6 @@ static framework::result<> init_context(context_t& context, const x86::mtrr::mtr
     context.stack_guard.map_into_pml4e(context.page_table, memory::page_table_t::stack_guard_pml4e);
 
 
-    print_pe_information();
     print_stack_info();
     /*{
         uint64_t rbp = x86::read_rbp();

@@ -28,52 +28,83 @@ static framework::optional<pe::function_entry> find_function(const pe::image& im
     return framework::nullopt;
 }
 
-framework::result<frame> unwind_next(const pe::image& image, const uint64_t rip, const uint64_t rbp) {
-    const auto rip_offset = rip - reinterpret_cast<uint64_t>(image.headers().base());
-    const auto func_opt = find_function(image, rip_offset);
-    if (!func_opt) {
-        trace_debug("function not found, offset=0x%x", rip_offset);
-        return framework::err(framework::status_unsupported);
+static framework::result<size_t> find_setfp_code_index(const pe::unwind_info& unwind_info) {
+    for (size_t i = 0; i < unwind_info.codes_count(); i++) {
+        const auto code = unwind_info.code(i);
+
+        const auto opcode = static_cast<pe::UnwindCodeOpCode>(code->u.OpCode);
+        switch (opcode) {;
+            case pe::UWOP_ALLOC_LARGE:
+                if (code->u.OpInfo == 0) {
+                    i += 1;
+                } else {
+                    i += 2;
+                }
+                break;
+            case pe::UWOP_ALLOC_SMALL:
+            case pe::UWOP_PUSH_NONVOL:
+            case pe::UWOP_SAVE_NONVOL:
+            case pe::UWOP_SAVE_NONVOL_FAR:
+            case pe::UWOP_SAVE_XMM128:
+            case pe::UWOP_SAVE_XMM128_FAR:
+            case pe::UWOP_EPILOG:
+            case pe::UWOP_SPARE_CODE:
+            case pe::UWOP_PUSH_MACHFRAME:
+                break;
+            case pe::UWOP_SET_FPREG:
+                return framework::ok(i);
+        }
     }
 
-    const auto unwind_info = func_opt.value().find_unwind_info(image.sections());
-    const auto unwind_fr = unwind_info.frame_register();
-    if (unwind_fr != 0 && static_cast<pe::UnwindCodeOpInfo>(unwind_fr) == pe::UWINFO_RBP) {
-        const auto fp = rbp;
-        const auto offset = unwind_info.frame_register_offset() * 16;
-        const auto last_rbp = reinterpret_cast<uint64_t*>(fp - offset)[0];
-        const auto return_address = reinterpret_cast<uint64_t*>(fp - offset + 8)[0];
-        return framework::ok(frame{return_address, last_rbp});
-    } else {
-        // todo view unwind codes
-        trace_debug("fr is not rbp: 0x%x", unwind_fr);
-        return framework::err(framework::status_unsupported);
-    }
+    return framework::err(framework::status_bad_arg); //todo: not found
 }
 
-framework::result<> unwind_our_image(uint64_t rip, uint64_t rbp) {
-    const auto image_info = verify(environment::get_our_image_info());
+static framework::result<size_t> calc_prolog_rsp_offset(const pe::unwind_info& unwind_info) {
+    const auto start_idx = verify(find_setfp_code_index(unwind_info)) + 1;
 
-    const pe::image image(image_info.base);
-    trace_debug("Stack unwind: rip=0x%p, rbp=0x%p", rip, rbp);
-    do {
-        const auto result = unwind_next(image, rip, rbp);
-        if (!result) {
-            trace_result("stack unwind error", result);
-            break;
+    size_t offset = 0;
+    for (auto i = start_idx; i < unwind_info.codes_count(); i++) {
+        const auto code = unwind_info.code(i);
+        const auto opcode = static_cast<pe::UnwindCodeOpCode>(code->u.OpCode);
+        switch (opcode) {;
+            case pe::UWOP_ALLOC_LARGE: {
+                size_t alloc_size;
+                if (code->u.OpInfo == 0) {
+                    alloc_size = unwind_info.code(i + 1)->FrameOffset * 8;
+                    i += 1;
+                } else {
+                    alloc_size = *reinterpret_cast<const unsigned int*>(unwind_info.code(i + 1));
+                    i += 2;
+                }
+
+                offset += alloc_size;
+                break;
+            }
+            case pe::UWOP_ALLOC_SMALL: {
+                const auto alloc_size = (code->u.OpInfo * 8) + 8;
+                offset += alloc_size;
+                break;
+            }
+            case pe::UWOP_PUSH_NONVOL:
+            case pe::UWOP_SAVE_NONVOL:
+            case pe::UWOP_SAVE_NONVOL_FAR:
+                offset += 8;
+                break;
+            case pe::UWOP_SAVE_XMM128:
+            case pe::UWOP_SAVE_XMM128_FAR:
+                // todo: handle
+                break;
+            case pe::UWOP_EPILOG:
+            case pe::UWOP_SPARE_CODE:
+            case pe::UWOP_PUSH_MACHFRAME:
+                // todo: handle
+                break;
+            case pe::UWOP_SET_FPREG:
+                break;
         }
+    }
 
-        rip = result.value().rip;
-        rbp = result.value().rbp;
-        trace_debug("\tFrame: rip=0x%p, rbp=0x%p", rip, rbp);
-    } while (true);
-
-    //const auto s = image.sections()[".text"];
-    /*for (const auto& s : image.sections()) {
-        trace_debug("%S 0x%x, 0x%x, 0x%x, 0x%x", s.name(), s.virtual_address(), s.virtual_size(), s.pointer_to_raw_data(), s.size_of_raw_data());
-    }*/
-
-    return {};
+    return framework::ok(offset);
 }
 
 static bool isprint(const uint8_t c) {
@@ -120,23 +151,52 @@ void hexdump(const void* data, const size_t length) {
     trace_debug("%a", buffer);
 }
 
-framework::result<> print_pe_information() {
+framework::result<frame> unwind_next(const pe::image& image, const uint64_t rip, const uint64_t rbp) {
+    const auto rip_offset = rip - reinterpret_cast<uint64_t>(image.headers().base());
+    const auto func_opt = find_function(image, rip_offset);
+    if (!func_opt) {
+        return framework::err(framework::status_unsupported);
+    }
+
+    const auto unwind_info = func_opt.value().find_unwind_info(image.sections());
+    const auto unwind_fr = unwind_info.frame_register();
+    if (unwind_fr != 0 && static_cast<pe::UnwindCodeOpInfo>(unwind_fr) == pe::UWINFO_RBP) {
+        // assuming that the function starts with push rbp
+        const auto fp = rbp;
+        const auto offset = unwind_info.frame_register_offset() * 16;
+        const auto prolog_offset = verify(calc_prolog_rsp_offset(unwind_info));
+        const auto last_rbp = reinterpret_cast<uint64_t*>(fp + prolog_offset - offset - 8)[0];
+        const auto return_address = reinterpret_cast<uint64_t*>(fp + prolog_offset - offset)[0];
+        return framework::ok(frame{return_address, last_rbp});
+    }
+
+    // todo implement
+    return framework::err(framework::status_unsupported);
+}
+
+framework::result<> unwind_our_image(uint64_t rip, uint64_t rbp) {
     const auto image_info = verify(environment::get_our_image_info());
-    const pe::image image(image_info.base);
-    const auto sections = image.sections();
+    const pe::image image(image_info.base, pe::memory_alignment::loaded);
 
-    /*for (const auto& section : sections) {
-        trace_debug("section: %s, 0x%x 0x%x", section.name(), section.virtual_address(), section.virtual_size());
-    }*/
+    char buffer[512];
+    size_t offset = 0;
+    size_t buffer_size = sizeof(buffer);
 
-    const auto d = image.headers().data_directory(pe::DataDirectoryType::IMAGE_DIRECTORY_ENTRY_EXCEPTION);
-    const auto section = image.sections()[d->VirtualAddress];
-    trace_debug("d: 0x%x, 0x%x, s: %a 0x%x", d->VirtualAddress, d->Size, section.name(), section.virtual_address());
+    ascii_format(buffer, offset, buffer_size, "Stack Unwind:\n");
+    ascii_format(buffer, offset, buffer_size, "\tFrame: rip=0x%p, rbp=0x%p\n", rip, rbp);
+    do {
+        const auto result = unwind_next(image, rip, rbp);
+        if (!result) {
+            break;
+        }
 
-    const auto directory = section.rva_to_pointer<pe::ImageRuntimeFunctionEntry>(d->VirtualAddress);
-    trace_debug("0x%x 0x%x", directory->BeginAddress, directory->EndAddress);
-    hexdump(directory, 16 * 3);
+        rip = result.value().rip;
+        rbp = result.value().rbp;
+        ascii_format(buffer, offset, buffer_size, "\tFrame: rip=0x%p, rbp=0x%p\n", rip, rbp);
+    } while (true);
 
+    buffer[offset] = '\0';
+    trace_debug("%a", buffer);
 
     return {};
 }

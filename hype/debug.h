@@ -8,8 +8,6 @@ namespace hype {
 
 void hexdump(const void* data, size_t length);
 
-framework::result<> print_pe_information();
-
 void print_stack_info(uint64_t rip, uint64_t rbp);
 
 inline __attribute__((always_inline)) void print_stack_info() {

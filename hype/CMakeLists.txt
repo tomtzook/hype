@@ -23,8 +23,11 @@ add_executable(hype
         vmentry_checks.cpp
         hype_gdbstub.cpp
         hype_gdbstub.h
-        debug.h
-        debug.cpp)
+        debug/modules.h
+        debug/print.h
+        debug/modules.cpp
+        debug/print.cpp
+        debug/print.h)
 
 target_link_libraries(hype PRIVATE edk2 arch ministl environment gdbstub pe)
 target_include_directories(hype PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})

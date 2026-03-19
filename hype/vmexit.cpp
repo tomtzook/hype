@@ -6,6 +6,8 @@
 
 #include <base.h>
 
+#include "context.h"
+#include "debug/modules.h"
 #include "cpu.h"
 #include "memory.h"
 #include "vmentry.h"
@@ -62,6 +64,8 @@ framework::result<> handle_vmexit(cpu_registers_t& registers) {
 
     const auto exit_reason = static_cast<x86::vmx::exit_reason_t>(exit_reason_raw & 0xffff);
     trace_debug("Exit %u From 0x%p", static_cast<uint16_t>(exit_reason), registers.rip);
+
+    debug::print_stack_frame(g_context.loaded_modules, registers.rip, registers.rbp);
 
     {
         // todo: limits are fucked post exit, maybe a result of restoration

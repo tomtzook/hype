@@ -4,6 +4,7 @@
 #include <x86/vmx/vmx.h>
 #include <x86/vmx/controls.h>
 
+#include "debug/modules.h"
 #include "cpu.h"
 #include "memory.h"
 #include "interrupts.h"
@@ -54,6 +55,8 @@ struct context_t {
     framework::array<vcpu_t, max_vcpu_supported> cpus;
     size_t cpu_count{};
     wanted_vm_controls_t wanted_vm_controls{};
+
+    debug::loaded_modules loaded_modules;
 
     volatile uint8_t cpu_init_index{};
 };

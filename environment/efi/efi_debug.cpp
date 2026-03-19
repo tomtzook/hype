@@ -23,7 +23,18 @@ void trace_impl(const wchar_t* fmt, ...) {
 
     VA_END(args);
 
+#ifdef trace_screen
     Print(reinterpret_cast<UINT16*>(_print_buffer));
+#else
+    char _ascii_print_buffer[sizeof(_print_buffer)];
+    UnicodeStrToAsciiStrS(
+        reinterpret_cast<UINT16*>(_print_buffer),
+        _ascii_print_buffer,
+        sizeof(_ascii_print_buffer));
+    SerialPortWrite(
+        reinterpret_cast<UINT8*>(_ascii_print_buffer),
+        AsciiStrLen(_ascii_print_buffer));
+#endif
 }
 
 }

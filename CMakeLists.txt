@@ -16,8 +16,8 @@ set(CMAKE_CXX_STANDARD 20)
 
 # /Oy-
 # -target x86_64-pc-windows-msvc
-set(CMAKE_C_FLAGS "-mno-omit-leaf-frame-pointer -fno-threadsafe-statics -fno-omit-frame-pointer -fno-stack-protector -fshort-wchar -mno-red-zone -Wall -target x86_64-pc-windows-msvc -D__x86_64__ -fno-exceptions -mstack-alignment=16 -g")
-set(CMAKE_CXX_FLAGS "-mno-omit-leaf-frame-pointer -fno-threadsafe-statics -fno-omit-frame-pointer -fno-stack-protector -fshort-wchar -mno-red-zone -Wall -target x86_64-pc-windows-msvc -D__x86_64__ -fno-exceptions -mstack-alignment=16 -g")
+set(CMAKE_C_FLAGS "-fno-rtti -fno-use-cxa-atexit -mno-omit-leaf-frame-pointer -fno-threadsafe-statics -fno-omit-frame-pointer -fno-stack-protector -fshort-wchar -mno-red-zone -Wall -target x86_64-pc-windows-msvc -D__x86_64__ -fno-exceptions -mstack-alignment=16 -g")
+set(CMAKE_CXX_FLAGS "-fno-rtti -fno-use-cxa-atexit -mno-omit-leaf-frame-pointer -fno-threadsafe-statics -fno-omit-frame-pointer -fno-stack-protector -fshort-wchar -mno-red-zone -Wall -target x86_64-pc-windows-msvc -D__x86_64__ -fno-exceptions -mstack-alignment=16 -g")
 set(CMAKE_CXX_LINK_FLAGS "-target x86_64-pc-windows-msvc -nostdlib -Wl,-entry:EfiMain -Wl,-subsystem:efi_application -fuse-ld=lld-link-19 -g")
 
 include(${CMAKE_SOURCE_DIR}/scripts/macros.cmake)

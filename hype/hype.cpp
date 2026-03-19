@@ -5,6 +5,7 @@
 #include <x86/vmx/controls.h>
 #include <x86/mtrr.h>
 #include <x86/apic.h>
+#include <x86/id.h>
 #include <x86/regs.h>
 
 #include <base.h>
@@ -54,6 +55,7 @@ static framework::result<> check_wanted_vm_controls() {
 static framework::result<> check_environment_support() {
     // todo: check intel
 
+    assert(x86::is_intel_cpu(), "cpu not intel");
     assert(x86::apic::is_x2apic_supported(), "x2apic not supported");
     assert(x86::paging::mode_t::ia32e == x86::paging::current_mode() &&
                      x86::paging::ia32e::are_huge_tables_supported(),
@@ -76,7 +78,6 @@ static framework::result<> check_environment_support() {
 }
 
 static framework::result<> init_context(context_t& context, const x86::mtrr::mtrr_cache_t& mtrr_cache) {
-    new (&g_context) context_t;
     context.wanted_vm_controls = get_wanted_vm_controls();
     context.cpu_init_index = 0;
     context.cpu_count = verify(environment::get_active_cpu_count());
@@ -88,19 +89,14 @@ static framework::result<> init_context(context_t& context, const x86::mtrr::mtr
     trace_debug("Initializing EPT");
     verify(memory::setup_identity_ept(context.ept, mtrr_cache));
 
+    trace_debug("Mapping Stack Guard");
     context.stack_guard.map_into_pml4e(context.page_table, memory::page_table_t::stack_guard_pml4e);
 
+    trace_debug("Loading Base Modules");
+    const auto image_info = verify(environment::get_our_image_info());
+    context.loaded_modules.add_if_image_base(image_info.base);
 
-    print_stack_info();
-    /*{
-        uint64_t rbp = x86::read_rbp();
-        uint64_t* ripPtr = reinterpret_cast<uint64_t*>(rbp + 8);
-        uint64_t rip = ripPtr[0];
-        //x86::stack_unwind_next64(0x1000, rbp, rip);
-        trace_debug("stack unwind: rbp=0x%lx, rip=0x%lx, ripPtr=0x%lx", rbp, rip, ripPtr);
-
-        while (a) {}
-    }*/
+    trace_debug("Done context init");
 
     return {};
 }
@@ -170,11 +166,16 @@ framework::result<> initialize() {
     trace_debug("Checking environment support");
     verify(check_environment_support());
 
+    const auto cpu_microarch = x86::get_microarchitecture(x86::get_cpu_model());
+    const auto cpu_series = x86::microarchitecture_to_series(cpu_microarch);
+    trace_debug("CPU is %a from %a", x86::cpu_microarchitecture_str(cpu_microarch), x86::cpu_series_str(cpu_series));
+
     assert(x86::apic::set_mode(x86::apic::mode_t::x2apic), "failed to enable x2apic");
 
     const auto mtrr_cache = x86::mtrr::initialize_cache();
 
     trace_debug("Initializing context");
+    new (&g_context) context_t;
     verify(init_context(g_context, mtrr_cache));
 
     return {};

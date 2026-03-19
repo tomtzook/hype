@@ -51,6 +51,22 @@ static framework::result<> handle_wrmsr(const cpu_registers_t& registers) {
     return {};
 }
 
+static framework::result<> handle_ept_violation(const cpu_registers_t& registers) {
+    x86::vmx::ept_violation_exit_qualification_t exit_qualification{};
+    verify_vmx(x86::vmx::vmread(x86::vmx::field_t::exit_qualification, exit_qualification.raw));
+
+    uint64_t physical_address;
+    verify_vmx(x86::vmx::vmread(x86::vmx::field_t::guest_physical_address, physical_address));
+    uint64_t linear_address;
+    verify_vmx(x86::vmx::vmread(x86::vmx::field_t::exit_guest_linear_address, linear_address));
+
+    trace_debug("Exit Violation at physical=0x%p, linear=0x%p : read=%d, write=%d, exec=%d",
+        physical_address, linear_address,
+        exit_qualification.bits.read_access, exit_qualification.bits.write_access, exit_qualification.bits.instruction_fetch);
+
+    return framework::err(framework::status_unsupported);
+}
+
 framework::result<> handle_vmexit(cpu_registers_t& registers) {
     const auto old_rsp = registers.rsp;
     const auto old_rflags = registers.rflags;
@@ -59,12 +75,13 @@ framework::result<> handle_vmexit(cpu_registers_t& registers) {
     verify_vmx(x86::vmx::vmread(x86::vmx::field_t::guest_rsp, registers.rsp));
     verify_vmx(x86::vmx::vmread(x86::vmx::field_t::guest_rflags, registers.rflags));
 
+    // todo: registers.rbp is wrong, it is our host rbp not guest rbp
+
     uint64_t exit_reason_raw;
     verify_vmx(x86::vmx::vmread(x86::vmx::field_t::exit_reason, exit_reason_raw));
 
     const auto exit_reason = static_cast<x86::vmx::exit_reason_t>(exit_reason_raw & 0xffff);
-    trace_debug("Exit %u From 0x%p", static_cast<uint16_t>(exit_reason), registers.rip);
-
+    trace_debug("Exit %a (%u) From 0x%p", x86::vmx::exit_reason_str(exit_reason), static_cast<uint16_t>(exit_reason), registers.rip);
     debug::print_stack_frame(g_context.loaded_modules, registers.rip, registers.rbp);
 
     {
@@ -85,6 +102,9 @@ framework::result<> handle_vmexit(cpu_registers_t& registers) {
             break;
         case x86::vmx::exit_reason_t::wrmsr:
             verify(handle_wrmsr(registers));
+            break;
+        case x86::vmx::exit_reason_t::ept_violation:
+            verify(handle_ept_violation(registers));
             break;
         default:
             trace_error("Unsupported exit %d", exit_reason);
@@ -109,7 +129,7 @@ framework::result<> handle_vmexit(cpu_registers_t& registers) {
     verify(do_vm_entry_checks());
 
     trace_debug("Resume guest into rip=0x%x", registers.rip);
-    registers.rip = reinterpret_cast<uint64_t>(x86::vmx::vmresume);
+    registers.rip = reinterpret_cast<uint64_t>(asm_vm_resume);
     asm_cpu_load_registers(&registers);
 }
 

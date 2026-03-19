@@ -4,6 +4,7 @@ section .text
 extern asm_cpu_load_registers
 
 global asm_vm_entry
+global asm_vm_resume
 
 
 asm_vm_entry:
@@ -26,3 +27,8 @@ asm_vm_entry:
     ;mov rax, 1
     ;mov rcx, 0
     ;cpuid
+
+
+asm_vm_resume:
+    vmresume
+    hlt

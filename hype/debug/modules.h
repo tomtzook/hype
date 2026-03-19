@@ -38,24 +38,22 @@ public:
     loaded_modules() = default;
 
     const loaded_module* find_module(const void* ptr) const;
-
-    void add_if_image_base(const void* base);
+    const loaded_module* add_if_image_base(const void* base);
 
 private:
     framework::vector<loaded_module> m_modules;
 };
 
 struct stack_frame {
-    const loaded_module* module;
     void* rip;
     void* rbp;
 };
 
-framework::result<stack_frame> unwind_next(const loaded_modules& modules, stack_frame current);
-framework::result<> print_stack_frame(const loaded_modules& modules, stack_frame current);
-framework::result<> print_stack_frame(const loaded_modules& modules, uint64_t rip, uint64_t rbp);
+framework::result<stack_frame> unwind_next(loaded_modules& modules, const stack_frame& current);
+framework::result<> print_stack_frame(loaded_modules& modules, stack_frame current);
+framework::result<> print_stack_frame(loaded_modules& modules, uint64_t rip, uint64_t rbp);
 
-inline __attribute__((always_inline)) void print_current_stack_frame(const loaded_modules& modules) {
+inline __attribute__((always_inline)) void print_current_stack_frame(loaded_modules& modules) {
     print_stack_frame(modules, x86::read_rip(), x86::read_rbp());
 }
 

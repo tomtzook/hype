@@ -6,13 +6,23 @@
 
 namespace hype::debug {
 
+static const char* pdb_path_to_image_name(const char* name) {
+    return framework::strrchr(name, '/') + 1;
+}
+
 static const char* find_image_name(const pe::image& image) {
     const auto export_table = image.load_export_table();
     if (export_table.is_valid()) {
         return export_table.image_name();
     }
 
-    return "";
+    const auto debug_table = image.load_debug_table();
+    if (debug_table.is_valid() && debug_table.type() == pe::image_debug_type_codeview) {
+        const auto path = debug_table.data<pe::CvInfoPdb70>(image.sections())->PdbFileName;
+        return pdb_path_to_image_name(path);
+    }
+
+    return "n/a";
 }
 
 static framework::result<size_t> find_setfp_code_index(const pe::unwind_info& unwind_info) {
@@ -94,6 +104,29 @@ static framework::result<size_t> calc_prolog_rsp_offset(const pe::unwind_info& u
     return framework::ok(offset);
 }
 
+static const loaded_module* find_module(loaded_modules& modules, const void* rip) {
+    if (const auto* module = modules.find_module(rip)) {
+        return module;
+    }
+
+    const auto start_address = framework::round_up(reinterpret_cast<uint64_t>(rip), x86::paging::page_size);
+    // only search backwards up to 2MB, we don't want to search forever
+    const auto end_address = start_address - x86::paging::page_size_2m;
+    for (auto address = start_address; address >= end_address; address -= x86::paging::page_size) {
+        const auto* header = reinterpret_cast<const pe::ImageDosHeader*>(address);
+        if (header->e_magic == pe::IMAGE_DOS_SIGNATURE) {
+            // found pe signature, but need to make sure it is actually valid, which the following function
+            // will check
+            const auto* module = modules.add_if_image_base(reinterpret_cast<void*>(address));
+            if (module != nullptr) {
+                return module;
+            }
+        }
+    }
+
+    return nullptr;
+}
+
 function_entry::function_entry(const pe::section_list& sections, const pe::function_entry& entry)
     : start(sections.rva_to_pointer<void>(entry.start()))
     , end(sections.rva_to_pointer<void>(entry.end()))
@@ -157,14 +190,17 @@ const loaded_module* loaded_modules::find_module(const void* ptr) const {
     return nullptr;
 }
 
-void loaded_modules::add_if_image_base(const void* base) {
+const loaded_module* loaded_modules::add_if_image_base(const void* base) {
     if (pe::image::is_image_base(base)) {
         m_modules.push_back(loaded_module(base));
+        return &m_modules.back();
     }
+
+    return nullptr;
 }
 
-framework::result<stack_frame> unwind_next(const loaded_modules& modules, const stack_frame current) {
-    const auto* module = modules.find_module(current.rip);
+framework::result<stack_frame> unwind_next(loaded_modules& modules, const stack_frame& current) {
+    const auto* module = find_module(modules, current.rip);
     if (module == nullptr) {
         // trace_debug("did not find module for 0x%p", current.rip);
         return framework::err(framework::status_not_found);
@@ -189,30 +225,32 @@ framework::result<stack_frame> unwind_next(const loaded_modules& modules, const 
     const auto last_rbp = *reinterpret_cast<uint64_t*>(fp + prolog_offset - offset - 8);
     const auto return_address = *reinterpret_cast<uint64_t*>(fp + prolog_offset - offset);
     return framework::ok(stack_frame{
-        module,
         reinterpret_cast<void*>(return_address),
         reinterpret_cast<void*>(last_rbp)});
 }
 
-framework::result<> print_stack_frame(const loaded_modules& modules, stack_frame current) {
+framework::result<> print_stack_frame(loaded_modules& modules, stack_frame current) {
     char buffer[512];
     size_t offset = 0;
     size_t buffer_size = sizeof(buffer);
 
     ascii_format(buffer, offset, buffer_size, "Stack Unwind:\n");
-    ascii_format(buffer, offset, buffer_size, "\tFrame: [Module %a (0x%p -> 0x%p)] rip=0x%p, rbp=0x%p\n",
-        current.module->name(), current.module->base(), current.module->end(),
-        current.rip, current.rbp);
     do {
+        const auto* module = find_module(modules, current.rip);
+        if (module == nullptr) {
+            break;
+        }
+
+        ascii_format(buffer, offset, buffer_size, "\tFrame: [Module %a (0x%p -> 0x%p)] rip=0x%p, rbp=0x%p\n",
+                module->name(), module->base(), module->end(),
+                current.rip, current.rbp);
+
         const auto result = unwind_next(modules, current);
         if (!result) {
             break;
         }
 
         current = result.value();
-        ascii_format(buffer, offset, buffer_size, "\tFrame: [Module %a (0x%p -> 0x%p)] rip=0x%p, rbp=0x%p\n",
-            current.module->name(), current.module->base(), current.module->end(),
-            current.rip, current.rbp);
     } while (true);
 
     buffer[offset] = '\0';
@@ -221,13 +259,8 @@ framework::result<> print_stack_frame(const loaded_modules& modules, stack_frame
     return {};
 }
 
-framework::result<> print_stack_frame(const loaded_modules& modules, const uint64_t rip, const uint64_t rbp) {
-    const auto* module = modules.find_module(reinterpret_cast<void*>(rip));
-    if (module == nullptr) {
-        return framework::err(framework::status_not_found);
-    }
-
-    return print_stack_frame(modules, stack_frame{module, reinterpret_cast<void*>(rip), reinterpret_cast<void*>(rbp)});
+framework::result<> print_stack_frame(loaded_modules& modules, const uint64_t rip, const uint64_t rbp) {
+    return print_stack_frame(modules, stack_frame{reinterpret_cast<void*>(rip), reinterpret_cast<void*>(rbp)});
 }
 
 }

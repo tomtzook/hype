@@ -199,13 +199,7 @@ const loaded_module* loaded_modules::add_if_image_base(const void* base) {
     return nullptr;
 }
 
-framework::result<stack_frame> unwind_next(loaded_modules& modules, const stack_frame& current) {
-    const auto* module = find_module(modules, current.rip);
-    if (module == nullptr) {
-        // trace_debug("did not find module for 0x%p", current.rip);
-        return framework::err(framework::status_not_found);
-    }
-
+framework::result<stack_frame> unwind_next(const loaded_module* module, const stack_frame& current) {
     const auto function_opt = module->find_function(current.rip);
     if (!function_opt) {
         // trace_debug("did not find function for 0x%p in module 0x%p", current.rip, module->base());
@@ -245,7 +239,7 @@ framework::result<> print_stack_frame(loaded_modules& modules, stack_frame curre
                 module->name(), module->base(), module->end(),
                 current.rip, current.rbp);
 
-        const auto result = unwind_next(modules, current);
+        const auto result = unwind_next(module, current);
         if (!result) {
             break;
         }

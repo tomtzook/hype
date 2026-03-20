@@ -5,7 +5,7 @@
 #include "interrupts.h"
 
 #include "context.h"
-#include "hype_gdbstub.h"
+#include "debug/hype_gdbstub.h"
 
 
 extern "C" void* isr_stub_table[];

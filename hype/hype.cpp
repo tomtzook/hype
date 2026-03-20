@@ -12,8 +12,8 @@
 #include "cpu.h"
 #include "memory.h"
 #include "context.h"
-#include "vmx.h"
-#include "vmentry.h"
+#include "vmx/vmx.h"
+#include "vmx/vmentry.h"
 #include "debug.h"
 #include "hype.h"
 

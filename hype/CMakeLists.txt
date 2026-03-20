@@ -7,22 +7,22 @@ add_executable(hype
         memory.h
         memory.cpp
         context.h
-        vmx.h
-        vmx.cpp
         interrupts.h
         interrupts.cpp
         interrupts.asm
         cpu.h
         cpu.cpp
         cpu.asm
-        vmexit.asm
-        vmexit.cpp
-        vmexit.h
-        vmentry.h
-        vmentry.asm
-        vmentry_checks.cpp
-        hype_gdbstub.cpp
-        hype_gdbstub.h
+        vmx/vmx.h
+        vmx/vmx.cpp
+        vmx/vmexit.asm
+        vmx/vmexit.cpp
+        vmx/vmexit.h
+        vmx/vmentry.h
+        vmx/vmentry.asm
+        vmx/vmentry_checks.cpp
+        debug/hype_gdbstub.cpp
+        debug/hype_gdbstub.h
         debug/modules.h
         debug/print.h
         debug/modules.cpp

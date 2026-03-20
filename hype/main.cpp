@@ -6,7 +6,7 @@
 #include <efi/efi_environment.h>
 
 #include "hype.h"
-#include "hype_gdbstub.h"
+#include "debug/hype_gdbstub.h"
 
 
 static void disable_qemu_timers() {

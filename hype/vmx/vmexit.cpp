@@ -6,10 +6,10 @@
 
 #include <base.h>
 
-#include "context.h"
-#include "debug/modules.h"
-#include "cpu.h"
-#include "memory.h"
+#include "../context.h"
+#include "../debug/modules.h"
+#include "../cpu.h"
+#include "../memory.h"
 #include "vmentry.h"
 
 namespace hype {

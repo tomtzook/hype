@@ -4,7 +4,7 @@
 #include <x86/vmx/vmcs.h>
 
 #include <base.h>
-#include "context.h"
+#include "../context.h"
 
 
 namespace hype {

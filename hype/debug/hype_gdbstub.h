@@ -2,7 +2,7 @@
 
 #include <x86/interrupts.h>
 
-#include "cpu.h"
+#include "../cpu.h"
 
 namespace gdbstub {
 

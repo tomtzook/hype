@@ -72,6 +72,8 @@ UefiMain(
             trace_debug("RES CPUID[rax=1, rcx=0]: eax=0x%lx, ebx=0x%lx, ecx=0x%lx, edx=0x%lx",
                 res.eax, res.ebx, res.ecx, res.edx);
 
+            // x86::debugbreak();
+
             trace_debug("Hypervisor Launched");
             __asm__ volatile ("cli; hlt");
         } else {

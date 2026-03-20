@@ -10,33 +10,6 @@
 
 extern "C" void* isr_stub_table[];
 
-
-static const wchar_t* interrupt_name(const x86::interrupts::interrupt_t interrupt) {
-    switch (interrupt) {
-        case x86::interrupts::interrupt_t::divide_error: return L"#DE";
-        case x86::interrupts::interrupt_t::debug_exception: return L"#DB";
-        case x86::interrupts::interrupt_t::nmi: return L"NMI";
-        case x86::interrupts::interrupt_t::breakpoint: return L"#BP";
-        case x86::interrupts::interrupt_t::overflow: return L"#OF";
-        case x86::interrupts::interrupt_t::bound_range_exceeded: return L"#BR";
-        case x86::interrupts::interrupt_t::invalid_opcode: return L"#UD";
-        case x86::interrupts::interrupt_t::device_not_available: return L"#NM";
-        case x86::interrupts::interrupt_t::double_fault: return L"#DF";
-        case x86::interrupts::interrupt_t::coprocessor_segment_overrun: return L"CoprocessorSegmentOverrun";
-        case x86::interrupts::interrupt_t::invalid_tss: return L"#TS";
-        case x86::interrupts::interrupt_t::segment_not_present: return L"#NP";
-        case x86::interrupts::interrupt_t::stack_segment_fault: return L"#SS";
-        case x86::interrupts::interrupt_t::general_protection: return L"#GP";
-        case x86::interrupts::interrupt_t::page_fault: return L"#PF";
-        case x86::interrupts::interrupt_t::fpu_floating_point_error: return L"#MF";
-        case x86::interrupts::interrupt_t::alignment_check: return L"#AC";
-        case x86::interrupts::interrupt_t::machine_check: return L"#MC";
-        case x86::interrupts::interrupt_t::simd_floating_point_exception: return L"#XM";
-        case x86::interrupts::interrupt_t::virtualization_exception: return L"#VE";
-        default: return L"N/A";
-    }
-}
-
 static void handle_general_protection(const uint64_t error_code) {
     if (error_code == 0) {
         trace_debug("General Protection fault. Error code is 0");
@@ -122,7 +95,7 @@ extern "C" void idt_handler(const uint64_t vector, const uint64_t error_code, co
     auto& cpu = hype::get_current_vcpu();
     auto* registers = reinterpret_cast<hype::cpu_registers_t*>(reinterpret_cast<uint64_t>(cpu.interrupt_stack.end()) - hype::vcpu_t::stack_shadow_space);
 
-    trace_debug("IDT Called from 0x%p for [0x%x] %S(0x%x) cs=0x%x", rip, vector, interrupt_name(interrupt), error_code, cs);
+    trace_debug("IDT Called from 0x%p for [0x%x] %a(0x%x) cs=0x%x", rip, vector, x86::interrupts::vector_to_str(interrupt), error_code, cs);
 
     switch (interrupt) {
         case x86::interrupts::interrupt_t::general_protection:

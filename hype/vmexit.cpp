@@ -14,11 +14,52 @@
 
 namespace hype {
 
+static framework::result<> handle_exception_or_nmi(cpu_registers_t& registers) {
+    uint64_t exit_info_raw;
+    verify_vmx(x86::vmx::vmread(x86::vmx::field_t::vmexit_interruption_information, exit_info_raw));
+    const x86::vmx::vmexit_interruption_info_t exit_info{.raw = static_cast<uint32_t>(exit_info_raw)};
+    uint64_t exit_interrupt_code;
+    verify_vmx(x86::vmx::vmread(x86::vmx::field_t::vmexit_interruption_error_code, exit_interrupt_code));
+
+    verify_vmx(x86::vmx::vmread(x86::vmx::field_t::idt_vectoring_information, exit_info_raw));
+    const x86::vmx::vmexit_interruption_info_t idt_vectoring{.raw = static_cast<uint32_t>(exit_info_raw)};
+    uint64_t idt_vectoring_code;
+    verify_vmx(x86::vmx::vmread(x86::vmx::field_t::idt_vectoring_error_code, idt_vectoring_code));
+
+    const auto vector = static_cast<x86::interrupts::interrupt_t>(exit_info.bits.vector);
+    trace_debug("EXCEPTION[vector=%a(0x%x)]: code=0x%x(%d)",
+        x86::interrupts::vector_to_str(vector), static_cast<uint16_t>(vector),
+        exit_interrupt_code, exit_info.bits.error_code_valid);
+
+    // todo: handle NMI
+
+    if (idt_vectoring.bits.valid) {
+        // todo: handle idt vector info (exception while handling another)
+        const auto nested_vector = static_cast<x86::interrupts::interrupt_t>(idt_vectoring.bits.vector);
+        trace_debug("NESTED[vector=%a(0x%x)]:",
+            x86::interrupts::vector_to_str(nested_vector), static_cast<uint16_t>(nested_vector),
+            idt_vectoring_code, idt_vectoring.bits.error_code_valid);
+    }
+
+    // same struct for exit and entry
+    verify_vmx(x86::vmx::vmwrite(x86::vmx::field_t::ctrl_vmentry_interruption_information_field, exit_info_raw));
+    if (exit_info.bits.error_code_valid) {
+        verify_vmx(x86::vmx::vmwrite(x86::vmx::field_t::ctrl_vmentry_exception_error_code, exit_interrupt_code));
+    }
+    if (x86::interrupts::vector_type(vector) == x86::interrupts::interrupt_type_t::trap) {
+        uint64_t instruction_length;
+        verify_vmx(x86::vmx::vmread(x86::vmx::field_t::vmexit_instruction_length, instruction_length));
+        verify_vmx(x86::vmx::vmwrite(x86::vmx::field_t::ctrl_vmentry_instruction_length, instruction_length));
+    }
+
+    return {};
+}
+
 static framework::result<> handle_cpuid(cpu_registers_t& registers) {
     const auto cpuid = x86::cpuid(registers.rax, registers.rcx);
 
-    //trace_debug("CPUID[rax=0x%lx, rcx=0x%lx]: eax=0x%lx, ebx=0x%lx, ecx=0x%lx, edx=0x%lx",
-    //    registers.rax, registers.rcx, cpuid.eax, cpuid.ebx, cpuid.ecx, cpuid.edx);
+    trace_debug("CPUID[rax=0x%lx, rcx=0x%lx]: eax=0x%lx, ebx=0x%lx, ecx=0x%lx, edx=0x%lx",
+        registers.rax, registers.rcx, cpuid.eax, cpuid.ebx, cpuid.ecx, cpuid.edx);
 
     registers.rax = cpuid.eax;
     registers.rbx = cpuid.ebx;
@@ -60,7 +101,7 @@ static framework::result<> handle_ept_violation(const cpu_registers_t& registers
     uint64_t linear_address;
     verify_vmx(x86::vmx::vmread(x86::vmx::field_t::exit_guest_linear_address, linear_address));
 
-    trace_debug("Exit Violation at physical=0x%p, linear=0x%p : read=%d, write=%d, exec=%d",
+    trace_debug("EPTVIOLATION[physical=0x%p,linear=0x%p]: read=%d, write=%d, exec=%d",
         physical_address, linear_address,
         exit_qualification.bits.read_access, exit_qualification.bits.write_access, exit_qualification.bits.instruction_fetch);
 
@@ -74,8 +115,6 @@ framework::result<> handle_vmexit(cpu_registers_t& registers) {
     verify_vmx(x86::vmx::vmread(x86::vmx::field_t::guest_rip, registers.rip));
     verify_vmx(x86::vmx::vmread(x86::vmx::field_t::guest_rsp, registers.rsp));
     verify_vmx(x86::vmx::vmread(x86::vmx::field_t::guest_rflags, registers.rflags));
-
-    // todo: registers.rbp is wrong, it is our host rbp not guest rbp
 
     uint64_t exit_reason_raw;
     verify_vmx(x86::vmx::vmread(x86::vmx::field_t::exit_reason, exit_reason_raw));
@@ -94,6 +133,10 @@ framework::result<> handle_vmexit(cpu_registers_t& registers) {
     bool should_move_to_next_instruction = true;
 
     switch (exit_reason) {
+        case x86::vmx::exit_reason_t::exception_or_nmi:
+            verify(handle_exception_or_nmi(registers));
+            should_move_to_next_instruction = false;
+            break;
         case x86::vmx::exit_reason_t::cpuid:
             verify(handle_cpuid(registers));
             break;
@@ -105,6 +148,7 @@ framework::result<> handle_vmexit(cpu_registers_t& registers) {
             break;
         case x86::vmx::exit_reason_t::ept_violation:
             verify(handle_ept_violation(registers));
+            should_move_to_next_instruction = false;
             break;
         default:
             trace_error("Unsupported exit %d", exit_reason);
@@ -129,6 +173,7 @@ framework::result<> handle_vmexit(cpu_registers_t& registers) {
     verify(do_vm_entry_checks());
 
     trace_debug("Resume guest into rip=0x%x", registers.rip);
+    // we must use a small asm code as to not fuckup any registers
     registers.rip = reinterpret_cast<uint64_t>(asm_vm_resume);
     asm_cpu_load_registers(&registers);
 }

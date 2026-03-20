@@ -200,6 +200,11 @@ framework::result<> setup_vmcs(context_t& context, vcpu_t& cpu) {
         x86::vmx::field_t::ctrl_msr_bitmap_address,
         environment::to_physical(cpu.msr_bitmap)));
 
+    cpu.exception_bitmap = 0xffff;
+    verify_vmx(x86::vmx::vmwrite(
+        x86::vmx::field_t::ctrl_exception_bitmap,
+        cpu.exception_bitmap));
+
     verify(setup_vm_controls(context.wanted_vm_controls.pinbased));
     verify(setup_vm_controls(context.wanted_vm_controls.procbased));
     verify(setup_vm_controls(context.wanted_vm_controls.secondary_procbased));

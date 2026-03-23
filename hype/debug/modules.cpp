@@ -56,9 +56,7 @@ static framework::result<size_t> find_setfp_code_index(const pe::unwind_info& un
     return framework::err(framework::status_bad_arg); //todo: not found
 }
 
-static framework::result<size_t> calc_prolog_rsp_offset(const pe::unwind_info& unwind_info) {
-    const auto start_idx = verify(find_setfp_code_index(unwind_info)) + 1;
-
+static framework::result<size_t> calc_prolog_rsp_offset(const pe::unwind_info& unwind_info, const size_t start_idx) {
     size_t offset = 0;
     for (auto i = start_idx; i < unwind_info.codes_count(); i++) {
         const auto code = unwind_info.code(i);
@@ -208,19 +206,31 @@ framework::result<stack_frame> unwind_next(const loaded_module* module, const st
 
     const auto unwind_info = function_opt.value().unwind_info;
     const auto unwind_fr = unwind_info.frame_register();
-    if (unwind_fr == 0 || static_cast<pe::UnwindCodeOpInfo>(unwind_fr) != pe::uwinfo_rbp) {
-        return framework::err(framework::status_unsupported);
+    if (unwind_fr == 0) {
+        // no frame register in use, just unwide
+        const auto prolog_offset = verify(calc_prolog_rsp_offset(unwind_info, 0));
+        const auto last_rsp = reinterpret_cast<uint64_t>(current.rsp) + prolog_offset;
+        const auto return_address = *reinterpret_cast<uint64_t*>(last_rsp);
+        return framework::ok(stack_frame{
+            reinterpret_cast<void*>(return_address),
+            nullptr,
+            reinterpret_cast<void*>(last_rsp)});
     }
 
-    // assuming that the function starts with push rbp
-    const auto fp = reinterpret_cast<uint64_t>(current.rbp);
-    const auto offset = unwind_info.frame_register_offset() * 16;
-    const auto prolog_offset = verify(calc_prolog_rsp_offset(unwind_info));
-    const auto last_rbp = *reinterpret_cast<uint64_t*>(fp + prolog_offset - offset - 8);
-    const auto return_address = *reinterpret_cast<uint64_t*>(fp + prolog_offset - offset);
-    return framework::ok(stack_frame{
-        reinterpret_cast<void*>(return_address),
-        reinterpret_cast<void*>(last_rbp)});
+    if (static_cast<pe::UnwindCodeOpInfo>(unwind_fr) == pe::uwinfo_rbp) {
+        // the function starts with push rbp and uses rbp as a frame register
+        const auto fp = reinterpret_cast<uint64_t>(current.rbp);
+        const auto offset = unwind_info.frame_register_offset() * 16;
+        const auto prolog_start_idx = verify(find_setfp_code_index(unwind_info)) + 1;
+        const auto prolog_offset = verify(calc_prolog_rsp_offset(unwind_info, prolog_start_idx));
+        const auto last_rbp = *reinterpret_cast<uint64_t*>(fp + prolog_offset - offset - 8);
+        const auto return_address = *reinterpret_cast<uint64_t*>(fp + prolog_offset - offset);
+        return framework::ok(stack_frame{
+            reinterpret_cast<void*>(return_address),
+            reinterpret_cast<void*>(last_rbp)});
+    }
+
+    return framework::err(framework::status_unsupported);
 }
 
 framework::result<> print_stack_frame(loaded_modules& modules, stack_frame current) {
@@ -235,9 +245,9 @@ framework::result<> print_stack_frame(loaded_modules& modules, stack_frame curre
             break;
         }
 
-        ascii_format(buffer, offset, buffer_size, "\tFrame: [Module %a (0x%p -> 0x%p)] rip=0x%p, rbp=0x%p\n",
+        ascii_format(buffer, offset, buffer_size, "\tFrame: [Module %a (0x%p -> 0x%p)] rip=0x%p, rbp=0x%p, rsp=0x%p\n",
                 module->name(), module->base(), module->end(),
-                current.rip, current.rbp);
+                current.rip, current.rbp, current.rsp);
 
         const auto result = unwind_next(module, current);
         if (!result) {
@@ -253,8 +263,9 @@ framework::result<> print_stack_frame(loaded_modules& modules, stack_frame curre
     return {};
 }
 
-framework::result<> print_stack_frame(loaded_modules& modules, const uint64_t rip, const uint64_t rbp) {
-    return print_stack_frame(modules, stack_frame{reinterpret_cast<void*>(rip), reinterpret_cast<void*>(rbp)});
+framework::result<> print_stack_frame(loaded_modules& modules, const uint64_t rip, const uint64_t rbp, const uint64_t rsp) {
+    return print_stack_frame(modules, stack_frame{
+        reinterpret_cast<void*>(rip), reinterpret_cast<void*>(rbp), reinterpret_cast<void*>(rsp)});
 }
 
 }

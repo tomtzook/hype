@@ -47,14 +47,15 @@ private:
 struct stack_frame {
     void* rip;
     void* rbp;
+    void* rsp;
 };
 
 framework::result<stack_frame> unwind_next(const loaded_module* module, const stack_frame& current);
 framework::result<> print_stack_frame(loaded_modules& modules, stack_frame current);
-framework::result<> print_stack_frame(loaded_modules& modules, uint64_t rip, uint64_t rbp);
+framework::result<> print_stack_frame(loaded_modules& modules, uint64_t rip, uint64_t rbp, uint64_t rsp);
 
 inline __attribute__((always_inline)) void print_current_stack_frame(loaded_modules& modules) {
-    print_stack_frame(modules, x86::read_rip(), x86::read_rbp());
+    print_stack_frame(modules, x86::read_rip(), x86::read_rbp(), x86::read_rsp());
 }
 
 }

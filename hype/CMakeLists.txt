@@ -4,8 +4,6 @@ add_executable(hype
         main.cpp
         hype.cpp
         hype.h
-        memory.h
-        memory.cpp
         context.h
         interrupts.h
         interrupts.cpp
@@ -27,7 +25,16 @@ add_executable(hype
         debug/print.h
         debug/modules.cpp
         debug/print.cpp
-        debug/print.h)
+        debug/print.h
+        memory/mapping.h
+        memory/stack.h
+        memory/paging.h
+        memory/segments.h
+        memory/ept.h
+        memory/segments.cpp
+        memory/paging.cpp
+        memory/ept.cpp
+        memory/stack.cpp)
 
 target_link_libraries(hype PRIVATE edk2 arch ministl environment gdbstub pe)
 target_include_directories(hype PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})

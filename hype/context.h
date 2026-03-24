@@ -5,8 +5,10 @@
 #include <x86/vmx/controls.h>
 
 #include "debug/modules.h"
+#include "memory/stack.h"
+#include "memory/segments.h"
+#include "memory/ept.h"
 #include "cpu.h"
-#include "memory.h"
 #include "interrupts.h"
 #include "environment.h"
 

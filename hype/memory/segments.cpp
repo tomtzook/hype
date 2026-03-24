@@ -1,34 +1,7 @@
 
-#include <x86/paging/paging.h>
-#include <x86/paging/ia32e.h>
-
-#include <base.h>
-#include "environment.h"
-#include "memory.h"
+#include "segments.h"
 
 namespace hype::memory {
-
-void stack_guard::map_into_pml4e(page_table_t& table, const size_t pml4e_index) {
-    m_pml4e_index = pml4e_index;
-    map_into_pml4e(table.m_pml4[pml4e_index]);
-}
-
-void stack_guard::map_into_pml4e(x86::paging::ia32e::pml4e_t& pml4e) {
-    pml4e.raw = 0;
-    pml4e.bits.rw = true;
-    pml4e.bits.present = true;
-    pml4e.address(environment::to_physical(m_pdpt));
-
-    // initialize only the first pdpte
-    auto& pdpte = m_pdpt[0];
-    pdpte.raw = 0;
-    pdpte.small.rw = true;
-    pdpte.small.present = true;
-    pdpte.address(environment::to_physical(m_pd));
-
-    // reset pde index
-    m_pde_index = 0;
-}
 
 void trace_gdt(const x86::segments::gdtr_t& gdtr) {
     auto gdtr_w = x86::segments::table_t(gdtr);
@@ -145,84 +118,6 @@ framework::result<> setup_gdt(x86::segments::gdtr_t& gdtr, gdt_t& gdt, x86::segm
     gdt.tr.base.bits.long_mode = 0;
     gdt.tr.base.bits.default_db = 0;
     gdt.tr.base.bits.granularity = x86::segments::granularity_t::byte;
-
-    return {};
-}
-
-framework::result<> setup_identity_paging(page_table_t& page_table) {
-    {
-        auto& pml4e = page_table.m_pml4[0];
-        pml4e.raw = 0;
-        pml4e.bits.present = true;
-        pml4e.bits.rw = true;
-        pml4e.address(environment::to_physical(page_table.m_pdpt));
-    }
-
-    for(size_t i = 0; i < x86::paging::ia32e::pdptes_in_pdpt; i++) {
-        auto& pdpte = page_table.m_pdpt[i];
-        pdpte.raw = 0;
-        pdpte.small.present = true;
-        pdpte.small.rw = true;
-        pdpte.small.us = false;
-        pdpte.address(environment::to_physical(page_table.m_pd[i]));
-
-        for(size_t j = 0; j < x86::paging::ia32e::pdes_in_directory; j++) {
-            auto& pde = page_table.m_pd[i][j];
-            pde.raw = 0;
-            pde.large.present = true;
-            pde.large.rw = true;
-            pde.large.ps = true;
-            pde.large.us = false;
-            const auto address = (i * 512 + j) * x86::paging::page_size_2m;
-            pde.address(address);
-        }
-    }
-
-    return {};
-}
-
-framework::result<> setup_identity_ept(ept_t& ept, const x86::mtrr::mtrr_cache_t& mtrr_cache) {
-    {
-        auto& pml4e = ept.m_pml4[0];
-        pml4e.raw = 0;
-        pml4e.bits.read = true;
-        pml4e.bits.write = true;
-        pml4e.bits.execute = true;
-        pml4e.address(environment::to_physical(ept.m_pdpt));
-    }
-
-    for (int i = 0; i < x86::vmx::pdptes_in_pdpt; i++) {
-        auto& pdpte = ept.m_pdpt[i];
-        pdpte.raw = 0;
-        pdpte.small.read = true;
-        pdpte.small.write = true;
-        pdpte.small.execute = true;
-        pdpte.address(environment::to_physical(ept.m_pd[i]));
-
-        for (int j = 0; j < x86::vmx::pdes_in_directory; j++) {
-            auto& pde = ept.m_pd[i][j];
-            pde.raw = 0;
-            pde.large.read = true;
-            pde.large.write = true;
-            pde.large.execute = true;
-            pde.large.ps = true;
-
-            const auto address = (i * 512 + j) * x86::paging::page_size_2m;
-            auto type = mtrr_cache.type_for_2m(address);
-            assert(x86::mtrr::memory_type_invalid != type, "mtrr for range is invalid");
-
-            pde.large.mem_type = static_cast<uint64_t>(type);
-            pde.address(address);
-        }
-    }
-
-    return {};
-}
-
-framework::result<> load_page_table(const page_table_t& page_table) {
-    x86::cr3_t cr3(0);
-    cr3.ia32e.address = environment::to_physical(page_table.m_pml4) >> x86::paging::page_bits_4k;
-    x86::write(cr3);
 
     return {};
 }

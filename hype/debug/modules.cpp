@@ -25,40 +25,23 @@ static const char* find_image_name(const pe::image& image) {
     return "n/a";
 }
 
-static framework::result<size_t> find_setfp_code_index(const pe::unwind_info& unwind_info) {
-    for (size_t i = 0; i < unwind_info.codes_count(); i++) {
-        const auto code = unwind_info.code(i);
-
-        const auto opcode = static_cast<pe::UnwindCodeOpCode>(code->u.OpCode);
-        switch (opcode) {;
-            case pe::uwop_alloc_large:
-                if (code->u.OpInfo == 0) {
-                    i += 1;
-                } else {
-                    i += 2;
-                }
-                break;
-            case pe::uwop_alloc_small:
-            case pe::uwop_push_nonvol:
-            case pe::uwop_save_nonvol:
-            case pe::uwop_save_nonvol_far:
-            case pe::uwop_save_xmm128:
-            case pe::uwop_save_xmm128_far:
-            case pe::uwop_epilog:
-            case pe::uwop_spare_code:
-            case pe::uwop_push_machframe:
-                break;
-            case pe::uwop_set_fpreg:
-                return framework::ok(i);
-        }
+static framework::result<uint64_t> get_frame_register(const pe::unwind_info& unwind_info, const stack_frame& frame) {
+    const auto fp = static_cast<pe::UnwindCodeOpInfo>(unwind_info.frame_register());
+    if (fp == 0) {
+        return framework::err(framework::status_not_found);
     }
 
-    return framework::err(framework::status_bad_arg); //todo: not found
+    switch (fp) {
+        case pe::uwinfo_rbp:
+            return framework::ok(reinterpret_cast<uint64_t>(frame.rbp));
+        default:
+            return framework::err(framework::status_unsupported);
+    }
 }
 
-static framework::result<size_t> calc_prolog_rsp_offset(const pe::unwind_info& unwind_info, const size_t start_idx) {
-    size_t offset = 0;
-    for (auto i = start_idx; i < unwind_info.codes_count(); i++) {
+static framework::result<void*> calculate_original_rsp(const pe::unwind_info& unwind_info, const stack_frame& frame) {
+    auto rsp = reinterpret_cast<uint64_t>(frame.rsp);
+    for (auto i = 0; i < unwind_info.codes_count(); i++) {
         const auto code = unwind_info.code(i);
         const auto opcode = static_cast<pe::UnwindCodeOpCode>(code->u.OpCode);
         switch (opcode) {;
@@ -72,34 +55,62 @@ static framework::result<size_t> calc_prolog_rsp_offset(const pe::unwind_info& u
                     i += 2;
                 }
 
-                offset += alloc_size;
+                rsp += alloc_size;
                 break;
             }
             case pe::uwop_alloc_small: {
                 const auto alloc_size = (code->u.OpInfo * 8) + 8;
-                offset += alloc_size;
+                rsp += alloc_size;
                 break;
             }
             case pe::uwop_push_nonvol:
+                rsp += 8;
+                break;
             case pe::uwop_save_nonvol:
+                // saves register to stack, no rsp change
+                i += 1;
+                break;
             case pe::uwop_save_nonvol_far:
-                offset += 8;
+                // saves register to stack, no rsp change
+                i += 2;
                 break;
             case pe::uwop_save_xmm128:
-            case pe::uwop_save_xmm128_far:
-                // todo: handle
+                // saves register to stack, no rsp change
+                i += 1;
                 break;
+            case pe::uwop_save_xmm128_far:
+                // saves register to stack, no rsp change
+                i += 2;
+                break;
+            case pe::uwop_set_fpreg: {
+                // set the value of the fpreg, into some stack value
+                const auto fp = verify(get_frame_register(unwind_info, frame));
+                const auto offset = unwind_info.frame_register_offset() * 16;
+                rsp = fp - offset;
+                break;
+            }
+            case pe::uwop_push_machframe: {
+                switch (code->u.OpInfo) {
+                    case 0:
+                        rsp += 40;
+                        break;
+                    case 1:
+                        rsp += 48;
+                        break;
+                    default:
+                        return framework::err(framework::status_unsupported);
+                }
+                break;
+            }
             case pe::uwop_epilog:
             case pe::uwop_spare_code:
-            case pe::uwop_push_machframe:
-                // todo: handle
                 break;
-            case pe::uwop_set_fpreg:
-                break;
+            default:
+                return framework::err(framework::status_unsupported);
         }
     }
 
-    return framework::ok(offset);
+    return framework::ok(reinterpret_cast<void*>(rsp));
 }
 
 static const loaded_module* find_module(loaded_modules& modules, const void* rip) {
@@ -126,7 +137,8 @@ static const loaded_module* find_module(loaded_modules& modules, const void* rip
 }
 
 function_entry::function_entry(const pe::section_list& sections, const pe::function_entry& entry)
-    : start(sections.rva_to_pointer<void>(entry.start()))
+    : entry(entry)
+    , start(sections.rva_to_pointer<void>(entry.start()))
     , end(sections.rva_to_pointer<void>(entry.end()))
     , unwind_info(entry.find_unwind_info(sections))
 {}
@@ -206,31 +218,21 @@ framework::result<stack_frame> unwind_next(const loaded_module* module, const st
 
     const auto unwind_info = function_opt.value().unwind_info;
     const auto unwind_fr = unwind_info.frame_register();
-    if (unwind_fr == 0) {
-        // no frame register in use, just unwide
-        const auto prolog_offset = verify(calc_prolog_rsp_offset(unwind_info, 0));
-        const auto last_rsp = reinterpret_cast<uint64_t>(current.rsp) + prolog_offset;
-        const auto return_address = *reinterpret_cast<uint64_t*>(last_rsp);
-        return framework::ok(stack_frame{
-            reinterpret_cast<void*>(return_address),
-            nullptr,
-            reinterpret_cast<void*>(last_rsp)});
-    }
+
+    const auto rsp = verify(calculate_original_rsp(unwind_info, current));
+    const auto return_address = *static_cast<const uint64_t*>(rsp);
+
+    stack_frame next_frame{
+        reinterpret_cast<void*>(return_address),
+        nullptr,
+        static_cast<uint8_t*>(rsp) + 8};
 
     if (static_cast<pe::UnwindCodeOpInfo>(unwind_fr) == pe::uwinfo_rbp) {
-        // the function starts with push rbp and uses rbp as a frame register
-        const auto fp = reinterpret_cast<uint64_t>(current.rbp);
-        const auto offset = unwind_info.frame_register_offset() * 16;
-        const auto prolog_start_idx = verify(find_setfp_code_index(unwind_info)) + 1;
-        const auto prolog_offset = verify(calc_prolog_rsp_offset(unwind_info, prolog_start_idx));
-        const auto last_rbp = *reinterpret_cast<uint64_t*>(fp + prolog_offset - offset - 8);
-        const auto return_address = *reinterpret_cast<uint64_t*>(fp + prolog_offset - offset);
-        return framework::ok(stack_frame{
-            reinterpret_cast<void*>(return_address),
-            reinterpret_cast<void*>(last_rbp)});
+        const auto last_rbp = *reinterpret_cast<uint64_t*>(reinterpret_cast<uint64_t>(rsp) - 8);
+        next_frame.rbp = reinterpret_cast<void*>(last_rbp);
     }
 
-    return framework::err(framework::status_unsupported);
+    return framework::ok(next_frame);
 }
 
 framework::result<> print_stack_frame(loaded_modules& modules, stack_frame current) {

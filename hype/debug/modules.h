@@ -9,6 +9,7 @@ namespace hype::debug {
 struct function_entry {
     function_entry(const pe::section_list& sections, const pe::function_entry& entry);
 
+    const pe::function_entry entry;
     const void* start;
     const void* end;
     const pe::unwind_info unwind_info;

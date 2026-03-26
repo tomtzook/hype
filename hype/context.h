@@ -8,6 +8,7 @@
 #include "memory/stack.h"
 #include "memory/segments.h"
 #include "memory/ept.h"
+#include "memory/mapping.h"
 #include "cpu.h"
 #include "interrupts.h"
 #include "environment.h"
@@ -59,6 +60,7 @@ struct context_t {
     size_t cpu_count{};
     wanted_vm_controls_t wanted_vm_controls{};
 
+    memory::guest_memory_mapper guest_memory_mapper{page_table, memory::page_table_t::guest_mapping_pml4e};
     debug::loaded_modules loaded_modules;
 
     volatile uint8_t cpu_init_index{};

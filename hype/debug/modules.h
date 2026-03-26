@@ -4,6 +4,8 @@
 #include <vector.h>
 #include <pe.h>
 
+#include "memory/mapping.h"
+
 namespace hype::debug {
 
 struct function_entry {
@@ -17,7 +19,7 @@ struct function_entry {
 
 class loaded_module {
 public:
-    explicit loaded_module(const void* image_base);
+    loaded_module(framework::buffer&& headers_data, framework::buffer&& functions_data, framework::buffer&& name_data);
 
     [[nodiscard]] const void* base() const;
     [[nodiscard]] const void* end() const;
@@ -28,10 +30,10 @@ public:
     framework::optional<function_entry> find_function(const void* ptr) const;
 
 private:
-    const pe::image m_image;
-    const void* m_start;
-    const void* m_end;
-    const pe::functions_table m_function_table;
+    const framework::buffer m_headers_data;
+    const framework::buffer m_functions_data;
+    const framework::buffer m_name_data;
+    const pe::headers m_headers;
 };
 
 class loaded_modules {

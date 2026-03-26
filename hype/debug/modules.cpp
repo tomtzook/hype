@@ -4,6 +4,8 @@
 #include "print.h"
 #include "modules.h"
 
+#include "context.h"
+
 namespace hype::debug {
 
 static const char* pdb_path_to_image_name(const char* name) {
@@ -113,6 +115,51 @@ static framework::result<void*> calculate_original_rsp(const pe::unwind_info& un
     return framework::ok(reinterpret_cast<void*>(rsp));
 }
 
+template<memory::memory_mapper_type mem_t_>
+framework::result<framework::buffer> load_module_headers(memory::memory_mapper<mem_t_>& memory_mapper, const void* image_base) {
+    const auto first_page = verify(memory_mapper->map(reinterpret_cast<uint64_t>(image_base), x86::paging::page_size_4k));
+    const auto* dos_header = first_page.template data<pe::ImageDosHeader>();
+    if (dos_header->e_magic != pe::IMAGE_DOS_SIGNATURE) {
+        return framework::err(framework::status_assert_failed);
+    }
+
+    const auto* nt_headers = first_page.template data<pe::ImageNtHeaders64>(dos_header->e_lfanew);
+    if (nt_headers->Signature != pe::IMAGE_NT_SIGNATURE) {
+        return framework::err(framework::status_assert_failed);
+    }
+
+    const framework::span headers{image_base, nt_headers->OptionalHeader.SizeOfHeaders};
+    auto buffer = framework::buffer::from(headers);
+    return framework::ok(framework::move(buffer));
+}
+
+template<memory::memory_mapper_type mem_t_>
+framework::result<framework::buffer> load_module_exception_table(memory::memory_mapper<mem_t_>& memory_mapper, const pe::headers& headers) {
+    const auto base = reinterpret_cast<uint64_t>(headers.base());
+    const auto* directory = headers.data_directory(pe::DataDirectoryType::image_directory_entry_exception);
+    if (directory->VirtualAddress == 0 || (directory->VirtualAddress - base) >= headers.image_size()) {
+        return framework::err(framework::status_not_found);
+    }
+
+    const auto section = verify(memory_mapper->map(base + directory->VirtualAddress, directory->Size));
+
+    auto buffer = framework::buffer::create(section.data(), section.size());
+    return framework::ok(framework::move(buffer));
+}
+
+template<memory::memory_mapper_type mem_t_>
+framework::result<framework::buffer> load_module_name(memory::memory_mapper<mem_t_>& memory_mapper, const void* image_base) {
+
+}
+
+template<memory::memory_mapper_type mem_t_>
+framework::result<loaded_module> load_module(memory::memory_mapper<mem_t_>& memory_mapper, const void* image_base) {
+    auto headers_buffer = verify(load_module_headers(memory_mapper, image_base));
+    auto exception_table_buffer = verify(load_module_exception_table(memory_mapper, image_base));
+
+    return framework::ok(loaded_module{framework::move(headers_buffer), framework::move(exception_table_buffer), });
+}
+
 static const loaded_module* find_module(loaded_modules& modules, const void* rip) {
     if (const auto* module = modules.find_module(rip)) {
         return module;
@@ -143,48 +190,52 @@ function_entry::function_entry(const pe::section_list& sections, const pe::funct
     , unwind_info(entry.find_unwind_info(sections))
 {}
 
-loaded_module::loaded_module(const void* image_base)
-    : m_image(image_base, pe::memory_alignment::loaded)
-    , m_start(m_image.base())
-    , m_end(m_image.end())
-    , m_function_table(m_image.load_exception_table())
+loaded_module::loaded_module(framework::buffer&& headers_data, framework::buffer&& functions_data, framework::buffer&& name_data)
+    : m_headers_data(framework::move(headers_data))
+    , m_functions_data(framework::move(functions_data))
+    , m_name_data(framework::move(name_data))
+    , m_headers(m_headers_data.data())
 {}
 
 const void* loaded_module::base() const {
-    return m_start;
+    return m_headers.base();
 }
 
 const void* loaded_module::end() const {
-    return m_end;
+    return m_headers.base() + m_headers.image_size();
 }
 
 size_t loaded_module::size() const {
-    return m_image.size();
+    return m_headers.image_size();
 }
 
 const char* loaded_module::name() const {
-    return find_image_name(m_image);
+    return m_name_data.data<char>();
 }
 
 bool loaded_module::contains(const void* ptr) const {
-    return ptr >= m_start && ptr < m_end;
+    return ptr >= base() && ptr < end();
 }
 
 framework::optional<function_entry> loaded_module::find_function(const void* ptr) const {
-    if (!m_function_table.is_valid()) {
+    if (!contains(ptr)) {
+        // todo: error
         return framework::nullopt;
     }
 
-    // todo: binary search
-    const auto offset = static_cast<const uint8_t*>(ptr) - m_image.base();
-    const auto sections = m_image.sections();
-    for (const auto& entry : m_function_table) {
-        const auto start = sections.rva_to_offset(entry.start());
-        const auto end = sections.rva_to_offset(entry.end());
-        if (offset >= start && offset < end) {
-            return function_entry(sections, entry);
-        }
+
+    const auto* function_table = m_functions_data.data<pe::ImageRuntimeFunctionEntry>();
+
+    /*binary search
+    *    int low = 0, high = size - 1;
+    while (low <= high) {
+        int mid = low + (high - low) / 2; // Prevents overflow
+        if (arr[mid] == target) return mid;
+        if (arr[mid] < target) low = mid + 1;
+        else high = mid - 1;
     }
+    return -1;
+     */
 
     return framework::nullopt;
 }

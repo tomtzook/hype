@@ -2,48 +2,62 @@
 
 #include <x86/regs.h>
 #include <vector.h>
+#include "str.h"
 #include <pe.h>
 
 #include "memory/mapping.h"
 
 namespace hype::debug {
 
-struct function_entry {
-    function_entry(const pe::section_list& sections, const pe::function_entry& entry);
+// NOTICE: WRITTEN WITH GUEST MAPPING AT HEART, so everything is translated from guest
 
-    const pe::function_entry entry;
-    const void* start;
-    const void* end;
+struct function_entry {
+    using mem_t_ = memory::guest_memory_mapper;
+
+    function_entry(const void* guest_image_base, const pe::ImageRuntimeFunctionEntry& function_entry, memory::mapped_memory<mem_t_>&& unwind_info_map);
+
+    const void* guest_start;
+    const void* guest_end;
+private:
+    memory::mapped_memory<mem_t_> unwind_info_map;
+public:
     const pe::unwind_info unwind_info;
 };
 
 class loaded_module {
 public:
-    loaded_module(framework::buffer&& headers_data, framework::buffer&& functions_data, framework::buffer&& name_data);
+    using mem_t_ = memory::guest_memory_mapper;
 
-    [[nodiscard]] const void* base() const;
-    [[nodiscard]] const void* end() const;
+    loaded_module(memory::memory_mapper<mem_t_> mapper, const void* guest_image_base, memory::mapped_memory<mem_t_>&& headers_data, memory::mapped_memory<mem_t_>&& functions_data, framework::optional<framework::string>&& name);
+
+    [[nodiscard]] const void* guest_base() const;
+    [[nodiscard]] const void* guest_end() const;
     [[nodiscard]] size_t size() const;
     [[nodiscard]] const char* name() const;
-    [[nodiscard]] bool contains(const void* ptr) const;
+    [[nodiscard]] bool contains(const void* guest_ptr) const;
 
-    framework::optional<function_entry> find_function(const void* ptr) const;
+    framework::result<function_entry> find_function(const void* guest_ptr) const;
 
 private:
-    const framework::buffer m_headers_data;
-    const framework::buffer m_functions_data;
-    const framework::buffer m_name_data;
-    const pe::headers m_headers;
+    memory::memory_mapper<mem_t_> m_mapper;
+    const void* m_guest_image_base;
+    memory::mapped_memory<mem_t_> m_headers_data;
+    memory::mapped_memory<mem_t_> m_functions_data;
+    framework::optional<framework::string> m_name;
+    pe::headers m_headers;
 };
 
 class loaded_modules {
 public:
-    loaded_modules() = default;
+    using mem_t_ = memory::guest_memory_mapper;
 
-    const loaded_module* find_module(const void* ptr) const;
-    const loaded_module* add_if_image_base(const void* base);
+    explicit loaded_modules(memory::memory_mapper<mem_t_> mapper);
+
+    framework::result<const loaded_module&> find_module(const void* ptr) const;
+    framework::result<const loaded_module&> add(const void* base);
 
 private:
+    memory::memory_mapper<mem_t_> m_mapper;
     framework::vector<loaded_module> m_modules;
 };
 
@@ -53,12 +67,13 @@ struct stack_frame {
     void* rsp;
 };
 
-framework::result<stack_frame> unwind_next(const loaded_module* module, const stack_frame& current);
-framework::result<> print_stack_frame(loaded_modules& modules, stack_frame current);
-framework::result<> print_stack_frame(loaded_modules& modules, uint64_t rip, uint64_t rbp, uint64_t rsp);
+framework::result<stack_frame> unwind_next(memory::memory_mapper<memory::guest_memory_mapper>& mapper, const loaded_module& module, const stack_frame& current);
+framework::result<> print_stack_frame(memory::memory_mapper<memory::guest_memory_mapper>& mapper, loaded_modules& modules, stack_frame current);
+framework::result<> print_stack_frame(memory::memory_mapper<memory::guest_memory_mapper>& mapper, loaded_modules& modules, uint64_t rip, uint64_t rbp, uint64_t rsp);
 
+/*
 inline __attribute__((always_inline)) void print_current_stack_frame(loaded_modules& modules) {
     print_stack_frame(modules, x86::read_rip(), x86::read_rbp(), x86::read_rsp());
 }
-
+*/
 }

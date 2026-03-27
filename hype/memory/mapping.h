@@ -50,8 +50,8 @@ class memory_mapper {
 public:
     explicit memory_mapper(t_* mapper);
 
-    framework::result<mapped_memory<t_>> map(uint64_t base, size_t size);
-    framework::result<> unmap(const void* base, size_t size);
+    framework::result<mapped_memory<t_>> map(uint64_t base, size_t size) const;
+    framework::result<> unmap(const void* base, size_t size) const;
 
 private:
     t_* m_mapper;
@@ -72,10 +72,10 @@ private:
 
     framework::result<x86::paging::ia32e::linear_address_t> map(size_t required_pages, const frame_ranges& ranges);
 
-    mapped_range* find_and_mark_available_range(size_t page_count);
-    mapped_range* insert_range_at(const framework::vector<mapped_range>::iterator& it, const x86::paging::ia32e::linear_address_t& base, size_t page_count);
-    mapped_range* insert_range(const x86::paging::ia32e::linear_address_t& base, size_t page_count);
-    void remove_range(const x86::paging::ia32e::linear_address_t& base);
+    framework::result<mapped_range*> find_and_mark_available_range(size_t page_count);
+    framework::result<mapped_range*> insert_range_at(const framework::vector<mapped_range>::iterator& it, const x86::paging::ia32e::linear_address_t& base, size_t page_count);
+    framework::result<mapped_range*> insert_range(const x86::paging::ia32e::linear_address_t& base, size_t page_count);
+    framework::result<> remove_range(const x86::paging::ia32e::linear_address_t& base);
 
     size_t count_pages(const frame_ranges& ranges) const;
     size_t pages_between(const x86::paging::ia32e::linear_address_t& start, const x86::paging::ia32e::linear_address_t& end) const;
@@ -101,15 +101,15 @@ mapped_memory<t_>::mapped_memory(t_* mapper, void* base, const size_t size)
 template<typename t_>
 mapped_memory<t_>::mapped_memory(mapped_memory&& other) noexcept
     : m_mapper(other.m_mapper)
-      , m_base(other.m_base)
-      , m_size(other.m_size) {
+    , m_base(other.m_base)
+    , m_size(other.m_size) {
     other.m_base = nullptr;
     other.m_size = 0;
 }
 
 template<typename t_>
 mapped_memory<t_>::~mapped_memory() {
-    if (m_base != nullptr) {
+    if (m_mapper != nullptr && m_base != nullptr) {
         m_mapper->unmap(m_base, m_size);
         m_base = nullptr;
     }
@@ -184,12 +184,12 @@ memory_mapper<t_>::memory_mapper(t_* mapper)
 {}
 
 template<memory_mapper_type t_>
-framework::result<mapped_memory<t_>> memory_mapper<t_>::map(const uint64_t base, const size_t size) {
+framework::result<mapped_memory<t_>> memory_mapper<t_>::map(const uint64_t base, const size_t size) const {
     return m_mapper->map(base, size);
 }
 
 template<memory_mapper_type t_>
-framework::result<> memory_mapper<t_>::unmap(const void* base, const size_t size) {
+framework::result<> memory_mapper<t_>::unmap(const void* base, const size_t size) const {
     return m_mapper->unmap(base, size);
 }
 

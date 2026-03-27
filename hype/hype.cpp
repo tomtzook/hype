@@ -19,7 +19,11 @@
 
 namespace hype {
 
-context_t g_context;
+// todo: use optional context so to only initialize this when we decide
+context_t& get_context() {
+    static context_t context;
+    return context;
+}
 
 static wanted_vm_controls_t get_wanted_vm_controls() {
     wanted_vm_controls_t controls{};
@@ -92,17 +96,14 @@ static framework::result<> init_context(context_t& context, const x86::mtrr::mtr
     trace_debug("Mapping Stack Guard");
     context.stack_guard.map_into_pml4e(context.page_table, memory::page_table_t::stack_guard_pml4e);
 
-    trace_debug("Loading Base Modules");
-    const auto image_info = verify(environment::get_our_image_info());
-    context.loaded_modules.add_if_image_base(image_info.base);
-
     trace_debug("Done context init");
 
     return {};
 }
 
 static framework::result<> start_on_vcpu(void*) {
-    const auto cpu_id = x86::atomic::fetchadd8(&g_context.cpu_init_index, 1);
+    auto& context = get_context();
+    const auto cpu_id = x86::atomic::fetchadd8(&context.cpu_init_index, 1);
     environment::set_current_vcpu_id(cpu_id);
 
     trace_debug("Starting on core id=0x%x (apic_id=0x%x)", cpu_id, x86::apic::get_local_apic_id());
@@ -117,7 +118,7 @@ static framework::result<> start_on_vcpu(void*) {
     verify(memory::setup_gdt(cpu.gdtr, cpu.gdt, cpu.tss));
     cpu.tss.ist[interrupts::idt_t::ist_index - 1] = reinterpret_cast<uint64_t>(cpu.interrupt_stack.end()) - vcpu_t::stack_shadow_space;
 
-    g_context.stack_guard.create_guard(cpu.host_stack);
+    context.stack_guard.create_guard(cpu.host_stack);
     memset(cpu.msr_bitmap, 0, sizeof(cpu.msr_bitmap));
 
     auto* initial_registers = reinterpret_cast<cpu_registers_t*>(reinterpret_cast<uint64_t>(cpu.guest_stack.end()) - vcpu_t::stack_shadow_space);
@@ -138,7 +139,7 @@ static framework::result<> start_on_vcpu(void*) {
     verify_vmx(x86::vmx::vmclear(vmcs_physical));
     assert(x86::vmx::initialize_vmstruct(cpu.vmcs), "initialize_vmstruct failed");
     verify_vmx(x86::vmx::vmptrld(vmcs_physical));
-    verify(setup_vmcs(g_context, cpu));
+    verify(setup_vmcs(context, cpu));
 
     verify(do_vm_entry_checks());
 
@@ -175,8 +176,9 @@ framework::result<> initialize() {
     const auto mtrr_cache = x86::mtrr::initialize_cache();
 
     trace_debug("Initializing context");
-    new (&g_context) context_t;
-    verify(init_context(g_context, mtrr_cache));
+
+    auto& context = get_context();
+    verify(init_context(context, mtrr_cache));
 
     return {};
 }

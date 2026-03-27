@@ -17,7 +17,8 @@ namespace hype::memory {
 
 guest_memory_mapper::guest_memory_mapper(page_table_t& table, const size_t pml4e_index)
     : m_table(table)
-    , m_pml4e_index(pml4e_index) {
+    , m_pml4e_index(pml4e_index)
+    , m_mapped() {
     auto& pml4e = m_table.m_pml4[m_pml4e_index];
     pml4e.address(environment::to_physical(m_pdpt));
     pml4e.bits.present = true;
@@ -25,6 +26,17 @@ guest_memory_mapper::guest_memory_mapper(page_table_t& table, const size_t pml4e
 }
 
 framework::result<mapped_memory<guest_memory_mapper>> guest_memory_mapper::map(const uint64_t base, const size_t size) {
+    {
+        // single page optimization:
+        const auto page_start = framework::round_down(base, x86::paging::page_size_4k);
+        const auto end_page_start = framework::round_down(base + size, x86::paging::page_size_4k);
+        if (page_start == end_page_start) {
+            // all the memory is within a single page, no need to fully map it
+            const auto translated = environment::to_virtual(verify(gva_to_hpa(base)));
+            return framework::ok(mapped_memory<guest_memory_mapper>{nullptr, translated, size});
+        }
+    }
+
     const x86::paging::ia32e::linear_address_t guest_address(base);
 
     const auto ranges = verify(load_guest_ranges(base, size));
@@ -74,7 +86,7 @@ framework::result<x86::paging::ia32e::linear_address_t> guest_memory_mapper::map
     mapped_range* mapped_range;
     {
         framework::unique_lock lock(m_lock);
-        mapped_range = find_and_mark_available_range(required_pages);
+        mapped_range = verify(find_and_mark_available_range(required_pages));
     }
     if (mapped_range == nullptr) {
         return framework::err(framework::status_no_space);
@@ -86,6 +98,7 @@ framework::result<x86::paging::ia32e::linear_address_t> guest_memory_mapper::map
     for (int i = 0; i < ranges.count; i++) {
         const auto& range = ranges.ranges[i];
         for (int j = 0; j < range.count; j++) {
+            const auto frame_number = range.index + j;
             auto& pdpte = m_pdpt[current_pdpte_index];
             auto& pd = m_pd[current_pdpte_index];
             auto& pde = pd[current_pde_index];
@@ -107,8 +120,8 @@ framework::result<x86::paging::ia32e::linear_address_t> guest_memory_mapper::map
                 pde.small.rw = true;
             }
 
+            pte.bits.pfn = frame_number;
             pte.bits.present = true;
-            pte.bits.pfn = range.index + j;
             pte.bits.rw = true;
 
             current_pte_index++;
@@ -129,7 +142,7 @@ framework::result<x86::paging::ia32e::linear_address_t> guest_memory_mapper::map
     return framework::ok(mapped_range->mapped_base);
 }
 
-guest_memory_mapper::mapped_range* guest_memory_mapper::find_and_mark_available_range(const size_t page_count) {
+framework::result<guest_memory_mapper::mapped_range*> guest_memory_mapper::find_and_mark_available_range(const size_t page_count) {
     x86::paging::ia32e::linear_address_t start_address{};
     start_address.small.pml4e = m_pml4e_index;
 
@@ -148,28 +161,30 @@ guest_memory_mapper::mapped_range* guest_memory_mapper::find_and_mark_available_
         return insert_range(start_address, page_count);
     }
 
-    return nullptr;
+    return framework::err(framework::status_not_found);
 }
 
-guest_memory_mapper::mapped_range* guest_memory_mapper::insert_range_at(
+framework::result<guest_memory_mapper::mapped_range*> guest_memory_mapper::insert_range_at(
     const framework::vector<mapped_range>::iterator& it, const x86::paging::ia32e::linear_address_t& base, const size_t page_count) {
-    auto new_it = m_mapped.insert(it, { base, page_count });
-    return new_it.operator->();
+    auto new_it = verify(m_mapped.insert(it, { base, page_count }));
+    return framework::ok(new_it.operator->());
 }
 
-guest_memory_mapper::mapped_range* guest_memory_mapper::insert_range(
+framework::result<guest_memory_mapper::mapped_range*> guest_memory_mapper::insert_range(
     const x86::paging::ia32e::linear_address_t& base, const size_t page_count) {
-    m_mapped.push_back({ base, page_count });
-    return &m_mapped.back();
+    verify(m_mapped.push_back({ base, page_count }));
+    return framework::ok(&m_mapped.back());
 }
 
-void guest_memory_mapper::remove_range(const x86::paging::ia32e::linear_address_t& base) {
+framework::result<> guest_memory_mapper::remove_range(const x86::paging::ia32e::linear_address_t& base) {
     for (auto it = m_mapped.begin(); it != m_mapped.end(); ++it) {
         if (it->mapped_base.raw == base.raw) {
-            m_mapped.erase(it);
+            verify(m_mapped.erase(it));
             break;
         }
     }
+
+    return {};
 }
 
 size_t guest_memory_mapper::count_pages(const frame_ranges& ranges) const {

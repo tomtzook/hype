@@ -25,7 +25,7 @@ cp ${BINARY_PATH} ${RUN_PATH}/image/EFI/BOOT/BOOTX64.efi
 #-smp 2,cores=2,threads=1 \
 qemu-system-x86_64 \
   -cpu host \
-  -m 1G \
+  -m 2G \
   -M q35,accel=tcg \
   -gdb tcp::9000 \
   -serial stdio \

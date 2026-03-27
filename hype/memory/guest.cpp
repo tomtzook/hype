@@ -27,7 +27,27 @@ framework::result<x86::cr3_t> read_current_guest_cr3() {
 }
 
 framework::result<x86::paging::mode_t> read_current_guest_paging_mode() {
+    x86::cr0_t cr0;
+    verify_vmx(x86::vmx::vmread(x86::vmx::field_t::guest_cr0, cr0.raw));
+    x86::cr4_t cr4;
+    verify_vmx(x86::vmx::vmread(x86::vmx::field_t::guest_cr4, cr4.raw));
+    x86::msr::ia32_efer_t efer;
+    verify_vmx(x86::vmx::vmread(x86::vmx::field_t::guest_efer, efer.raw));
 
+    x86::paging::mode_t mode;
+    if (cr0.bits.paging_enable && cr4.bits.physical_address_extension) {
+        if (efer.bits.lma) {
+            mode = x86::paging::mode_t::ia32e;
+        } else {
+            mode = x86::paging::mode_t::pae;
+        }
+    } else if (cr0.bits.paging_enable) {
+        mode = x86::paging::mode_t::bit32;
+    } else {
+        mode = x86::paging::mode_t::disabled;
+    }
+
+    return framework::ok(mode);
 }
 
 framework::result<physical_address_t> gpa_to_hpa(const x86::vmx::ept_pointer_t& eptp, const uint64_t address) {
@@ -90,6 +110,14 @@ framework::result<physical_address_t> gva_to_hpa(const x86::vmx::ept_pointer_t& 
     return gpa_to_hpa(eptp, gpa);
 }
 
+framework::result<physical_address_t> gva_to_hpa(const uint64_t address) {
+    const auto eptp = verify(read_current_eptp());
+    const auto guest_cr3 = verify(read_current_guest_cr3());
+    const auto guest_paging_mode = verify(read_current_guest_paging_mode());
+
+    return gva_to_hpa(eptp, guest_paging_mode, guest_cr3, address);
+}
+
 framework::result<frame_ranges> load_guest_ranges(const x86::vmx::ept_pointer_t& eptp, const x86::paging::mode_t guest_mode, const x86::cr3_t& guest_cr3, const uint64_t base, const size_t size) {
     frame_ranges ranges{};
     for (auto address = base; address < base + size; address += x86::paging::page_size_4k) {
@@ -100,6 +128,7 @@ framework::result<frame_ranges> load_guest_ranges(const x86::vmx::ept_pointer_t&
         if (range.count == 0) {
             range.index = pfn;
             range.count = 1;
+            ranges.count++;
         } else if (range.index + 1 == pfn) {
             range.count++;
         } else {

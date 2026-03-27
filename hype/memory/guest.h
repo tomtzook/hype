@@ -13,6 +13,7 @@ framework::result<physical_address_t> gpa_to_hpa(const x86::vmx::ept_pointer_t& 
 framework::result<physical_address_t> gva_to_gpa_ia32(const x86::vmx::ept_pointer_t& eptp, const x86::cr3_t& guest_cr3, uint64_t address);
 framework::result<physical_address_t> gva_to_gpa(const x86::vmx::ept_pointer_t& eptp, x86::paging::mode_t guest_mode, const x86::cr3_t& guest_cr3, uint64_t address);
 framework::result<physical_address_t> gva_to_hpa(const x86::vmx::ept_pointer_t& eptp, x86::paging::mode_t guest_mode, const x86::cr3_t& guest_cr3, uint64_t address);
+framework::result<physical_address_t> gva_to_hpa(uint64_t address);
 
 struct frame_range {
     uint32_t index;

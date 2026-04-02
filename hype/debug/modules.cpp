@@ -207,7 +207,8 @@ framework::result<loaded_module> load_module(memory::memory_mapper<mem_t_>& memo
     return framework::ok(loaded_module{memory_mapper, image_base, framework::move(headers), framework::move(exception_table), framework::move(module_name_opt)});
 }
 
-static framework::result<const loaded_module&> find_module(loaded_modules& modules, const void* rip) {
+template<memory::memory_mapper_type mem_t_>
+framework::result<const loaded_module&> find_module(memory::memory_mapper<mem_t_>& memory_mapper, loaded_modules& modules, const void* rip) {
     {
         auto result = modules.find_module(rip);
         if (result) {
@@ -219,7 +220,8 @@ static framework::result<const loaded_module&> find_module(loaded_modules& modul
     // only search backwards up to 2MB, we don't want to search forever
     const auto end_address = start_address - x86::paging::page_size_2m;
     for (auto address = start_address; address >= end_address; address -= x86::paging::page_size) {
-        const auto* header = reinterpret_cast<const pe::ImageDosHeader*>(address);
+        auto mapped_start = verify(memory_mapper.map(address, sizeof(pe::ImageDosHeader)));
+        const auto* header = mapped_start.template data<pe::ImageDosHeader>();
         if (header->e_magic == pe::IMAGE_DOS_SIGNATURE) {
             // found pe signature, but need to make sure it is actually valid, which the following function
             // will check

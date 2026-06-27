@@ -216,7 +216,7 @@ framework::result<const loaded_module&> find_module(memory::memory_mapper<mem_t_
         }
     }
 
-    const auto start_address = framework::round_up(reinterpret_cast<uint64_t>(rip), x86::paging::page_size);
+    const auto start_address = framework::round_up<uint64_t>(reinterpret_cast<uint64_t>(rip), x86::paging::page_size);
     // only search backwards up to 2MB, we don't want to search forever
     const auto end_address = start_address - x86::paging::page_size_2m;
     for (auto address = start_address; address >= end_address; address -= x86::paging::page_size) {
@@ -355,7 +355,7 @@ framework::result<> print_stack_frame(memory::memory_mapper<memory::guest_memory
 
     ascii_format(buffer, offset, buffer_size, "Stack Unwind:\n");
     do {
-        const auto module_result = find_module(modules, current.rip);
+        const auto module_result = find_module(mapper, modules, current.rip);
         if (!module_result) {
             break;
         }

@@ -28,8 +28,8 @@ guest_memory_mapper::guest_memory_mapper(page_table_t& table, const size_t pml4e
 framework::result<mapped_memory<guest_memory_mapper>> guest_memory_mapper::map(const uint64_t base, const size_t size) {
     {
         // single page optimization:
-        const auto page_start = framework::round_down(base, x86::paging::page_size_4k);
-        const auto end_page_start = framework::round_down(base + size, x86::paging::page_size_4k);
+        const auto page_start = framework::round_down<uint64_t>(base, x86::paging::page_size_4k);
+        const auto end_page_start = framework::round_down<uint64_t>(base + size, x86::paging::page_size_4k);
         if (page_start == end_page_start) {
             // all the memory is within a single page, no need to fully map it
             const auto translated = environment::to_virtual(verify(gva_to_hpa(base)));

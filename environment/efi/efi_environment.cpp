@@ -123,7 +123,7 @@ framework::result<size_t> get_active_cpu_count() {
     uintn_t enabled_cpu_count;
     verify_efi(mp_services->GetNumberOfProcessors(mp_services, &cpu_count, &enabled_cpu_count));
 
-    return framework::ok(enabled_cpu_count);
+    return framework::ok(static_cast<size_t>(enabled_cpu_count));
 }
 
 framework::result<> run_on_all_vcpu(vcpu_procedure_t procedure, void* param) {

@@ -46,6 +46,7 @@ isr_stub_%+%1:
     call idt_handler
     add rsp, 20h
 
+    ; todo: consider the error code needing to be popped
     lea rcx, [rsp+30h]    ; context registers are at the top of the stack
     jmp asm_cpu_load_registers ; this will return from the interrupt
 %endmacro
@@ -89,8 +90,7 @@ isr_stub_%+%1:
     call idt_handler
     add rsp, 20h
 
-    lea rcx, [rsp+30h]    ; context registers are at the top of the stack
-    sub rsp, 30h
+    lea rcx, [rsp+28h]    ; context registers are at the top of the stack
     jmp asm_cpu_load_registers ; this will return from the interrupt
 %endmacro
 

@@ -157,6 +157,8 @@ framework::result<> serial_initialize() {
     return {};
 }
 
+constexpr auto COM2_BASE = 0x2F8;
+
 framework::result<char> serial_read() {
     char ch;
     const auto read = SerialPortRead(reinterpret_cast<UINT8*>(&ch), 1);
@@ -167,9 +169,29 @@ framework::result<char> serial_read() {
     return framework::ok(ch);
 }
 
-framework::result<> serial_write(char ch) {
-    const auto written = SerialPortWrite(reinterpret_cast<UINT8*>(&ch), 1);
+framework::result<> serial_write(const char ch) {
+    const auto written = SerialPortWrite(reinterpret_cast<UINT8*>(const_cast<char*>(&ch)), 1);
     assert(written == 1, "write failed for unknown reason");
+    return {};
+}
+
+framework::result<bool> serial2_available() {
+    return framework::ok((IoRead8 (COM2_BASE + 5) & 0x01) != 0);
+}
+
+framework::result<char> serial2_read() {
+    // Wait for Data Ready (DR) bit to be set
+    while ((IoRead8 (COM2_BASE + 5) & 0x01) == 0) {}
+    const auto ch = static_cast<char>(IoRead8(COM2_BASE));
+
+    return framework::ok(ch);
+}
+
+framework::result<> serial2_write(const char ch) {
+    // Wait for Transmitter Holding Register Empty (THRE) bit to be set
+    while ((IoRead8 (COM2_BASE + 5) & 0x20) == 0) {}
+    IoWrite8 (COM2_BASE, ch);
+
     return {};
 }
 

@@ -21,7 +21,8 @@ static void handle_general_protection(const uint64_t error_code) {
 
     switch (selector.bits.tbl) {
         case x86::interrupts::selector_error_code_table_t::gdt: {
-            auto gdt = x86::segments::table_t(x86::read<x86::segments::gdtr_t>());
+            const auto gdtr = x86::read<x86::segments::gdtr_t>();
+            auto gdt = x86::segments::table_t(gdtr);
             if (gdt.count() < selector.bits.index) {
                 const auto& segment = gdt[selector.bits.index];
                 trace_debug("General Protection fault. At: 0x%x GDT segment, base=0x%llx, limit=0x%llx, s=0x%x, type=0x%x, avail=0x%x, present=0x%x, db=0x%x, dpl=0x%x, long=0x%x, gran=0x%x, raw=0x%llx",
@@ -38,6 +39,7 @@ static void handle_general_protection(const uint64_t error_code) {
                     segment.raw);
             } else {
                 trace_debug("General Protection fault. At 0x%x GDT segment (not in gdt)", selector.bits.index);
+                //hype::memory::trace_gdt(gdtr);
             }
             break;
         }
@@ -96,6 +98,7 @@ extern "C" void idt_handler(const uint64_t vector, const uint64_t error_code, co
     auto* registers = reinterpret_cast<hype::cpu_registers_t*>(reinterpret_cast<uint64_t>(cpu.interrupt_stack.end()) - hype::vcpu_t::stack_shadow_space);
 
     trace_debug("IDT Called from 0x%p for [0x%x] %a(0x%x) cs=0x%x", rip, vector, x86::interrupts::vector_to_str(interrupt), error_code, cs);
+    hype::trace_regs(*registers);
 
     switch (interrupt) {
         case x86::interrupts::interrupt_t::general_protection:
@@ -112,9 +115,9 @@ extern "C" void idt_handler(const uint64_t vector, const uint64_t error_code, co
     // todo: lock other processors???
     // todo: single step
     // todo: breakpoints
-    gdbstub::handle(interrupt, *registers);
+    gdbstub::handle_interrupt(interrupt, *registers);
 
-    if (vector < 32) {
+    if (vector < 32 && vector != 3) {
         // these are problem interrupts, halt
         hype::hlt_cpu();
     }

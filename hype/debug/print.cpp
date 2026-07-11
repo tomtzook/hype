@@ -5,6 +5,8 @@
 
 #include "print.h"
 
+#include "x86/regs.h"
+
 namespace hype::debug {
 
 static bool isprint(const uint8_t c) {

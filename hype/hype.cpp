@@ -6,16 +6,15 @@
 #include <x86/mtrr.h>
 #include <x86/apic.h>
 #include <x86/id.h>
-#include <x86/regs.h>
 
 #include <base.h>
 #include "cpu.h"
-#include "memory.h"
 #include "context.h"
 #include "vmx/vmx.h"
 #include "vmx/vmentry.h"
 #include "debug.h"
 #include "hype.h"
+#include "debug/hype_gdbstub.h"
 
 namespace hype {
 

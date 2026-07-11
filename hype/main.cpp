@@ -47,6 +47,7 @@ UefiMain(
 
     disable_qemu_timers();
     gdbstub::initialize();
+    gdbstub::wait_for_server();
 
     {
         const auto result = init(ImageHandle);

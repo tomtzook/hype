@@ -61,6 +61,8 @@ static_assert(offsetof(cpu_registers_t, fs) == 0x96, "offsetof fs");
 static_assert(offsetof(cpu_registers_t, gs) == 0x98, "offsetof gs");
 static_assert(offsetof(cpu_registers_t, ss) == 0x9a, "offsetof ss");
 
+void trace_regs(cpu_registers_t& regs);
+
 void deadloop();
 [[noreturn]] void hlt_cpu();
 

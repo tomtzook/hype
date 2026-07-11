@@ -7,16 +7,16 @@
 
 namespace gdbstub {
 
-void write_char(const char ch) {
-    const auto result = environment::serial_write(ch);
+static void write_char(const char ch) {
+    const auto result = environment::serial2_write(ch);
     if (result.is_error()) {
         trace_result("gdbstub write_char failed", result);
         catastrophic_error("gdbstub failure");
     }
 }
 
-char read_char() {
-    const auto result = environment::serial_read();
+static char read_char() {
+    const auto result = environment::serial2_read();
     if (result.is_error()) {
         trace_result("gdbstub read_char failed", result);
         catastrophic_error("gdbstub failure");
@@ -25,12 +25,17 @@ char read_char() {
     return result.value();
 }
 
-void initialize() {
-    set_read_write(read_char, write_char);
+static bool available_char() {
+    const auto result = environment::serial2_available();
+    if (result.is_error()) {
+        trace_result("gdbstub available_char failed", result);
+        catastrophic_error("gdbstub failure");
+    }
+
+    return result.value();
 }
 
-void handle(const x86::interrupts::interrupt_t vector, hype::cpu_registers_t& registers) {
-    x86_64::registers_t gdb_regs{};
+static void store_regs(const hype::cpu_registers_t& registers, x86_64::registers_t& gdb_regs) {
     gdb_regs.rax = registers.rax;
     gdb_regs.rbx = registers.rbx;
     gdb_regs.rcx = registers.rcx;
@@ -43,7 +48,7 @@ void handle(const x86::interrupts::interrupt_t vector, hype::cpu_registers_t& re
     gdb_regs.r13 = registers.r13;
     gdb_regs.r14 = registers.r14;
     gdb_regs.r15 = registers.r15;
-    gdb_regs.rflags = registers.rflags;
+    gdb_regs.rflags_full = registers.rflags;
     gdb_regs.rsi = registers.rsi;
     gdb_regs.rdi = registers.rdi;
     gdb_regs.rbp = registers.rbp;
@@ -55,9 +60,9 @@ void handle(const x86::interrupts::interrupt_t vector, hype::cpu_registers_t& re
     gdb_regs.fs = registers.fs;
     gdb_regs.gs = registers.gs;
     gdb_regs.ss = registers.ss;
+}
 
-    x86_64::handle_exception(static_cast<unsigned int>(vector), gdb_regs);
-
+static void load_regs(hype::cpu_registers_t& registers, const x86_64::registers_t& gdb_regs) {
     registers.rax = gdb_regs.rax;
     registers.rbx = gdb_regs.rbx;
     registers.rcx = gdb_regs.rcx;
@@ -70,7 +75,7 @@ void handle(const x86::interrupts::interrupt_t vector, hype::cpu_registers_t& re
     registers.r13 = gdb_regs.r13;
     registers.r14 = gdb_regs.r14;
     registers.r15 = gdb_regs.r15;
-    registers.rflags = gdb_regs.rflags;
+    registers.rflags = gdb_regs.rflags_full;
     registers.rsi = gdb_regs.rsi;
     registers.rdi = gdb_regs.rdi;
     // registers.rbp = gdb_regs.rbp;
@@ -82,6 +87,58 @@ void handle(const x86::interrupts::interrupt_t vector, hype::cpu_registers_t& re
     // registers.fs = gdb_regs.fs;
     // registers.gs = gdb_regs.gs;
     // registers.ss = gdb_regs.ss;
+}
+
+static void start_handling() {
+    volatile bool reloaded = false;
+
+    hype::cpu_registers_t registers{};
+    asm_cpu_store_registers(&registers);
+    if (reloaded) {
+        return;
+    }
+
+    x86_64::registers_t gdb_regs{};
+    store_regs(registers, gdb_regs);
+    x86_64::enter_loop(gdb_regs);
+    load_regs(registers, gdb_regs);
+
+    // ReSharper disable once CppDFAUnusedValue
+    reloaded = true;
+    asm_cpu_store_registers(&registers);
+}
+
+void initialize() {
+    initialize(read_char, write_char);
+}
+
+void handle_interrupt(const x86::interrupts::interrupt_t vector, hype::cpu_registers_t& registers) {
+    x86_64::registers_t gdb_regs{};
+    store_regs(registers, gdb_regs);
+
+    x86_64::handle_exception(static_cast<unsigned int>(vector), gdb_regs);
+
+    load_regs(registers, gdb_regs);
+}
+
+void start_handling_if_prompted() {
+    if (!available_char()) {
+        return;
+    }
+    if (read_char() != 0x03) {
+        return;
+    }
+
+    start_handling();
+}
+
+void wait_for_server() {
+    const auto ch = read_char();
+    if (ch != 0x03 && ch != '+') {
+        return;
+    }
+
+    start_handling();
 }
 
 }

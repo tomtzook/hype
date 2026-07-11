@@ -11,6 +11,7 @@
 #include "debug/print.h"
 #include "cpu.h"
 #include "vmentry.h"
+#include "debug/hype_gdbstub.h"
 
 namespace hype {
 
@@ -109,6 +110,8 @@ static framework::result<> handle_ept_violation(const cpu_registers_t& registers
 }
 
 framework::result<> handle_vmexit(cpu_registers_t& registers) {
+    gdbstub::start_handling_if_prompted();
+
     const auto old_rsp = registers.rsp;
     const auto old_rflags = registers.rflags;
 

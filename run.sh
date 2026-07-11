@@ -29,6 +29,7 @@ qemu-system-x86_64 \
   -M q35,accel=tcg \
   -gdb tcp::9000 \
   -serial stdio \
+  -serial tcp:127.0.0.1:5555,server,nowait \
   -d int,cpu_reset,pcall,guest_errors -no-reboot -no-shutdown \
   -enable-kvm \
   -bios ${OVMF_DISK_IMG} \

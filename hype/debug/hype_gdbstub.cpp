@@ -122,6 +122,8 @@ void handle_interrupt(const x86::interrupts::interrupt_t vector, hype::cpu_regis
 }
 
 void start_handling_if_prompted() {
+    gdbstub::reload_breakpoints();
+
     if (!available_char()) {
         return;
     }

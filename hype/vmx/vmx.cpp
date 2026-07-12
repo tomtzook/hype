@@ -3,6 +3,7 @@
 #include <x86/vmx/controls.h>
 #include <x86/interrupts.h>
 #include <x86/rflags.h>
+#include <x86/dr.h>
 
 #include "environment.h"
 #include "vmexit.h"

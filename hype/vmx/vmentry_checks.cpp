@@ -10,6 +10,7 @@
 #include <x86/rflags.h>
 #include <x86/segments.h>
 #include <x86/vmx/segments.h>
+#include <x86/dr.h>
 
 #include <base.h>
 #include "status.h"

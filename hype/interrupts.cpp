@@ -1,7 +1,9 @@
 
+#include <x86/dr.h>
+#include <x86/rflags.h>
+
 #include "environment.h"
 #include "cpu.h"
-#include "memory.h"
 #include "interrupts.h"
 
 #include "context.h"
@@ -91,6 +93,45 @@ static void handle_page_fault(const uint64_t error_code, const uint64_t rip, con
     }
 }
 
+bool handle_debug_break() {
+    auto dr6 = x86::read<x86::dr6_t>();
+    const auto dr7 = x86::read<x86::dr7_t>();
+
+    bool did_breakpoint_hit = false;
+    if (dr6.bits.bp_0_cond) {
+        const auto dr_addr = x86::read<x86::dr0_t>();
+        trace_debug("Debug Break on bp0: addr=0x%x, len=%d, cond=%d", dr_addr.raw, dr7.bits.length_bp_0, dr7.bits.condition_bp_0);
+
+        dr6.bits.bp_0_cond = false;
+        did_breakpoint_hit = true;
+    } else if (dr6.bits.bp_1_cond) {
+        const auto dr_addr = x86::read<x86::dr1_t>();
+        trace_debug("Debug Break on bp1: addr=0x%x, len=%d, cond=%d", dr_addr.raw, dr7.bits.length_bp_1, dr7.bits.condition_bp_1);
+
+        dr6.bits.bp_1_cond = false;
+        did_breakpoint_hit = true;
+    } else if (dr6.bits.bp_2_cond) {
+        const auto dr_addr = x86::read<x86::dr2_t>();
+        trace_debug("Debug Break on bp2: addr=0x%x, len=%d, cond=%d", dr_addr.raw, dr7.bits.length_bp_2, dr7.bits.condition_bp_2);
+
+        dr6.bits.bp_2_cond = false;
+        did_breakpoint_hit = true;
+    } else if (dr6.bits.bp_3_cond) {
+        const auto dr_addr = x86::read<x86::dr3_t>();
+        trace_debug("Debug Break on bp3: addr=0x%x, len=%d, cond=%d", dr_addr.raw, dr7.bits.length_bp_3, dr7.bits.condition_bp_3);
+
+        dr6.bits.bp_3_cond = false;
+        did_breakpoint_hit = true;
+    }
+
+    if (did_breakpoint_hit) {
+        x86::write(dr6);
+        return true;
+    }
+
+    return false;
+}
+
 extern "C" void idt_handler(const uint64_t vector, const uint64_t error_code, const uint64_t rip, const uint16_t cs) {
     const auto interrupt = static_cast<x86::interrupts::interrupt_t>(vector);
 
@@ -100,6 +141,7 @@ extern "C" void idt_handler(const uint64_t vector, const uint64_t error_code, co
     trace_debug("IDT Called from 0x%p for [0x%x] %a(0x%x) cs=0x%x", rip, vector, x86::interrupts::vector_to_str(interrupt), error_code, cs);
     hype::trace_regs(*registers);
 
+    bool did_breakpoint_hit = false;
     switch (interrupt) {
         case x86::interrupts::interrupt_t::general_protection:
             handle_general_protection(error_code);
@@ -107,15 +149,23 @@ extern "C" void idt_handler(const uint64_t vector, const uint64_t error_code, co
         case x86::interrupts::interrupt_t::page_fault:
             handle_page_fault(error_code, rip, x86::read<x86::cr2_t>().raw);
             break;
+        case x86::interrupts::interrupt_t::debug_exception:
+            did_breakpoint_hit = handle_debug_break();
+            break;
         default:
             break;
     }
 
     // todo: multiprocessing, state per processor for gdb
     // todo: lock other processors???
-    // todo: single step
-    // todo: breakpoints
     gdbstub::handle_interrupt(interrupt, *registers);
+
+    if (did_breakpoint_hit) {
+        // breakpoint hit, we must set the resume flag
+        x86::rflags_t rflags{registers->rflags};
+        rflags.bits.resume_flag = true;
+        registers->rflags = rflags.raw;
+    }
 
     if (vector < 32 && vector != 3) {
         // these are problem interrupts, halt

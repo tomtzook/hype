@@ -46,8 +46,6 @@ UefiMain(
     trace_debug("entry");
 
     disable_qemu_timers();
-    gdbstub::initialize();
-    gdbstub::wait_for_server();
 
     {
         const auto result = init(ImageHandle);
@@ -68,14 +66,15 @@ UefiMain(
         trace_debug("Main Start: base=0x%llx, end=0x%llx, size=0x%llx", info.base, reinterpret_cast<uint64_t>(info.base) + info.size, info.size);
     }
 
+    gdbstub::initialize();
+    gdbstub::wait_for_server();
+
     {
         const auto result = start();
         if (result) {
             auto res = x86::cpuid(1, 0);
             trace_debug("RES CPUID[rax=1, rcx=0]: eax=0x%lx, ebx=0x%lx, ecx=0x%lx, edx=0x%lx",
                 res.eax, res.ebx, res.ecx, res.edx);
-
-            // x86::debugbreak();
 
             trace_debug("Hypervisor Launched");
             __asm__ volatile ("cli; hlt");

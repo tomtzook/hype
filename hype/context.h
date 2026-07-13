@@ -67,6 +67,7 @@ struct context_t {
     volatile uint8_t cpu_init_index{};
 };
 
+bool is_context_initialized();
 context_t& get_context();
 
 inline vcpu_t& get_current_vcpu() {

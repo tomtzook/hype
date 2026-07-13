@@ -18,6 +18,12 @@
 
 namespace hype {
 
+static bool g_ctx_initialized = false;
+
+bool is_context_initialized() {
+    return g_ctx_initialized;
+}
+
 // todo: use optional context so to only initialize this when we decide
 context_t& get_context() {
     static context_t context;
@@ -34,6 +40,8 @@ static wanted_vm_controls_t get_wanted_vm_controls() {
     controls.secondary_procbased.bits.unrestricted_guest = true;
     controls.vmentry.bits.ia32e_mode_guest = true;
     controls.vmexit.bits.host_address_space_size = true;
+    controls.pinbased.bits.nmi_exiting = false;
+    controls.pinbased.bits.external_interrupt_exiting = true;
 
     return controls;
 }
@@ -95,7 +103,9 @@ static framework::result<> init_context(context_t& context, const x86::mtrr::mtr
     trace_debug("Mapping Stack Guard");
     context.stack_guard.map_into_pml4e(context.page_table, memory::page_table_t::stack_guard_pml4e);
 
-    trace_debug("Done context init");
+    trace_debug("Done context init, core count=%d", context.cpu_count);
+
+    g_ctx_initialized = true;
 
     return {};
 }

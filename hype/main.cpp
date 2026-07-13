@@ -67,7 +67,7 @@ UefiMain(
     }
 
     gdbstub::initialize();
-    gdbstub::wait_for_server();
+    //gdbstub::wait_for_server();
 
     {
         const auto result = start();

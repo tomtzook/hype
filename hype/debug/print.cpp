@@ -122,6 +122,7 @@ static void print_op(char* buffer, size_t& offset, size_t& buffer_size, const x8
 }
 
 static void print_opcode(char* buffer, size_t& offset, size_t& buffer_size, const uint8_t* opcode_ptr, const size_t opcode_size, const x86::opcode::decoded_opcode_t& opcode) {
+    ascii_format(buffer, offset, buffer_size, "\n");
     ascii_format(buffer, offset, buffer_size, "%04x ", opcode_ptr);
 
     for (int i = 0; i < opcode_size; ++i) {
@@ -137,7 +138,6 @@ static void print_opcode(char* buffer, size_t& offset, size_t& buffer_size, cons
         ascii_format(buffer, offset, buffer_size, ", ");
     }
     print_op(buffer, offset, buffer_size, opcode.op2);
-    ascii_format(buffer, offset, buffer_size, "\n");
 }
 
 void instruction_dump(const void* data, size_t count) {
@@ -145,7 +145,7 @@ void instruction_dump(const void* data, size_t count) {
     size_t offset = 0;
     size_t buffer_size = sizeof(buffer);
 
-    ascii_format(buffer, offset, buffer_size, "Instruction Dump:\n");
+    ascii_format(buffer, offset, buffer_size, "Instruction Dump:");
 
     const auto* ptr = static_cast<const uint8_t*>(data);
     while ((count--) > 0) {
@@ -154,7 +154,7 @@ void instruction_dump(const void* data, size_t count) {
             print_opcode(buffer, offset, buffer_size, ptr, (static_cast<const uint8_t*>(res.ptr) - ptr), res.opcode);
             ptr = static_cast<const uint8_t*>(res.ptr);
         } else {
-            ascii_format(buffer, offset, buffer_size, "Failed to decode: code=0x%x\n", res.error_code);
+            ascii_format(buffer, offset, buffer_size, "\nFailed to decode: code=0x%x", res.error_code);
             break;
         }
     }

@@ -134,7 +134,7 @@ framework::result<> run_on_all_vcpu(vcpu_procedure_t procedure, void* param) {
     context.procedure = procedure;
     context.param = param;
 
-    // run on bsp first
+    // run on bsp
     mp_procedure(&context);
 
     const auto status = mp_services->StartupAllAPs(mp_services, mp_procedure, true, nullptr, 0, &context, nullptr);
@@ -176,12 +176,12 @@ framework::result<> serial_write(const char ch) {
 }
 
 framework::result<bool> serial2_available() {
-    return framework::ok((IoRead8 (COM2_BASE + 5) & 0x01) != 0);
+    return framework::ok((IoRead8(COM2_BASE + 5) & 0x01) != 0);
 }
 
 framework::result<char> serial2_read() {
     // Wait for Data Ready (DR) bit to be set
-    while ((IoRead8 (COM2_BASE + 5) & 0x01) == 0) {}
+    while ((IoRead8(COM2_BASE + 5) & 0x01) == 0) {}
     const auto ch = static_cast<char>(IoRead8(COM2_BASE));
 
     return framework::ok(ch);
@@ -189,10 +189,27 @@ framework::result<char> serial2_read() {
 
 framework::result<> serial2_write(const char ch) {
     // Wait for Transmitter Holding Register Empty (THRE) bit to be set
-    while ((IoRead8 (COM2_BASE + 5) & 0x20) == 0) {}
+    while ((IoRead8(COM2_BASE + 5) & 0x20) == 0) {}
     IoWrite8 (COM2_BASE, ch);
 
     return {};
+}
+
+bool g_trace_enabled_for_core[32]{true};
+
+scoped_trace_disabler::scoped_trace_disabler() {
+    set_trace_disabled_for_core();
+}
+scoped_trace_disabler::~scoped_trace_disabler() {
+    set_trace_enabled_for_core();
+}
+
+void set_trace_enabled_for_core() {
+    g_trace_enabled_for_core[get_current_vcpu_id()] = true;
+}
+
+void set_trace_disabled_for_core() {
+    g_trace_enabled_for_core[get_current_vcpu_id()] = false;
 }
 
 }

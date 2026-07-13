@@ -1,4 +1,7 @@
 
+#include <atomic.h>
+#include <x86/apic.h>
+
 #include <gdbstub.h>
 #include <gdbstub_x86_64.h>
 
@@ -6,6 +9,12 @@
 #include "hype_gdbstub.h"
 
 namespace gdbstub {
+
+static struct{
+    framework::atomic<bool> is_gdbstub_owned{false};
+    framework::atomic<int> collected_count{0};
+    size_t active_core_count = 0;
+} g_context;
 
 static void write_char(const char ch) {
     const auto result = environment::serial2_write(ch);
@@ -89,6 +98,38 @@ static void load_regs(hype::cpu_registers_t& registers, const x86_64::registers_
     // registers.ss = gdb_regs.ss;
 }
 
+static void signal_all_cores() {
+    trace_debug("starting signal to all cores");
+
+    g_context.collected_count.store(0);
+
+    if (g_context.active_core_count > 1) {
+        x86::apic::send_ipi(
+           0x40,
+           x86::apic::delivery_mode_t::fixed,
+           x86::apic::destination_mode_t::logical,
+           x86::apic::level_t::assert,
+           x86::apic::trigger_mode_t::level,
+           x86::apic::destination_shorthand_t::all_no_self);
+
+        while (g_context.collected_count.load() < (g_context.active_core_count - 1)) {
+            __asm__ __volatile__("pause");
+        }
+
+        trace_debug("all cores responded");
+    }
+}
+
+static void on_core_signalled() {
+    trace_debug("core signalled for gdb %d", environment::get_current_vcpu_id());
+    g_context.collected_count.add_fetch(1);
+
+    // todo: store registers!
+    while (g_context.is_gdbstub_owned.load()) {
+        __asm__ __volatile__("pause");
+    }
+}
+
 static void start_handling() {
     volatile bool reloaded = false;
 
@@ -97,6 +138,8 @@ static void start_handling() {
     if (reloaded) {
         return;
     }
+
+    signal_all_cores();
 
     x86_64::registers_t gdb_regs{};
     store_regs(registers, gdb_regs);
@@ -113,34 +156,54 @@ void initialize() {
 }
 
 void handle_interrupt(const x86::interrupts::interrupt_t vector, hype::cpu_registers_t& registers) {
-    x86_64::registers_t gdb_regs{};
-    store_regs(registers, gdb_regs);
+    if (!g_context.is_gdbstub_owned.exchange(true)) {
+        trace_debug("enter gdbstub due to exception");
 
-    x86_64::handle_exception(static_cast<unsigned int>(vector), gdb_regs);
+        signal_all_cores();
 
-    load_regs(registers, gdb_regs);
+        x86_64::registers_t gdb_regs{};
+        store_regs(registers, gdb_regs);
+
+        x86_64::handle_exception(static_cast<unsigned int>(vector), gdb_regs);
+        load_regs(registers, gdb_regs);
+
+        g_context.is_gdbstub_owned.store(false);
+    } else if (static_cast<int>(vector) == 0x40) {
+        on_core_signalled();
+    }
 }
 
 void start_handling_if_prompted() {
     gdbstub::reload_breakpoints();
 
+    if (g_context.is_gdbstub_owned.load()) {
+        on_core_signalled();
+        return;
+    }
     if (!available_char()) {
         return;
     }
-    if (read_char() != 0x03) {
-        return;
-    }
 
-    start_handling();
+    if (!g_context.is_gdbstub_owned.exchange(true)) {
+        if (read_char() == 0x03) {
+            trace_debug("gdb server sent interrupt");
+            start_handling();
+        }
+
+        g_context.is_gdbstub_owned.store(false);
+    }
 }
 
 void wait_for_server() {
-    const auto ch = read_char();
-    if (ch != 0x03 && ch != '+') {
-        return;
-    }
+    if (!g_context.is_gdbstub_owned.exchange(true)) {
+        trace_debug("waiting for gdb server");
+        const auto ch = read_char();
+        if (ch == 0x03 || ch == '+') {
+            start_handling();
+        }
 
-    start_handling();
+        g_context.is_gdbstub_owned.store(false);
+    }
 }
 
 }

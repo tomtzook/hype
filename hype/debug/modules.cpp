@@ -353,25 +353,28 @@ framework::result<> print_stack_frame(memory::memory_mapper<memory::guest_memory
     size_t offset = 0;
     size_t buffer_size = sizeof(buffer);
 
-    ascii_format(buffer, offset, buffer_size, "Stack Unwind:\n");
-    do {
-        const auto module_result = find_module(mapper, modules, current.rip);
-        if (!module_result) {
-            break;
-        }
+    {
+        environment::scoped_trace_disabler trace_disabler;
+        ascii_format(buffer, offset, buffer_size, "Stack Unwind:");
+        do {
+            const auto module_result = find_module(mapper, modules, current.rip);
+            if (!module_result) {
+                break;
+            }
 
-        const auto& module = module_result.value();
-        ascii_format(buffer, offset, buffer_size, "\tFrame: [Module %a (0x%p -> 0x%p)] rip=0x%p, rbp=0x%p, rsp=0x%p\n",
-                module.name(), module.guest_base(), module.guest_end(),
-                current.rip, current.rbp, current.rsp);
+            const auto& module = module_result.value();
+            ascii_format(buffer, offset, buffer_size, "\n\tFrame: [Module %a (0x%p -> 0x%p)] rip=0x%p, rbp=0x%p, rsp=0x%p",
+                    module.name(), module.guest_base(), module.guest_end(),
+                    current.rip, current.rbp, current.rsp);
 
-        const auto result = unwind_next(mapper, module, current);
-        if (!result) {
-            break;
-        }
+            const auto result = unwind_next(mapper, module, current);
+            if (!result) {
+                break;
+            }
 
-        current = result.value();
-    } while (true);
+            current = result.value();
+        } while (true);
+    }
 
     buffer[offset] = '\0';
     trace_debug("%a", buffer);

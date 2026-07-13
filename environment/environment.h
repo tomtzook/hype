@@ -36,4 +36,13 @@ framework::result<bool> serial2_available();
 framework::result<char> serial2_read();
 framework::result<> serial2_write(char ch);
 
+
+struct scoped_trace_disabler {
+    scoped_trace_disabler();
+    ~scoped_trace_disabler();
+};
+
+void set_trace_enabled_for_core();
+void set_trace_disabled_for_core();
+
 }

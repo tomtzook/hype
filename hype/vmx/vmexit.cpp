@@ -119,14 +119,13 @@ framework::result<> handle_vmexit(cpu_registers_t& registers) {
     verify_vmx(x86::vmx::vmread(x86::vmx::field_t::guest_rsp, registers.rsp));
     verify_vmx(x86::vmx::vmread(x86::vmx::field_t::guest_rflags, registers.rflags));
 
-    auto& context = get_context();
-
     uint64_t exit_reason_raw;
     verify_vmx(x86::vmx::vmread(x86::vmx::field_t::exit_reason, exit_reason_raw));
 
     const auto exit_reason = static_cast<x86::vmx::exit_reason_t>(exit_reason_raw & 0xffff);
     trace_debug("Exit %a (%u) From 0x%p", x86::vmx::exit_reason_str(exit_reason), static_cast<uint16_t>(exit_reason), registers.rip);
 
+    auto& context = get_context();
     debug::instruction_dump(reinterpret_cast<const void*>(registers.rip), 4);
     //debug::memdump(reinterpret_cast<const void*>(registers.rip), 0x10);
     debug::print_stack_frame(context.guest_memory_mapper, context.loaded_modules, registers.rip, registers.rbp, registers.rsp);

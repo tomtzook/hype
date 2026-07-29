@@ -6,11 +6,16 @@
 #include "cpu.h"
 #include "interrupts.h"
 
+#include "config.h"
 #include "context.h"
 #include "debug/hype_gdbstub.h"
 
+// todo: remove
+#include <efi/efi_base.h>
 
 extern "C" void* isr_stub_table[];
+
+namespace hype::interrupts {
 
 static void handle_general_protection(const uint64_t error_code) {
     if (error_code == 0) {
@@ -93,7 +98,7 @@ static void handle_page_fault(const uint64_t error_code, const uint64_t rip, con
     }
 }
 
-bool handle_debug_break() {
+static bool handle_debug_break() {
     auto dr6 = x86::read<x86::dr6_t>();
     const auto dr7 = x86::read<x86::dr7_t>();
 
@@ -132,14 +137,50 @@ bool handle_debug_break() {
     return false;
 }
 
-extern "C" void idt_handler(const uint64_t vector, const uint64_t error_code, const uint64_t rip, const uint16_t cs) {
-    const auto interrupt = static_cast<x86::interrupts::interrupt_t>(vector);
+bool g_isTracingWrite = false;
 
-    auto& cpu = hype::get_current_vcpu();
-    auto* registers = reinterpret_cast<hype::cpu_registers_t*>(reinterpret_cast<uint64_t>(cpu.interrupt_stack.end()) - hype::vcpu_t::stack_shadow_space);
+static void handle_interrupt(const x86::interrupts::interrupt_t interrupt, const uint64_t error_code, const uint64_t rip, const uint16_t cs) {
+#define TARGET_PAGE 0x7BF48000ULL // 4KB aligned base address of 0x7bf4a020
+#define TARGET_ADDR 0x7bf48068ULL
+#define RFLAGS_TF   (1ULL << 8)
 
-    trace_debug("IDT Called from 0x%p for [0x%x] %a(0x%x) cs=0x%x", rip, vector, x86::interrupts::vector_to_str(interrupt), error_code, cs);
-    hype::trace_regs(*registers);
+    auto& cpu = get_current_vcpu();
+    auto* registers = reinterpret_cast<cpu_registers_t*>(reinterpret_cast<uint64_t>(cpu.interrupt_stack.end()) - vcpu_t::stack_shadow_space);
+
+    // todo: remove. create generic callback for interrupts
+    if (interrupt == x86::interrupts::interrupt_t::page_fault) {
+        const auto faulting_address = x86::read<x86::cr2_t>().raw;
+        if ((faulting_address & ~0xffull) == TARGET_PAGE) {
+            if (error_code & 0x2) {
+                AsciiPrint("Writing access to 0x%llx from 0x%llx: 0x%x\n", faulting_address, rip, registers->rax & 0xff);
+
+                x86::paging::ia32e::apply_permissions(x86::read<x86::cr3_t>(), TARGET_PAGE, true, false);
+                x86::paging::invlpg(TARGET_PAGE);
+
+                registers->rflags |= RFLAGS_TF;
+                g_isTracingWrite = true;
+                return;
+            }
+        } else {
+            memory::split_large_into_small(get_context().page_table, faulting_address);
+            x86::paging::ia32e::apply_permissions(x86::read<x86::cr3_t>(), faulting_address, true, false);
+            x86::paging::ia32e::apply_permissions(x86::read<x86::cr3_t>(), TARGET_PAGE, false, false);
+            x86::paging::invlpg(faulting_address);
+            return;
+        }
+    }
+    if (g_isTracingWrite && interrupt == x86::interrupts::interrupt_t::debug_exception) {
+        AsciiPrint("Removing writing access 0x%llx\n", rip);
+        g_isTracingWrite = false;
+        registers->rflags &= ~RFLAGS_TF;
+        x86::paging::ia32e::apply_permissions(x86::read<x86::cr3_t>(), TARGET_PAGE, false, false);
+        x86::paging::invlpg(TARGET_PAGE);
+        return;
+    }
+
+    // todo: separate print mechanism for when in interrupt, so as to not rely on potentially problematic code
+    trace_debug("IDT Called from 0x%p for [0x%x] %a(0x%x) cs=0x%x", rip, static_cast<uint32_t>(interrupt), x86::interrupts::vector_to_str(interrupt), error_code, cs);
+    trace_regs(*registers);
 
     bool did_breakpoint_hit = false;
     switch (interrupt) {
@@ -156,9 +197,11 @@ extern "C" void idt_handler(const uint64_t vector, const uint64_t error_code, co
             break;
     }
 
-    // todo: multiprocessing, state per processor for gdb
-    // todo: lock other processors???
-    gdbstub::handle_interrupt(interrupt, *registers);
+    if constexpr (config::embedded_gdbstub) {
+        // todo: multiprocessing, state per processor for gdb
+        // todo: lock other processors???
+        gdbstub::handle_interrupt(interrupt, *registers);
+    }
 
     if (did_breakpoint_hit) {
         // breakpoint hit, we must set the resume flag
@@ -167,13 +210,11 @@ extern "C" void idt_handler(const uint64_t vector, const uint64_t error_code, co
         registers->rflags = rflags.raw;
     }
 
-    if (vector < 32 && vector != 3) {
+    if (static_cast<uint32_t>(interrupt) < 32 && interrupt != x86::interrupts::interrupt_t::breakpoint) {
         // these are problem interrupts, halt
-        hype::hlt_cpu();
+        hlt_cpu();
     }
 }
-
-namespace hype::interrupts {
 
 void trace_idt(const x86::interrupts::idtr_t& idtr) {
     auto table = x86::interrupts::table64_t(idtr);
@@ -218,4 +259,9 @@ framework::result<> setup_idt(x86::interrupts::idtr_t& idtr, idt_t& idt) {
     return {};
 }
 
+}
+
+extern "C" void idt_handler(const uint64_t vector, const uint64_t error_code, const uint64_t rip, const uint16_t cs) {
+    const auto interrupt = static_cast<x86::interrupts::interrupt_t>(vector);
+    hype::interrupts::handle_interrupt(interrupt, error_code, rip, cs);
 }

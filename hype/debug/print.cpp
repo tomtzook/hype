@@ -5,8 +5,6 @@
 
 #include "print.h"
 
-#include "x86/regs.h"
-
 namespace hype::debug {
 
 static bool isprint(const uint8_t c) {
@@ -157,6 +155,112 @@ void instruction_dump(const void* data, size_t count) {
             ascii_format(buffer, offset, buffer_size, "\nFailed to decode: code=0x%x", res.error_code);
             break;
         }
+    }
+
+    buffer[offset] = '\0';
+    trace_debug("%a", buffer);
+}
+
+void print_page_mapping_simple(const x86::cr3_t& cr3, const x86::paging::ia32e::linear_address_t address) {
+    char buffer[512];
+    size_t offset = 0;
+    size_t buffer_size = sizeof(buffer);
+
+    ascii_format(buffer, offset, buffer_size, "GVA->GPA: ");
+
+    using namespace x86::paging::ia32e;
+    const auto pml4_address = static_cast<physical_address_t>(cr3.ia32e.address) << x86::paging::page_bits_4k;
+    const auto pml4 = reinterpret_cast<const pml4e_t*>(pml4_address);
+    const auto& pml4e = pml4[address.huge.pml4e];
+    if (pml4e.bits.present) {
+        ascii_format(buffer, offset, buffer_size, "PML4E to PDPT at 0x%llx [rw:%d,xd:%d]; ", pml4e.address(), pml4e.bits.rw, pml4e.bits.xd);
+        const auto pdpt_address = pml4e.address();
+        const auto* pdpt = reinterpret_cast<const pdpte_t*>(pdpt_address);
+        const auto& pdpte = pdpt[address.huge.directory_pointer];
+        if (pdpte.huge.present) {
+            if (pdpte.is_huge()) {
+                ascii_format(buffer, offset, buffer_size, "PDPTE maps as huge to 0x%llx [rw:%d,xd:%d]; ", pdpte.address(), pdpte.huge.rw, pdpte.huge.xd);
+            } else {
+                ascii_format(buffer, offset, buffer_size, "PDPTE to PD at 0x%llx [rw:%d,xd:%d]; ", pdpte.address(), pdpte.small.rw, pdpte.small.xd);
+                const auto pd_address = pdpte.address();
+                const auto* pd = reinterpret_cast<const pde_t*>(pd_address);
+                const auto& pde = pd[address.large.directory];
+                if (pde.large.present) {
+                    if (pde.is_large()) {
+                        ascii_format(buffer, offset, buffer_size, "PDE maps as large to 0x%llx [rw:%d,xd:%d]; ", pde.address(), pde.large.rw, pde.large.xd);
+                    } else {
+                        ascii_format(buffer, offset, buffer_size, "PDE to PT at 0x%llx [rw:%d,xd:%d]; ", pde.address(), pde.small.rw, pde.small.xd);
+                        const auto pt_address = pde.address();
+                        const auto* pt = reinterpret_cast<const pte_t*>(pt_address);
+                        const auto& pte = pt[address.small.table];
+                        if (pte.bits.present) {
+                            ascii_format(buffer, offset, buffer_size, "PTE maps to 0x%llx [rw:%d,xd:%d]; ", pte.address(), pte.bits.rw, pte.bits.xd);
+                        } else {
+                            ascii_format(buffer, offset, buffer_size, "PTE not present; ");
+                        }
+                    }
+                } else {
+                    ascii_format(buffer, offset, buffer_size, "PDE not present; ");
+                }
+            }
+        } else {
+            ascii_format(buffer, offset, buffer_size, "PDPTE not present; ");
+        }
+    } else {
+        ascii_format(buffer, offset, buffer_size, "PML4E not present; ");
+    }
+
+    buffer[offset] = '\0';
+    trace_debug("%a", buffer);
+}
+
+void print_ept_mapping_simple(const x86::vmx::ept_pointer_t& eptp, const x86::vmx::guest_physical_address_t address) {
+    char buffer[512];
+    size_t offset = 0;
+    size_t buffer_size = sizeof(buffer);
+
+    ascii_format(buffer, offset, buffer_size, "GVA->HPA: ");
+
+    using namespace x86::vmx;
+    const auto pml4_address = static_cast<physical_address_t>(eptp.bits.address) << x86::paging::page_bits_4k;
+    const auto pml4 = reinterpret_cast<const pml4e_t*>(pml4_address);
+    auto& pml4e = pml4[address.huge.pml4e];
+    if (pml4e.present()) {
+        ascii_format(buffer, offset, buffer_size, "PML4E to PDPT at 0x%llx [r:%d,w:%d,x:%d]; ", pml4e.address(), pml4e.bits.read, pml4e.bits.write, pml4e.bits.execute);
+        const auto pdpt_address = pml4e.address();
+        const auto* pdpt = reinterpret_cast<const pdpte_t*>(pdpt_address);
+        const auto& pdpte = pdpt[address.huge.directory_pointer];
+        if (pdpte.present()) {
+            if (pdpte.is_huge()) {
+                ascii_format(buffer, offset, buffer_size, "PDPTE maps as huge to 0x%llx [r:%d,w:%d,x:%d]; ", pdpte.address(), pdpte.huge.read, pdpte.huge.write, pdpte.huge.execute);
+            } else {
+                ascii_format(buffer, offset, buffer_size, "PDPTE to PD at 0x%llx [r:%d,w:%d,x:%d]; ", pdpte.address(), pdpte.small.read, pdpte.small.write, pdpte.small.execute);
+                const auto pd_address = pdpte.address();
+                const auto* pd = reinterpret_cast<const pde_t*>(pd_address);
+                const auto& pde = pd[address.large.directory];
+                if (pde.present()) {
+                    if (pde.is_large()) {
+                        ascii_format(buffer, offset, buffer_size, "PDE maps as large to 0x%llx [r:%d,w:%d,x:%d]; ", pde.address(), pde.large.read, pde.large.write, pde.large.execute);
+                    } else {
+                        ascii_format(buffer, offset, buffer_size, "PDE to PT at 0x%llx [r:%d,w:%d,x:%d]; ", pde.address(), pde.small.read, pde.small.write, pde.small.execute);
+                        const auto pt_address = pde.address();
+                        const auto* pt = reinterpret_cast<const pte_t*>(pt_address);
+                        const auto& pte = pt[address.small.table];
+                        if (pte.present()) {
+                            ascii_format(buffer, offset, buffer_size, "PTE maps to 0x%llx [r:%d,w:%d,x:%d]; ", pte.address(), pte.bits.read, pte.bits.write, pte.bits.execute);
+                        } else {
+                            ascii_format(buffer, offset, buffer_size, "PTE not present; ");
+                        }
+                    }
+                } else {
+                    ascii_format(buffer, offset, buffer_size, "PDE not present; ");
+                }
+            }
+        } else {
+            ascii_format(buffer, offset, buffer_size, "PDPTE not present; ");
+        }
+    } else {
+        ascii_format(buffer, offset, buffer_size, "PML4E not present; ");
     }
 
     buffer[offset] = '\0';

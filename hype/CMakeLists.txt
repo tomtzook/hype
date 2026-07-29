@@ -37,7 +37,8 @@ add_executable(hype
         memory/stack.cpp
         memory/mapping.cpp
         memory/guest.h
-        memory/guest.cpp)
+        memory/guest.cpp
+        config.h)
 
 target_link_libraries(hype PRIVATE edk2 arch ministl environment gdbstub pe)
 target_include_directories(hype PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})

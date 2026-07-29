@@ -6,6 +6,7 @@
 
 #include <base.h>
 
+#include "config.h"
 #include "context.h"
 #include "debug/modules.h"
 #include "debug/print.h"
@@ -22,8 +23,9 @@ static framework::result<> handle_exception_or_nmi(cpu_registers_t& registers) {
     uint64_t exit_interrupt_code;
     verify_vmx(x86::vmx::vmread(x86::vmx::field_t::vmexit_interruption_error_code, exit_interrupt_code));
 
-    verify_vmx(x86::vmx::vmread(x86::vmx::field_t::idt_vectoring_information, exit_info_raw));
-    const x86::vmx::vmexit_interruption_info_t idt_vectoring{.raw = static_cast<uint32_t>(exit_info_raw)};
+    uint64_t idt_vectoring_info_raw;
+    verify_vmx(x86::vmx::vmread(x86::vmx::field_t::idt_vectoring_information, idt_vectoring_info_raw));
+    const x86::vmx::vmexit_interruption_info_t idt_vectoring{.raw = static_cast<uint32_t>(idt_vectoring_info_raw)};
     uint64_t idt_vectoring_code;
     verify_vmx(x86::vmx::vmread(x86::vmx::field_t::idt_vectoring_error_code, idt_vectoring_code));
 
@@ -57,7 +59,16 @@ static framework::result<> handle_exception_or_nmi(cpu_registers_t& registers) {
 }
 
 static framework::result<> handle_cpuid(cpu_registers_t& registers) {
-    const auto cpuid = x86::cpuid(registers.rax, registers.rcx);
+    auto cpuid = x86::cpuid(registers.rax, registers.rcx);
+
+    switch (registers.rax) {
+        case 1:
+            // turn off hypervisor bit
+            cpuid.ecx &= ~(1 << 31);
+            break;
+        default:
+            break;
+    }
 
     trace_debug("CPUID[rax=0x%lx, rcx=0x%lx]: eax=0x%lx, ebx=0x%lx, ecx=0x%lx, edx=0x%lx",
         registers.rax, registers.rcx, cpuid.eax, cpuid.ebx, cpuid.ecx, cpuid.edx);
@@ -76,19 +87,27 @@ static framework::result<> handle_rdmsr(cpu_registers_t& registers) {
 
     trace_debug("RDMSR[0x%lx]: value=0x%lx", id, value);
 
-    registers.rax = (value >> 32) & 0xffffffff;
-    registers.rdx = value & 0xffffffff;
+    registers.rax = static_cast<uint32_t>(value);
+    registers.rdx = static_cast<uint32_t>(value >> 32);
 
     return {};
 }
 
 static framework::result<> handle_wrmsr(const cpu_registers_t& registers) {
     const auto id = registers.rcx & 0xffffffff;
-    const auto value = ((registers.rax & 0xffffffff) << 32) | (registers.rdx & 0xffffffff);
+    const uint64_t low  = static_cast<uint32_t>(registers.rax);
+    const uint64_t high = static_cast<uint32_t>(registers.rdx);
+    const uint64_t value = (high << 32) | low;
 
     trace_debug("WRMSR[0x%lx]: value=0x%lx", id, value);
 
-    x86::msr::write(id, value);
+    switch (id) {
+        case x86::msr::ia32_efer_t::id:
+            verify_vmx(x86::vmx::vmwrite(x86::vmx::field_t::guest_efer, value));
+            break;
+        default:
+            x86::msr::write(id, value);
+    }
 
     return {};
 }
@@ -106,11 +125,39 @@ static framework::result<> handle_ept_violation(const cpu_registers_t& registers
         physical_address, linear_address,
         exit_qualification.bits.read_access, exit_qualification.bits.write_access, exit_qualification.bits.instruction_fetch);
 
+    x86::vmx::ept_pointer_t eptp;
+    verify_vmx(x86::vmx::vmread(x86::vmx::field_t::ctrl_ept_pointer, eptp.raw));
+
+    const auto guest_cr3 = verify(memory::read_current_guest_cr3());
+    debug::print_page_mapping_simple(guest_cr3, linear_address);
+    debug::print_ept_mapping_simple(eptp, physical_address);
+
     return framework::err(framework::status_unsupported);
 }
 
+static framework::result<> handle_xsetbv(const cpu_registers_t& registers) {
+    const uint32_t eax = registers.rax & 0xffffffff;
+    const uint32_t edx = registers.rdx & 0xffffffff;
+    const uint32_t ecx = registers.rcx & 0xffffffff;
+
+    trace_debug("XSETBV[0x%lx]: value=0x%lx", ecx, ((static_cast<uint64_t>(edx) << 32) | eax));
+
+    __asm__ __volatile__(
+        "xsetbv"
+        :
+        : "a"(eax), "d"(edx), "c"(ecx)
+        : "memory"
+    );
+
+    return {};
+}
+
+bool g_fitst = false;
+
 framework::result<> handle_vmexit(cpu_registers_t& registers) {
-    gdbstub::start_handling_if_prompted();
+    if constexpr (config::embedded_gdbstub) {
+        gdbstub::start_handling_if_prompted();
+    }
 
     const auto old_rsp = registers.rsp;
     const auto old_rflags = registers.rflags;
@@ -125,10 +172,32 @@ framework::result<> handle_vmexit(cpu_registers_t& registers) {
     const auto exit_reason = static_cast<x86::vmx::exit_reason_t>(exit_reason_raw & 0xffff);
     trace_debug("Exit %a (%u) From 0x%p", x86::vmx::exit_reason_str(exit_reason), static_cast<uint16_t>(exit_reason), registers.rip);
 
-    auto& context = get_context();
-    debug::instruction_dump(reinterpret_cast<const void*>(registers.rip), 4);
-    //debug::memdump(reinterpret_cast<const void*>(registers.rip), 0x10);
-    debug::print_stack_frame(context.guest_memory_mapper, context.loaded_modules, registers.rip, registers.rbp, registers.rsp);
+    if (!g_fitst) {
+        g_fitst = true;
+        //x86::paging::ia32e::apply_permissions(x86::read<x86::cr3_t>(), 0x7BF48000ULL, false, false);
+        //x86::paging::invlpg(0x7BF48000ULL);
+    }
+
+    /*if (environment::get_current_vcpu_id() == 1) {
+        trace_debug("from 1");
+        interrupts::trace_idt(x86::read<x86::interrupts::idtr_t>());
+        //asm volatile("int3");
+    }*/
+
+    if constexpr (config::decode_guest_instructions_on_vmexit) {
+        auto& context = get_context();
+        const auto result = context.guest_memory_mapper.map(registers.rip, x86::paging::page_size);
+        if (result) {
+            //debug::instruction_dump(result.value().data(), 4);
+            debug::memdump(result.value().data(), 0x10);
+        }
+        //debug::instruction_dump(reinterpret_cast<const void*>(registers.rip), 4);
+        //debug::memdump(reinterpret_cast<const void*>(registers.rip), 0x10);
+    }
+    if constexpr (config::print_guest_stack_on_vmexit) {
+        auto& context = get_context();
+        debug::print_stack_frame(context.guest_memory_mapper, context.loaded_modules, registers.rip, registers.rbp, registers.rsp);
+    }
 
     {
         // todo: limits are fucked post exit, maybe a result of restoration
@@ -157,6 +226,9 @@ framework::result<> handle_vmexit(cpu_registers_t& registers) {
             verify(handle_ept_violation(registers));
             should_move_to_next_instruction = false;
             break;
+        case x86::vmx::exit_reason_t::xsetbv:
+            verify(handle_xsetbv(registers));
+            break;
         default:
             trace_error("Unsupported exit %d", exit_reason);
             return framework::err(framework::status_unsupported);
@@ -177,9 +249,11 @@ framework::result<> handle_vmexit(cpu_registers_t& registers) {
     registers.rsp = old_rsp;
     registers.rflags = old_rflags;
 
-    verify(do_vm_entry_checks());
+    if constexpr (config::do_vmentry_checks) {
+        verify(do_vm_entry_checks());
+    }
 
-    trace_debug("Resume guest into rip=0x%x", registers.rip);
+    trace_debug("Resume guest into rip=0x%llx", registers.rip);
     // we must use a small asm code as to not fuckup any registers
     registers.rip = reinterpret_cast<uint64_t>(asm_vm_resume);
     asm_cpu_load_registers(&registers);

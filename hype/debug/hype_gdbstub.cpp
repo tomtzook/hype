@@ -6,14 +6,14 @@
 #include <gdbstub_x86_64.h>
 
 #include "environment.h"
+#include "context.h"
 #include "hype_gdbstub.h"
 
 namespace gdbstub {
 
 static struct{
-    framework::atomic<bool> is_gdbstub_owned{false};
+    framework::atomic_flag is_gdbstub_owned;
     framework::atomic<int> collected_count{0};
-    size_t active_core_count = 0;
 } g_context;
 
 static void write_char(const char ch) {
@@ -101,9 +101,10 @@ static void load_regs(hype::cpu_registers_t& registers, const x86_64::registers_
 static void signal_all_cores() {
     trace_debug("starting signal to all cores");
 
+    const auto active_core_count = hype::get_context().cpu_init_index;
     g_context.collected_count.store(0);
 
-    if (g_context.active_core_count > 1) {
+    if (active_core_count > 1) {
         x86::apic::send_ipi(
            0x40,
            x86::apic::delivery_mode_t::fixed,
@@ -112,7 +113,7 @@ static void signal_all_cores() {
            x86::apic::trigger_mode_t::level,
            x86::apic::destination_shorthand_t::all_no_self);
 
-        while (g_context.collected_count.load() < (g_context.active_core_count - 1)) {
+        while (g_context.collected_count.load() < (active_core_count - 1)) {
             __asm__ __volatile__("pause");
         }
 
@@ -125,7 +126,7 @@ static void on_core_signalled() {
     g_context.collected_count.add_fetch(1);
 
     // todo: store registers!
-    while (g_context.is_gdbstub_owned.load()) {
+    while (g_context.is_gdbstub_owned.test(framework::atomic_memory_order::relaxed)) {
         __asm__ __volatile__("pause");
     }
 }
@@ -156,7 +157,8 @@ void initialize() {
 }
 
 void handle_interrupt(const x86::interrupts::interrupt_t vector, hype::cpu_registers_t& registers) {
-    if (!g_context.is_gdbstub_owned.exchange(true)) {
+    if (g_context.is_gdbstub_owned.test_and_set(framework::atomic_memory_order::acquire)) {
+        trace_debug("gdb: own");
         trace_debug("enter gdbstub due to exception");
 
         signal_all_cores();
@@ -167,8 +169,10 @@ void handle_interrupt(const x86::interrupts::interrupt_t vector, hype::cpu_regis
         x86_64::handle_exception(static_cast<unsigned int>(vector), gdb_regs);
         load_regs(registers, gdb_regs);
 
-        g_context.is_gdbstub_owned.store(false);
+        trace_debug("gdb: unown");
+        g_context.is_gdbstub_owned.clear();
     } else if (static_cast<int>(vector) == 0x40) {
+        trace_debug("handle exception shows owned and ipi vector");
         on_core_signalled();
     }
 }
@@ -176,33 +180,38 @@ void handle_interrupt(const x86::interrupts::interrupt_t vector, hype::cpu_regis
 void start_handling_if_prompted() {
     gdbstub::reload_breakpoints();
 
-    if (g_context.is_gdbstub_owned.load()) {
+    /*if (g_context.is_gdbstub_owned.test()) {
+        trace_debug("checked handling shows owned");
         on_core_signalled();
         return;
-    }
+    }*/
     if (!available_char()) {
         return;
     }
 
-    if (!g_context.is_gdbstub_owned.exchange(true)) {
+    if (g_context.is_gdbstub_owned.test_and_set(framework::atomic_memory_order::acquire)) {
+        trace_debug("gdb: own");
         if (read_char() == 0x03) {
             trace_debug("gdb server sent interrupt");
             start_handling();
         }
 
-        g_context.is_gdbstub_owned.store(false);
+        trace_debug("gdb: unown");
+        g_context.is_gdbstub_owned.clear();
     }
 }
 
 void wait_for_server() {
-    if (!g_context.is_gdbstub_owned.exchange(true)) {
+    if (g_context.is_gdbstub_owned.test_and_set(framework::atomic_memory_order::acquire)) {
+        trace_debug("gdb: own");
         trace_debug("waiting for gdb server");
         const auto ch = read_char();
         if (ch == 0x03 || ch == '+') {
             start_handling();
         }
 
-        g_context.is_gdbstub_owned.store(false);
+        trace_debug("gdb: unown");
+        g_context.is_gdbstub_owned.clear();
     }
 }
 

@@ -168,6 +168,38 @@ static framework::result<> setup_entry_exit(vcpu_t& cpu) {
     return {};
 }
 
+void allow_msr_exit_in_bitmap(context_t& context, const x86::msr::id_t msr_id, const bool read, const bool write) {
+    static constexpr x86::msr::id_t low_read_bitmap = 0x0;
+    static constexpr x86::msr::id_t high_read_bitmap = 0x400;
+    static constexpr x86::msr::id_t low_write_bitmap = 0x800;
+    static constexpr x86::msr::id_t high_write_bitmap = 0xc00;
+    static constexpr x86::msr::id_t high_msr_start = 0xC0000000;
+
+    if (msr_id >= high_msr_start) {
+        const auto msr_index = msr_id - high_msr_start;
+        const auto byte_offset = msr_index / 8;
+        const auto bit_mask = 1 << (msr_index % 8);
+
+        if (read) {
+            context.msr_bitmap[high_read_bitmap + byte_offset] = bit_mask;
+        }
+        if (write) {
+            context.msr_bitmap[high_write_bitmap + byte_offset] = bit_mask;
+        }
+    } else {
+        const auto msr_index = msr_id;
+        const auto byte_offset = msr_index / 8;
+        const auto bit_mask = 1 << (msr_index % 8);
+
+        if (read) {
+            context.msr_bitmap[low_read_bitmap + byte_offset] = bit_mask;
+        }
+        if (write) {
+            context.msr_bitmap[low_write_bitmap + byte_offset] = bit_mask;
+        }
+    }
+}
+
 framework::result<> vmxon_for_vcpu(vcpu_t& cpu) {
     assert(x86::vmx::prepare_for_vmxon(true), "prepare_for_vmxon failed");
     assert(x86::vmx::initialize_vmstruct(cpu.vmxon_region), "initialize_vmstruct failed");
@@ -197,14 +229,8 @@ framework::result<> setup_vmcs(context_t& context, vcpu_t& cpu) {
             x86::vmx::vmwrite(x86::vmx::field_t::ctrl_virtual_processor_identifier, 0));
     }
 
-    verify_vmx(x86::vmx::vmwrite(
-        x86::vmx::field_t::ctrl_msr_bitmap_address,
-        environment::to_physical(cpu.msr_bitmap)));
-
-    cpu.exception_bitmap = 0xffff;
-    verify_vmx(x86::vmx::vmwrite(
-        x86::vmx::field_t::ctrl_exception_bitmap,
-        cpu.exception_bitmap));
+    verify_vmx(x86::vmx::vmwrite(x86::vmx::field_t::ctrl_msr_bitmap_address, environment::to_physical(context.msr_bitmap)));
+    verify_vmx(x86::vmx::vmwrite(x86::vmx::field_t::ctrl_exception_bitmap, context.exception_bitmap));
 
     verify(setup_vm_controls(context.wanted_vm_controls.pinbased));
     verify(setup_vm_controls(context.wanted_vm_controls.procbased));
@@ -215,6 +241,26 @@ framework::result<> setup_vmcs(context_t& context, vcpu_t& cpu) {
     verify(setup_cr_dr_vmcs(context));
     verify(setup_segments_vmcs(context, cpu));
     verify(setup_entry_exit(cpu));
+
+    return {};
+}
+
+framework::result<> emulate_fault_into_guest(const x86::interrupts::interrupt_t vector, const uint32_t error_code) {
+    x86::vmx::vmentry_interruption_info_t info{};
+    info.bits.valid = true;
+    info.bits.vector = static_cast<uint32_t>(vector);
+    info.bits.type = x86::vmx::interrupt_type(vector);
+    info.bits.deliver_error_code = x86::interrupts::has_error_code(vector);
+
+    verify_vmx(x86::vmx::vmwrite(x86::vmx::field_t::ctrl_vmentry_interruption_information_field, info.raw));
+    if (info.bits.deliver_error_code) {
+        verify_vmx(x86::vmx::vmwrite(x86::vmx::field_t::ctrl_vmentry_exception_error_code, error_code));
+    }
+    if (x86::interrupts::vector_type(vector) == x86::interrupts::interrupt_type_t::trap) {
+        uint64_t instruction_length;
+        verify_vmx(x86::vmx::vmread(x86::vmx::field_t::vmexit_instruction_length, instruction_length));
+        verify_vmx(x86::vmx::vmwrite(x86::vmx::field_t::ctrl_vmentry_instruction_length, instruction_length));
+    }
 
     return {};
 }

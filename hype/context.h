@@ -32,8 +32,6 @@ struct vcpu_t {
 
     page_aligned x86::vmx::vmstruct_t vmxon_region;
     page_aligned x86::vmx::vmstruct_t vmcs;
-    page_aligned uint8_t msr_bitmap[x86::paging::page_size];
-    uint32_t exception_bitmap;
 
     memory::stack<stack_size_full> guest_stack;
     memory::stack<stack_size_full> host_stack;
@@ -53,6 +51,8 @@ struct context_t {
     x86::interrupts::idtr_t idtr;
     page_aligned memory::page_table_t page_table{};
     page_aligned memory::ept_t ept{};
+    page_aligned uint8_t msr_bitmap[x86::paging::page_size];
+    uint32_t exception_bitmap;
 
     memory::stack_guard stack_guard{};
 

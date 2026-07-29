@@ -278,11 +278,11 @@ static framework::result<> verify_vmentry_entry_control_fields() {
         vmentry_interruption_info.raw = raw;
     }
     if (vmentry_interruption_info.bits.valid) {
-        assert(vmentry_interruption_info.bits.type != x86::vmx::vmentry_interrupt_type_t::reserved, "VMENTRY Interrupt Info Type is set to Reserved");
-        assert(!(!cpu_exec_controls.bits.monitor_trap_flag && vmentry_interruption_info.bits.type == x86::vmx::vmentry_interrupt_type_t::other_event), "VMENTRY Interrupt Info Type is set to OtherEvent but not supported");
-        assert(vmentry_interruption_info.bits.type != x86::vmx::vmentry_interrupt_type_t::nmi || vmentry_interruption_info.bits.vector == 2, "VMENTRY Interrupt Info Type is NMI and Vector is not 2");
-        assert(vmentry_interruption_info.bits.type != x86::vmx::vmentry_interrupt_type_t::hardware_exception || vmentry_interruption_info.bits.vector <= 31, "VMENTRY Interrupt Info Type is HARDWARE EXCEPTION and Vector is larger than 31");
-        assert(vmentry_interruption_info.bits.type != x86::vmx::vmentry_interrupt_type_t::other_event || vmentry_interruption_info.bits.vector == 0, "VMENTRY Interrupt Info Type is OTHER EVENT and Vector is not 0");
+        assert(vmentry_interruption_info.bits.type != x86::vmx::vmx_interrupt_type_t::reserved, "VMENTRY Interrupt Info Type is set to Reserved");
+        assert(!(!cpu_exec_controls.bits.monitor_trap_flag && vmentry_interruption_info.bits.type == x86::vmx::vmx_interrupt_type_t::other_event), "VMENTRY Interrupt Info Type is set to OtherEvent but not supported");
+        assert(vmentry_interruption_info.bits.type != x86::vmx::vmx_interrupt_type_t::nmi || vmentry_interruption_info.bits.vector == 2, "VMENTRY Interrupt Info Type is NMI and Vector is not 2");
+        assert(vmentry_interruption_info.bits.type != x86::vmx::vmx_interrupt_type_t::hardware_exception || vmentry_interruption_info.bits.vector <= 31, "VMENTRY Interrupt Info Type is HARDWARE EXCEPTION and Vector is larger than 31");
+        assert(vmentry_interruption_info.bits.type != x86::vmx::vmx_interrupt_type_t::other_event || vmentry_interruption_info.bits.vector == 0, "VMENTRY Interrupt Info Type is OTHER EVENT and Vector is not 0");
 
         if (vmentry_interruption_info.bits.deliver_error_code == 1) {
             uint64_t raw;
@@ -291,7 +291,7 @@ static framework::result<> verify_vmentry_entry_control_fields() {
 
             assert(
                 ((!secondary_controls_enabled || secondary_cpu_exec_controls.bits.unrestricted_guest == 0) || guest_cr0.bits.protection_enable) &&
-                vmentry_interruption_info.bits.type == x86::vmx::vmentry_interrupt_type_t::hardware_exception &&
+                vmentry_interruption_info.bits.type == x86::vmx::vmx_interrupt_type_t::hardware_exception &&
                 is_any_of(vmentry_interruption_info.bits.vector, 8, 10, 11, 12, 13, 14, 17),
                 "VMENTRY Interrupt Info Deliver Error code is set, but not allowed"
             );
@@ -304,9 +304,9 @@ static framework::result<> verify_vmentry_entry_control_fields() {
         assert(vmentry_interruption_info.bits.reserved == 0, "VMENTRY Interrupt Info reserved must be 0");
 
         if (is_any_of(vmentry_interruption_info.bits.type,
-            x86::vmx::vmentry_interrupt_type_t::software_interrupt,
-            x86::vmx::vmentry_interrupt_type_t::software_exception,
-            x86::vmx::vmentry_interrupt_type_t::privileged_software_exception)) {
+            x86::vmx::vmx_interrupt_type_t::software_interrupt,
+            x86::vmx::vmx_interrupt_type_t::software_exception,
+            x86::vmx::vmx_interrupt_type_t::privileged_software_exception)) {
             uint64_t length;
             verify_vmx(x86::vmx::vmread(x86::vmx::field_t::ctrl_vmentry_instruction_length, length));
 
@@ -588,7 +588,7 @@ static framework::result<> verify_guest_registers() {
         verify_vmx(x86::vmx::vmread(x86::vmx::field_t::ctrl_vmentry_interruption_information_field, interrupt_info_raw));
         x86::vmx::vmentry_interruption_info_t interruption_info{};
         interruption_info.raw = interrupt_info_raw;
-        assert(!(interruption_info.bits.valid && interruption_info.bits.type == x86::vmx::vmentry_interrupt_type_t::external_interrupt) || rflags.bits.interrupt_enable_flag, "Guest RFLAGS.IF must be 1");
+        assert(!(interruption_info.bits.valid && interruption_info.bits.type == x86::vmx::vmx_interrupt_type_t::external_interrupt) || rflags.bits.interrupt_enable_flag, "Guest RFLAGS.IF must be 1");
     }
 
     return {};

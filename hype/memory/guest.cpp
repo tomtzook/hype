@@ -1,6 +1,7 @@
 
 #include <x86/paging/ia32e.h>
 #include <x86/vmx/vmcs.h>
+#include <math.h>
 
 #include "guest.h"
 
@@ -52,7 +53,7 @@ framework::result<x86::paging::mode_t> read_current_guest_paging_mode() {
 
 framework::result<physical_address_t> gpa_to_hpa(const x86::vmx::ept_pointer_t& eptp, const uint64_t address) {
     physical_address_t result;
-    if (x86::vmx::to_physical(eptp, x86::vmx::guest_physical_address_t{.raw = address}, result)) {
+    if (x86::vmx::to_physical(eptp, address, result)) {
         return framework::ok(result);
     }
 
@@ -120,7 +121,7 @@ framework::result<physical_address_t> gva_to_hpa(const uint64_t address) {
 
 framework::result<frame_ranges> load_guest_ranges(const x86::vmx::ept_pointer_t& eptp, const x86::paging::mode_t guest_mode, const x86::cr3_t& guest_cr3, const uint64_t base, const size_t size) {
     frame_ranges ranges{};
-    for (auto address = base; address < base + size; address += x86::paging::page_size_4k) {
+    for (auto address = framework::round_down(base, x86::paging::page_size_4k); address < base + size; address += x86::paging::page_size_4k) {
         const auto physical_addr = verify(gva_to_hpa(eptp, guest_mode, guest_cr3, address));
         const auto pfn = physical_addr >> x86::paging::page_bits_4k;
 

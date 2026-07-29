@@ -8,13 +8,13 @@
 #include <x86/id.h>
 
 #include <base.h>
+#include "config.h"
 #include "cpu.h"
 #include "context.h"
 #include "vmx/vmx.h"
 #include "vmx/vmentry.h"
 #include "debug.h"
 #include "hype.h"
-#include "debug/hype_gdbstub.h"
 
 namespace hype {
 
@@ -38,10 +38,14 @@ static wanted_vm_controls_t get_wanted_vm_controls() {
     controls.secondary_procbased.bits.enable_ept = true;
     controls.secondary_procbased.bits.enable_xsaves_xstors = true;
     controls.secondary_procbased.bits.unrestricted_guest = true;
+    controls.secondary_procbased.bits.enable_rdtscp = true;
     controls.vmentry.bits.ia32e_mode_guest = true;
+    controls.vmentry.bits.load_efer = true;
     controls.vmexit.bits.host_address_space_size = true;
+    controls.vmexit.bits.load_efer = true;
+    controls.vmexit.bits.save_efer = true;
     controls.pinbased.bits.nmi_exiting = false;
-    controls.pinbased.bits.external_interrupt_exiting = true;
+    controls.pinbased.bits.external_interrupt_exiting = false;
 
     return controls;
 }
@@ -80,6 +84,7 @@ static framework::result<> check_environment_support() {
     const auto ept_cap = x86::read<x86::msr::ia32_vmx_ept_vpid_cap_t>();
     assert(ept_cap.bits.ept_large_pages && ept_cap.bits.invept && ept_cap.bits.memory_type_write_back,
                  "Wanted EPT/VPID features not supported");
+    assert(x86::paging::max_physical_address_width() <= 36, "maxphysaddr > 36");
 
     assert(check_wanted_vm_controls(), "Wanted VM Controls not supported");
 
@@ -102,6 +107,10 @@ static framework::result<> init_context(context_t& context, const x86::mtrr::mtr
 
     trace_debug("Mapping Stack Guard");
     context.stack_guard.map_into_pml4e(context.page_table, memory::page_table_t::stack_guard_pml4e);
+
+    memset(context.msr_bitmap, 0, sizeof(context.msr_bitmap));
+    allow_msr_exit_in_bitmap(context, x86::msr::ia32_efer_t::id, false, true);
+    context.exception_bitmap = 0;//0xffff; // todo:
 
     trace_debug("Done context init, core count=%d", context.cpu_count);
 
@@ -128,7 +137,6 @@ static framework::result<> start_on_vcpu(void*) {
     cpu.tss.ist[interrupts::idt_t::ist_index - 1] = reinterpret_cast<uint64_t>(cpu.interrupt_stack.end()) - vcpu_t::stack_shadow_space;
 
     context.stack_guard.create_guard(cpu.host_stack);
-    memset(cpu.msr_bitmap, 0, sizeof(cpu.msr_bitmap));
 
     auto* initial_registers = reinterpret_cast<cpu_registers_t*>(reinterpret_cast<uint64_t>(cpu.guest_stack.end()) - vcpu_t::stack_shadow_space);
     asm_cpu_store_registers(initial_registers);
@@ -143,6 +151,12 @@ static framework::result<> start_on_vcpu(void*) {
     verify(vmxon_for_vcpu(cpu));
     cpu.is_in_vmx_operation = true;
 
+    {
+        auto cr4 = x86::read<x86::cr4_t>();
+        cr4.bits.os_xsave = true;
+        x86::write(cr4);
+    }
+
     trace_debug("Initializing vmcs");
     const auto vmcs_physical = environment::to_physical(&cpu.vmcs);
     verify_vmx(x86::vmx::vmclear(vmcs_physical));
@@ -150,7 +164,9 @@ static framework::result<> start_on_vcpu(void*) {
     verify_vmx(x86::vmx::vmptrld(vmcs_physical));
     verify(setup_vmcs(context, cpu));
 
-    verify(do_vm_entry_checks());
+    if constexpr (config::do_vmentry_checks) {
+        verify(do_vm_entry_checks());
+    }
 
     trace_debug("Launching");
     verify_vmx(x86::vmx::vmlaunch());
@@ -180,7 +196,8 @@ framework::result<> initialize() {
     const auto cpu_series = x86::microarchitecture_to_series(cpu_microarch);
     trace_debug("CPU is %a from %a", x86::cpu_microarchitecture_str(cpu_microarch), x86::cpu_series_str(cpu_series));
 
-    assert(x86::apic::set_mode(x86::apic::mode_t::x2apic), "failed to enable x2apic");
+    // todo:
+    // assert(x86::apic::set_mode(x86::apic::mode_t::x2apic), "failed to enable x2apic");
 
     const auto mtrr_cache = x86::mtrr::initialize_cache();
 

@@ -15,6 +15,7 @@ extern "C" {
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiRuntimeServicesTableLib.h>
 #include <Library/SerialPortLib.h>
+#include <Library/DevicePathLib.h>
 #include <Library/IoLib.h>
 #include <Pi/PiMultiPhase.h>
 #include <Protocol/LoadedImage.h>

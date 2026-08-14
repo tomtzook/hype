@@ -168,6 +168,17 @@ static framework::result<> setup_entry_exit(vcpu_t& cpu) {
     return {};
 }
 
+framework::result<uint64_t> vmread(const x86::vmx::field_t field) {
+    uint64_t value;
+    verify_vmx(x86::vmx::vmread(field, value));
+    return framework::ok(value);
+}
+
+framework::result<> vmwrite(const x86::vmx::field_t field, const uint64_t value) {
+    verify_vmx(x86::vmx::vmwrite(field, value));
+    return {};
+}
+
 void allow_msr_exit_in_bitmap(context_t& context, const x86::msr::id_t msr_id, const bool read, const bool write) {
     static constexpr x86::msr::id_t low_read_bitmap = 0x0;
     static constexpr x86::msr::id_t high_read_bitmap = 0x400;

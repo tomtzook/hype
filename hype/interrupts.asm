@@ -5,7 +5,13 @@ extern idt_handler
 extern asm_cpu_store_registers
 extern asm_cpu_load_registers
 
+
+extern isr_report
+isr_report:
+    ret
+
 %macro isr_err_stub 1
+extern isr_stub_%+%1 ; todo: remove
 isr_stub_%+%1:
     ; stack state
     ; +48 : registers struct
@@ -16,6 +22,7 @@ isr_stub_%+%1:
     ; +08 : rip
     ; +00 : error code
 
+    call isr_report ; todo: remove
     push rcx              ; because we are overriding rcx to load the struct, save it here to be returned to stack later
     lea rcx, [rsp+38h]    ; context registers are at the top of the stack
     sub rsp, 20h
@@ -51,6 +58,7 @@ isr_stub_%+%1:
     jmp asm_cpu_load_registers ; this will return from the interrupt
 %endmacro
 %macro isr_no_err_stub 1
+extern isr_stub_%+%1 ; todo: remove
 isr_stub_%+%1:
     ; stack state
     ; +40 : registers struct
@@ -60,6 +68,7 @@ isr_stub_%+%1:
     ; +08 : cs
     ; +00 : rip
 
+    call isr_report ; todo: remove
     push rcx              ; because we are overriding rcx to load the struct, save it here to be returned to stack later
     lea rcx, [rsp+30h]    ; context registers are at the top of the stack
     sub rsp, 20h

@@ -1,5 +1,6 @@
 
 #include <x86/msr.h>
+#include <lock.h>
 
 #include "efi_base.h"
 #include "environment.h"
@@ -18,12 +19,21 @@ namespace environment {
 
 struct {
     EFI_HANDLE image_handle;
+    void* image_base;
+    size_t image_size;
 } g_environment_data{};
 
 struct mp_procedure_context_t {
     vcpu_procedure_t* procedure;
     void* param;
 };
+
+EFI_EXIT_BOOT_SERVICES g_exit_boot_services = nullptr;
+
+static EFI_STATUS exit_boot_services(const EFI_HANDLE ImageHandle, const UINTN MapKey) {
+    trace_debug("EXIT BOOT SERVICES");
+    return g_exit_boot_services(ImageHandle, MapKey);
+}
 
 static void mp_procedure(void* param) {
     // TODO MAKE ATOMIC STUFF
@@ -52,12 +62,8 @@ framework::result<> initialize_efi(EFI_HANDLE image_handle) {
 
 framework::result<> initialize() {
     verify(init_heap(500, framework::memory_type::code));
-    verify(init_heap(500, framework::memory_type::data));
+    verify(init_heap(5000 + 500, framework::memory_type::data));
 
-    return {};
-}
-
-framework::result<image_info> get_our_image_info() {
     EFI_LOADED_IMAGE_PROTOCOL* loaded_image{};
     const auto _efiStatus = gBS->HandleProtocol(
         g_environment_data.image_handle,
@@ -66,8 +72,18 @@ framework::result<image_info> get_our_image_info() {
     if (_efiStatus != EFI_SUCCESS) {
         verify_efi(_efiStatus);
     }
+    g_environment_data.image_base = loaded_image->ImageBase;
+    g_environment_data.image_size = loaded_image->ImageSize;
 
-    return framework::ok(image_info{loaded_image->ImageBase, loaded_image->ImageSize});
+    // todo:
+    //g_exit_boot_services = gBS->ExitBootServices;
+    //gBS->ExitBootServices = exit_boot_services;
+
+    return {};
+}
+
+framework::result<image_info> get_our_image_info() {
+    return framework::ok(image_info{g_environment_data.image_base, g_environment_data.image_size});
 }
 
 framework::result<void*> allocate_pages(const size_t pages, const framework::memory_type type) {

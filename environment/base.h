@@ -53,4 +53,37 @@ constexpr bool is_any_of(_t first, _t2 second, _args... args) {
     return first == second || is_any_of(first, args...);
 }
 
+enum status_codes {
+    success = 0,
+    status_pml4e_not_present,
+    status_pdpte_not_present,
+    status_pdpte_is_huge,
+    status_pde_not_present,
+    status_pde_is_small,
+};
+
+}
+
+namespace framework {
+
+static constexpr status_category_t status_category_hype = 4;
+
+template<>
+struct status_category_of<hype::status_codes>{ static constexpr status_category_t category = status_category_hype; };
+
+template<>
+class err<hype::status_codes> {
+public:
+    // ReSharper disable once CppNonExplicitConvertingConstructor
+    constexpr err(hype::status_codes value); // NOLINT(*-explicit-constructor)
+
+    constexpr status&& value();
+
+private:
+    status m_value;
+};
+
+constexpr err<hype::status_codes>::err(const hype::status_codes value) : m_value(status_category_hype, value) {}
+constexpr status&& err<hype::status_codes>::value() { return move(m_value); }
+
 }

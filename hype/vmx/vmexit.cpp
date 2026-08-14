@@ -16,18 +16,19 @@
 
 namespace hype {
 
-static framework::result<> handle_exception_or_nmi(cpu_registers_t& registers) {
+static framework::result<> handle_exception_or_nmi(cpu_registers_t&) {
     uint64_t exit_info_raw;
     verify_vmx(x86::vmx::vmread(x86::vmx::field_t::vmexit_interruption_information, exit_info_raw));
     const x86::vmx::vmexit_interruption_info_t exit_info{.raw = static_cast<uint32_t>(exit_info_raw)};
-    uint64_t exit_interrupt_code;
-    verify_vmx(x86::vmx::vmread(x86::vmx::field_t::vmexit_interruption_error_code, exit_interrupt_code));
+
+    uint64_t exit_interrupt_code = 0;
+    if (exit_info.bits.error_code_valid) {
+        verify_vmx(x86::vmx::vmread(x86::vmx::field_t::vmexit_interruption_error_code, exit_interrupt_code));
+    }
 
     uint64_t idt_vectoring_info_raw;
     verify_vmx(x86::vmx::vmread(x86::vmx::field_t::idt_vectoring_information, idt_vectoring_info_raw));
     const x86::vmx::vmexit_interruption_info_t idt_vectoring{.raw = static_cast<uint32_t>(idt_vectoring_info_raw)};
-    uint64_t idt_vectoring_code;
-    verify_vmx(x86::vmx::vmread(x86::vmx::field_t::idt_vectoring_error_code, idt_vectoring_code));
 
     const auto vector = static_cast<x86::interrupts::interrupt_t>(exit_info.bits.vector);
     trace_debug("EXCEPTION[vector=%a(0x%x)]: code=0x%x(%d)",
@@ -38,28 +39,47 @@ static framework::result<> handle_exception_or_nmi(cpu_registers_t& registers) {
 
     if (idt_vectoring.bits.valid) {
         // todo: handle idt vector info (exception while handling another)
-        const auto nested_vector = static_cast<x86::interrupts::interrupt_t>(idt_vectoring.bits.vector);
-        trace_debug("NESTED[vector=%a(0x%x)]:",
-            x86::interrupts::vector_to_str(nested_vector), static_cast<uint16_t>(nested_vector),
-            idt_vectoring_code, idt_vectoring.bits.error_code_valid);
+        return framework::err(framework::status_unsupported);
     }
 
-    // same struct for exit and entry
-    verify_vmx(x86::vmx::vmwrite(x86::vmx::field_t::ctrl_vmentry_interruption_information_field, exit_info_raw));
+    x86::vmx::vmentry_interruption_info_t inject_info{};
+    inject_info.bits.vector = exit_info.bits.vector;
+    inject_info.bits.type = exit_info.bits.type;
+    inject_info.bits.valid = 1;
+
+    verify_vmx(x86::vmx::vmwrite(x86::vmx::field_t::ctrl_vmentry_interruption_information_field, inject_info.raw));
+
     if (exit_info.bits.error_code_valid) {
+        inject_info.bits.deliver_error_code = true;
         verify_vmx(x86::vmx::vmwrite(x86::vmx::field_t::ctrl_vmentry_exception_error_code, exit_interrupt_code));
     }
-    if (x86::interrupts::vector_type(vector) == x86::interrupts::interrupt_type_t::trap) {
+
+    if (inject_info.bits.type == x86::vmx::vmx_interrupt_type_t::software_exception ||
+        inject_info.bits.type == x86::vmx::vmx_interrupt_type_t::software_interrupt ||
+        inject_info.bits.type == x86::vmx::vmx_interrupt_type_t::privileged_software_exception) {
         uint64_t instruction_length;
         verify_vmx(x86::vmx::vmread(x86::vmx::field_t::vmexit_instruction_length, instruction_length));
         verify_vmx(x86::vmx::vmwrite(x86::vmx::field_t::ctrl_vmentry_instruction_length, instruction_length));
+    }
+
+    if (vector == x86::interrupts::interrupt_t::page_fault) {
+        // cr2 is not updated during vmexit due to page fault
+        uint64_t faulting_address;
+        verify_vmx(x86::vmx::vmread(x86::vmx::field_t::exit_qualification, faulting_address));
+        x86::write(x86::cr2_t{faulting_address});
+
+        if (config::print_paging_info_on_guest_page_fault) {
+            // todo: works only for identity ept
+            const auto guest_cr3 = verify(memory::read_current_guest_cr3());
+            debug::print_page_mapping_simple(guest_cr3, faulting_address);
+        }
     }
 
     return {};
 }
 
 static framework::result<> handle_cpuid(cpu_registers_t& registers) {
-    auto cpuid = x86::cpuid(registers.rax, registers.rcx);
+    auto cpuid = x86::cpuid(registers.eax, registers.ecx);
 
     switch (registers.rax) {
         case 1:
@@ -70,36 +90,46 @@ static framework::result<> handle_cpuid(cpu_registers_t& registers) {
             break;
     }
 
-    trace_debug("CPUID[rax=0x%lx, rcx=0x%lx]: eax=0x%lx, ebx=0x%lx, ecx=0x%lx, edx=0x%lx",
-        registers.rax, registers.rcx, cpuid.eax, cpuid.ebx, cpuid.ecx, cpuid.edx);
+    trace_debug("CPUID[rax=0x%x, rcx=0x%x]: eax=0x%x, ebx=0x%x, ecx=0x%x, edx=0x%x",
+        registers.eax, registers.ecx, cpuid.eax, cpuid.ebx, cpuid.ecx, cpuid.edx);
 
-    registers.rax = cpuid.eax;
-    registers.rbx = cpuid.ebx;
-    registers.rcx = cpuid.ecx;
-    registers.rdx = cpuid.edx;
+    // must clear upper bits
+    registers.rax = 0;
+    registers.rbx = 0;
+    registers.rcx = 0;
+    registers.rdx = 0;
+
+    registers.eax = cpuid.eax;
+    registers.ebx = cpuid.ebx;
+    registers.ecx = cpuid.ecx;
+    registers.edx = cpuid.edx;
 
     return {};
 }
 
 static framework::result<> handle_rdmsr(cpu_registers_t& registers) {
-    const auto id = registers.rcx & 0xffffffff;
+    const auto id = registers.ecx;
     const auto value = x86::msr::read(id);
 
-    trace_debug("RDMSR[0x%lx]: value=0x%lx", id, value);
+    trace_debug("RDMSR[0x%x]: value=0x%x", id, value);
 
-    registers.rax = static_cast<uint32_t>(value);
-    registers.rdx = static_cast<uint32_t>(value >> 32);
+    // must clear upper bits
+    registers.rax = 0;
+    registers.rdx = 0;
+
+    registers.eax = static_cast<uint32_t>(value);
+    registers.edx = static_cast<uint32_t>(value >> 32);
 
     return {};
 }
 
 static framework::result<> handle_wrmsr(const cpu_registers_t& registers) {
-    const auto id = registers.rcx & 0xffffffff;
-    const uint64_t low  = static_cast<uint32_t>(registers.rax);
-    const uint64_t high = static_cast<uint32_t>(registers.rdx);
+    const auto id = registers.ecx;
+    const uint64_t low  = registers.eax;
+    const uint64_t high = registers.edx;
     const uint64_t value = (high << 32) | low;
 
-    trace_debug("WRMSR[0x%lx]: value=0x%lx", id, value);
+    trace_debug("WRMSR[0x%x]: value=0x%llx", id, value);
 
     switch (id) {
         case x86::msr::ia32_efer_t::id:
@@ -128,19 +158,36 @@ static framework::result<> handle_ept_violation(const cpu_registers_t& registers
     x86::vmx::ept_pointer_t eptp;
     verify_vmx(x86::vmx::vmread(x86::vmx::field_t::ctrl_ept_pointer, eptp.raw));
 
+    // todo: works only for identity ept
     const auto guest_cr3 = verify(memory::read_current_guest_cr3());
     debug::print_page_mapping_simple(guest_cr3, linear_address);
     debug::print_ept_mapping_simple(eptp, physical_address);
+
+    // todo: works only for identity ept and identity page table
+    const auto image_info = verify(environment::get_our_image_info());
+    const auto start_addr = reinterpret_cast<uint64_t>(image_info.base);
+    if (physical_address >= start_addr && physical_address <= (start_addr + image_info.size)) {
+        trace_debug("IN OUR IMAGE");
+    }
+
+    /*{
+        trace_regs(registers);
+        auto& context = get_context();
+        const auto result = context.guest_memory_mapper.map(registers.rip, x86::paging::page_size);
+        if (result) {
+            debug::instruction_dump(result.value().data(), 4);
+        }
+    }*/
 
     return framework::err(framework::status_unsupported);
 }
 
 static framework::result<> handle_xsetbv(const cpu_registers_t& registers) {
-    const uint32_t eax = registers.rax & 0xffffffff;
-    const uint32_t edx = registers.rdx & 0xffffffff;
-    const uint32_t ecx = registers.rcx & 0xffffffff;
+    const auto eax = registers.eax;
+    const auto edx = registers.edx;
+    const auto ecx = registers.ecx;
 
-    trace_debug("XSETBV[0x%lx]: value=0x%lx", ecx, ((static_cast<uint64_t>(edx) << 32) | eax));
+    trace_debug("XSETBV[0x%x]: value=0x%lx", ecx, ((static_cast<uint64_t>(edx) << 32) | eax));
 
     __asm__ __volatile__(
         "xsetbv"
@@ -152,11 +199,16 @@ static framework::result<> handle_xsetbv(const cpu_registers_t& registers) {
     return {};
 }
 
-bool g_fitst = false;
+static volatile bool aaaa = false;
 
 framework::result<> handle_vmexit(cpu_registers_t& registers) {
     if constexpr (config::embedded_gdbstub) {
         gdbstub::start_handling_if_prompted();
+    }
+    if (!aaaa) {
+        aaaa = true;
+        //const auto image_info = verify(environment::get_our_image_info());
+        //verify(memory::protect_image(get_context().ept, image_info));
     }
 
     const auto old_rsp = registers.rsp;
@@ -172,39 +224,22 @@ framework::result<> handle_vmexit(cpu_registers_t& registers) {
     const auto exit_reason = static_cast<x86::vmx::exit_reason_t>(exit_reason_raw & 0xffff);
     trace_debug("Exit %a (%u) From 0x%p", x86::vmx::exit_reason_str(exit_reason), static_cast<uint16_t>(exit_reason), registers.rip);
 
-    if (!g_fitst) {
-        g_fitst = true;
-        //x86::paging::ia32e::apply_permissions(x86::read<x86::cr3_t>(), 0x7BF48000ULL, false, false);
-        //x86::paging::invlpg(0x7BF48000ULL);
-    }
-
-    /*if (environment::get_current_vcpu_id() == 1) {
-        trace_debug("from 1");
-        interrupts::trace_idt(x86::read<x86::interrupts::idtr_t>());
-        //asm volatile("int3");
-    }*/
-
-    if constexpr (config::decode_guest_instructions_on_vmexit) {
+    /*if constexpr (config::decode_guest_instructions_on_vmexit || config::print_guest_memory_on_vmexit) {
         auto& context = get_context();
         const auto result = context.guest_memory_mapper.map(registers.rip, x86::paging::page_size);
         if (result) {
-            //debug::instruction_dump(result.value().data(), 4);
-            debug::memdump(result.value().data(), 0x10);
+            if (config::decode_guest_instructions_on_vmexit) {
+                debug::instruction_dump(result.value().data(), 4);
+            }
+            if (config::print_guest_memory_on_vmexit) {
+                debug::memdump(result.value().data(), 0x10);
+            }
         }
-        //debug::instruction_dump(reinterpret_cast<const void*>(registers.rip), 4);
-        //debug::memdump(reinterpret_cast<const void*>(registers.rip), 0x10);
-    }
-    if constexpr (config::print_guest_stack_on_vmexit) {
+    }*/
+    /*if constexpr (config::print_guest_stack_on_vmexit) {
         auto& context = get_context();
         debug::print_stack_frame(context.guest_memory_mapper, context.loaded_modules, registers.rip, registers.rbp, registers.rsp);
-    }
-
-    {
-        // todo: limits are fucked post exit, maybe a result of restoration
-        //  via iretq
-        x86::vmx::vmwrite(x86::vmx::field_t::guest_cs_limit, 0xfffff);
-        x86::vmx::vmwrite(x86::vmx::field_t::guest_ss_limit, 0xfffff);
-    }
+    }*/
 
     bool should_move_to_next_instruction = true;
 
@@ -234,7 +269,6 @@ framework::result<> handle_vmexit(cpu_registers_t& registers) {
             return framework::err(framework::status_unsupported);
     }
 
-    // ReSharper disable once CppDFAConstantConditions
     if (should_move_to_next_instruction) {
         // move guest to next instruction
         uint64_t instruction_len;

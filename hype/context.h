@@ -60,9 +60,9 @@ struct context_t {
     size_t cpu_count{};
     wanted_vm_controls_t wanted_vm_controls{};
 
-    memory::guest_memory_mapper _guest_memory_mapper{page_table, memory::page_table_t::guest_mapping_pml4e};
-    memory::memory_mapper<memory::guest_memory_mapper> guest_memory_mapper{&_guest_memory_mapper};
-    debug::loaded_modules loaded_modules{guest_memory_mapper};
+    // memory::guest_memory_mapper _guest_memory_mapper{page_table, memory::page_table_t::guest_mapping_pml4e};
+    // memory::memory_mapper<memory::guest_memory_mapper> guest_memory_mapper{&_guest_memory_mapper};
+    // debug::loaded_modules loaded_modules{guest_memory_mapper};
 
     volatile uint8_t cpu_init_index{};
 };

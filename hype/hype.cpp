@@ -19,15 +19,14 @@
 namespace hype {
 
 static bool g_ctx_initialized = false;
+static context_t* g_context;
 
 bool is_context_initialized() {
     return g_ctx_initialized;
 }
 
-// todo: use optional context so to only initialize this when we decide
 context_t& get_context() {
-    static context_t context;
-    return context;
+    return *g_context;
 }
 
 static wanted_vm_controls_t get_wanted_vm_controls() {
@@ -104,13 +103,16 @@ static framework::result<> init_context(context_t& context, const x86::mtrr::mtr
     verify(memory::setup_identity_paging(context.page_table));
     trace_debug("Initializing EPT");
     verify(memory::setup_identity_ept(context.ept, mtrr_cache));
+    // todo:
+    // const auto image_info = verify(environment::get_our_image_info());
+    // verify(memory::protect_image(context.ept, image_info));
 
     trace_debug("Mapping Stack Guard");
     context.stack_guard.map_into_pml4e(context.page_table, memory::page_table_t::stack_guard_pml4e);
 
     memset(context.msr_bitmap, 0, sizeof(context.msr_bitmap));
     allow_msr_exit_in_bitmap(context, x86::msr::ia32_efer_t::id, false, true);
-    context.exception_bitmap = 0;//0xffff; // todo:
+    context.exception_bitmap = 0; // 0xffff;
 
     trace_debug("Done context init, core count=%d", context.cpu_count);
 
@@ -202,6 +204,8 @@ framework::result<> initialize() {
     const auto mtrr_cache = x86::mtrr::initialize_cache();
 
     trace_debug("Initializing context");
+    g_context = new (x86::paging::page_size) context_t;
+    verify_alloc(g_context);
 
     auto& context = get_context();
     verify(init_context(context, mtrr_cache));

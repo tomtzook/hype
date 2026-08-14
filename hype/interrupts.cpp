@@ -46,7 +46,6 @@ static void handle_general_protection(const uint64_t error_code) {
                     segment.raw);
             } else {
                 trace_debug("General Protection fault. At 0x%x GDT segment (not in gdt)", selector.bits.index);
-                //hype::memory::trace_gdt(gdtr);
             }
             break;
         }
@@ -137,46 +136,9 @@ static bool handle_debug_break() {
     return false;
 }
 
-bool g_isTracingWrite = false;
-
 static void handle_interrupt(const x86::interrupts::interrupt_t interrupt, const uint64_t error_code, const uint64_t rip, const uint16_t cs) {
-#define TARGET_PAGE 0x7BF48000ULL // 4KB aligned base address of 0x7bf4a020
-#define TARGET_ADDR 0x7bf48068ULL
-#define RFLAGS_TF   (1ULL << 8)
-
     auto& cpu = get_current_vcpu();
     auto* registers = reinterpret_cast<cpu_registers_t*>(reinterpret_cast<uint64_t>(cpu.interrupt_stack.end()) - vcpu_t::stack_shadow_space);
-
-    // todo: remove. create generic callback for interrupts
-    if (interrupt == x86::interrupts::interrupt_t::page_fault) {
-        const auto faulting_address = x86::read<x86::cr2_t>().raw;
-        if ((faulting_address & ~0xffull) == TARGET_PAGE) {
-            if (error_code & 0x2) {
-                AsciiPrint("Writing access to 0x%llx from 0x%llx: 0x%x\n", faulting_address, rip, registers->rax & 0xff);
-
-                x86::paging::ia32e::apply_permissions(x86::read<x86::cr3_t>(), TARGET_PAGE, true, false);
-                x86::paging::invlpg(TARGET_PAGE);
-
-                registers->rflags |= RFLAGS_TF;
-                g_isTracingWrite = true;
-                return;
-            }
-        } else {
-            memory::split_large_into_small(get_context().page_table, faulting_address);
-            x86::paging::ia32e::apply_permissions(x86::read<x86::cr3_t>(), faulting_address, true, false);
-            x86::paging::ia32e::apply_permissions(x86::read<x86::cr3_t>(), TARGET_PAGE, false, false);
-            x86::paging::invlpg(faulting_address);
-            return;
-        }
-    }
-    if (g_isTracingWrite && interrupt == x86::interrupts::interrupt_t::debug_exception) {
-        AsciiPrint("Removing writing access 0x%llx\n", rip);
-        g_isTracingWrite = false;
-        registers->rflags &= ~RFLAGS_TF;
-        x86::paging::ia32e::apply_permissions(x86::read<x86::cr3_t>(), TARGET_PAGE, false, false);
-        x86::paging::invlpg(TARGET_PAGE);
-        return;
-    }
 
     // todo: separate print mechanism for when in interrupt, so as to not rely on potentially problematic code
     trace_debug("IDT Called from 0x%p for [0x%x] %a(0x%x) cs=0x%x", rip, static_cast<uint32_t>(interrupt), x86::interrupts::vector_to_str(interrupt), error_code, cs);

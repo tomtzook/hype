@@ -226,41 +226,41 @@ void print_ept_mapping_simple(const x86::vmx::ept_pointer_t& eptp, const x86::vm
     const auto pml4 = reinterpret_cast<const pml4e_t*>(pml4_address);
     auto& pml4e = pml4[address.huge.pml4e];
     if (pml4e.present()) {
-        ascii_format(buffer, offset, buffer_size, "PML4E to PDPT at 0x%llx [r:%d,w:%d,x:%d]; ", pml4e.address(), pml4e.bits.read, pml4e.bits.write, pml4e.bits.execute);
+        ascii_format(buffer, offset, buffer_size, "PML4E(%d) to PDPT at 0x%llx [r:%d,w:%d,x:%d]; ", address.huge.pml4e, pml4e.address(), pml4e.bits.read, pml4e.bits.write, pml4e.bits.execute);
         const auto pdpt_address = pml4e.address();
         const auto* pdpt = reinterpret_cast<const pdpte_t*>(pdpt_address);
         const auto& pdpte = pdpt[address.huge.directory_pointer];
         if (pdpte.present()) {
             if (pdpte.is_huge()) {
-                ascii_format(buffer, offset, buffer_size, "PDPTE maps as huge to 0x%llx [r:%d,w:%d,x:%d]; ", pdpte.address(), pdpte.huge.read, pdpte.huge.write, pdpte.huge.execute);
+                ascii_format(buffer, offset, buffer_size, "PDPTE(%d) maps as huge to 0x%llx [r:%d,w:%d,x:%d]; ", address.huge.directory_pointer, pdpte.address(), pdpte.huge.read, pdpte.huge.write, pdpte.huge.execute);
             } else {
-                ascii_format(buffer, offset, buffer_size, "PDPTE to PD at 0x%llx [r:%d,w:%d,x:%d]; ", pdpte.address(), pdpte.small.read, pdpte.small.write, pdpte.small.execute);
+                ascii_format(buffer, offset, buffer_size, "PDPTE(%d) to PD at 0x%llx [r:%d,w:%d,x:%d]; ", address.large.directory_pointer, pdpte.address(), pdpte.small.read, pdpte.small.write, pdpte.small.execute);
                 const auto pd_address = pdpte.address();
                 const auto* pd = reinterpret_cast<const pde_t*>(pd_address);
                 const auto& pde = pd[address.large.directory];
                 if (pde.present()) {
                     if (pde.is_large()) {
-                        ascii_format(buffer, offset, buffer_size, "PDE maps as large to 0x%llx [r:%d,w:%d,x:%d]; ", pde.address(), pde.large.read, pde.large.write, pde.large.execute);
+                        ascii_format(buffer, offset, buffer_size, "PDE(%d) maps as large to 0x%llx [r:%d,w:%d,x:%d]; ", address.large.directory, pde.address(), pde.large.read, pde.large.write, pde.large.execute);
                     } else {
-                        ascii_format(buffer, offset, buffer_size, "PDE to PT at 0x%llx [r:%d,w:%d,x:%d]; ", pde.address(), pde.small.read, pde.small.write, pde.small.execute);
+                        ascii_format(buffer, offset, buffer_size, "PDE(%d) to PT at 0x%llx [r:%d,w:%d,x:%d]; ", address.small.directory, pde.address(), pde.small.read, pde.small.write, pde.small.execute);
                         const auto pt_address = pde.address();
                         const auto* pt = reinterpret_cast<const pte_t*>(pt_address);
                         const auto& pte = pt[address.small.table];
                         if (pte.present()) {
-                            ascii_format(buffer, offset, buffer_size, "PTE maps to 0x%llx [r:%d,w:%d,x:%d]; ", pte.address(), pte.bits.read, pte.bits.write, pte.bits.execute);
+                            ascii_format(buffer, offset, buffer_size, "PTE(%d) maps to 0x%llx [r:%d,w:%d,x:%d]; ", address.small.table, pte.address(), pte.bits.read, pte.bits.write, pte.bits.execute);
                         } else {
-                            ascii_format(buffer, offset, buffer_size, "PTE not present; ");
+                            ascii_format(buffer, offset, buffer_size, "PTE(%d) not present; ", address.small.table);
                         }
                     }
                 } else {
-                    ascii_format(buffer, offset, buffer_size, "PDE not present; ");
+                    ascii_format(buffer, offset, buffer_size, "PDE(%d) not present; ", address.large.directory);
                 }
             }
         } else {
-            ascii_format(buffer, offset, buffer_size, "PDPTE not present; ");
+            ascii_format(buffer, offset, buffer_size, "PDPTE(%d) not present; ", address.huge.directory_pointer);
         }
     } else {
-        ascii_format(buffer, offset, buffer_size, "PML4E not present; ");
+        ascii_format(buffer, offset, buffer_size, "PML4E(%d) not present; ", address.huge.pml4e);
     }
 
     buffer[offset] = '\0';
